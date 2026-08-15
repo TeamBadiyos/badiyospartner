@@ -1,4 +1,4 @@
-package com.badiyo.expert;
+package com.badiyos.partner;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;

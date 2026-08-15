@@ -5,7 +5,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // NOT committed to this repo — this file is the source of truth for their
 // runtime configuration.
 const config: CapacitorConfig = {
-  appId: "com.badiyo.expert",
+  appId: "com.badiyos.partner",
   appName: "badiyos Expert",
   webDir: "dist",
   plugins: {
