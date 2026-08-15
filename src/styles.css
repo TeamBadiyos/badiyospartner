@@ -137,3 +137,12 @@
 }
 
 
+
+/* Text nodes inside interactive chrome stay non-selectable so long-press on a
+   button never pops the OS text-selection UI. */
+@layer base {
+  button *, a *, nav *, [role="button"] * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
