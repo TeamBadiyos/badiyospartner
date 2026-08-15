@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession } from "@/lib/expert-client";
 import { useState, useRef, useEffect } from "react";
 import { useT } from "@/lib/i18n";
+import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 export const Route = createFileRoute("/booking/$id")({
   head: () => ({
@@ -253,13 +254,13 @@ function AssignedControls({
       <>
         <div className="mt-auto px-6 pt-6">
           <button
-            onClick={beginStart}
+            onClick={() => { hapticImpact("medium"); beginStart(); }}
             disabled={preparing}
             className="h-[52px] w-full rounded-[14px] bg-primary text-[16px] font-bold text-primary-foreground shadow-[var(--shadow-brand-sm)] disabled:opacity-60"
           >
             {preparing ? t("job.preparing") : t("job.start")}
           </button>
-          <button onClick={() => setShowReject(true)} className="mt-3 h-[52px] w-full rounded-[14px] border border-border bg-card text-[16px] font-bold text-foreground">{t("job.reject")}</button>
+          <button onClick={() => { hapticImpact("light"); setShowReject(true); }} className="mt-3 h-[52px] w-full rounded-[14px] border border-border bg-card text-[16px] font-bold text-foreground">{t("job.reject")}</button>
           {err && <p className="mt-3 text-center text-[13px] font-semibold text-[color:var(--color-destructive)]">{err}</p>}
         </div>
         {showReject && (
@@ -286,7 +287,7 @@ function AssignedControls({
               </div>
               <button
                 disabled={!reason || rejecting}
-                onClick={() => { onReject(reason); navigate({ to: "/home" }); }}
+                onClick={() => { hapticNotification("warning"); onReject(reason); navigate({ to: "/home" }); }}
                 className="mt-6 h-[52px] w-full rounded-[14px] bg-[color:var(--color-destructive)] text-[16px] font-bold text-white disabled:opacity-40"
               >
                 {rejecting ? t("job.reject.rejecting") : t("job.reject.confirm")}
@@ -300,7 +301,7 @@ function AssignedControls({
 
   // Start-OTP step
   return (
-    <form onSubmit={verifyStart} className="mt-auto px-6 pt-6">
+    <form onSubmit={(e) => { hapticImpact("medium"); verifyStart(e); }} className="mt-auto px-6 pt-6">
       <p className="text-[13px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">{t("job.startCode.label")}</p>
       <h3 className="mt-1 text-[22px] font-bold text-foreground">{t("job.startCode.title")}</h3>
       <div className="mt-6 grid grid-cols-4 gap-3">
@@ -366,7 +367,7 @@ function InProgressPanel({ booking, bookingId }: { booking: Booking; bookingId: 
         </p>
       </div>
 
-      <form onSubmit={verifyEnd} className="mt-6">
+      <form onSubmit={(e) => { hapticImpact("medium"); verifyEnd(e); }} className="mt-6">
         <p className="text-[13px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">{t("job.endCode.label")}</p>
         <h3 className="mt-1 text-[20px] font-bold text-foreground">{t("job.endCode.title")}</h3>
         <div className="mt-4 grid grid-cols-4 gap-3">

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import { useT } from "@/lib/i18n";
+import { PullToRefresh } from "@/components/pull-to-refresh";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
@@ -49,6 +50,7 @@ function WalletScreen() {
   const items = ledgerQ.data ?? [];
 
   return (
+    <PullToRefresh className="relative" onRefresh={() => ledgerQ.refetch()}>
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pt-[env(safe-area-inset-top)] pb-[max(env(safe-area-inset-bottom),2rem)]">
       <header className="flex items-center gap-3 px-6 pt-6 pb-4">
         <Link to="/home" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted">
@@ -89,5 +91,6 @@ function WalletScreen() {
         )}
       </section>
     </div>
+    </PullToRefresh>
   );
 }

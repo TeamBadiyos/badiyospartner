@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -13,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
 import { LanguageProvider } from "../lib/i18n";
+import { SwipeBack } from "../components/swipe-back";
 
 function NotFoundComponent() {
   return (
@@ -126,8 +128,12 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+// Root-level screens: an edge-swipe there has nowhere sensible to go back to.
+const NO_SWIPE_BACK = ["/", "/home", "/login", "/otp", "/pin", "/set-pin", "/not-registered"];
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     void import("../lib/native-init").then((m) => m.initNativeShell());
@@ -137,7 +143,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <LanguageProvider>
-        <Outlet />
+        <SwipeBack fallbackTo="/home" disabled={NO_SWIPE_BACK.includes(pathname)}>
+          <Outlet />
+        </SwipeBack>
       </LanguageProvider>
       <Toaster position="top-center" richColors closeButton />
     </QueryClientProvider>

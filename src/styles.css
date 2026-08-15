@@ -94,12 +94,55 @@
     min-height: 100dvh;
   }
 
-  /* Horizontal safe-area only; vertical safe-area padding is applied by each
-     page container so that min-h-[100dvh] children don't overflow the body
-     and cause unwanted scroll on devices with status/gesture bars. */
+  /* Native feel: no browser pull-to-refresh, no rubber-band at the document
+     level, momentum scrolling, and no double-tap-to-zoom delay. Individual
+     scroll containers opt back into bounce with `.bounce-scroll`. */
+  html {
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    touch-action: pan-y;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* UI chrome is not selectable and never triggers double-tap zoom;
+     readable content keeps normal text selection. */
+  button, a, label, [role="button"], nav, header, summary, input[type="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+
+  p, h1, h2, h3, h4, li, span, td, blockquote, .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  button, a, label, [role="button"], nav, header {
+    -webkit-touch-callout: none;
   }
 }
 
+@utility bounce-scroll {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+
+
+/* Text nodes inside interactive chrome stay non-selectable so long-press on a
+   button never pops the OS text-selection UI. */
+@layer base {
+  button *, a *, nav *, [role="button"] * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}

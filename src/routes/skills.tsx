@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
+import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 export const Route = createFileRoute("/skills")({
   head: () => ({
@@ -171,7 +172,7 @@ function SkillsScreen() {
                     key={c.id}
                     type="button"
                     disabled={requestSkill.isPending}
-                    onClick={() => requestSkill.mutate(c.id)}
+                    onClick={() => { hapticImpact("light"); requestSkill.mutate(c.id); }}
                     className="flex w-full items-center gap-3 rounded-[14px] border border-border bg-card p-4 text-left disabled:opacity-60"
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]">

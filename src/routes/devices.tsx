@@ -13,6 +13,7 @@ import {
 import { getDeviceId } from "@/lib/device-id";
 import { supabase } from "@/integrations/supabase/client";
 import { useT } from "@/lib/i18n";
+import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 const searchSchema = z.object({ limit: z.union([z.boolean(), z.string()]).optional() });
 
@@ -136,7 +137,7 @@ function DevicesScreen() {
               </div>
               <button
                 type="button"
-                onClick={() => onLogOut(d.device_id)}
+                onClick={() => { hapticNotification("warning"); onLogOut(d.device_id); }}
                 disabled={busy !== null}
                 className="mt-3 flex h-[44px] w-full items-center justify-center gap-2 rounded-[14px] border border-border bg-background text-[14px] font-bold text-[color:var(--color-destructive)] disabled:opacity-60"
               >
