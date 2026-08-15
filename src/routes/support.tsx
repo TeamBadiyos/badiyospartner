@@ -4,6 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpertSession } from "@/lib/expert-client";
 import { useT } from "@/lib/i18n";
+import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 export const Route = createFileRoute("/support")({
   head: () => ({
@@ -56,7 +57,7 @@ function SupportScreen() {
 
       <section className="mt-6 px-6">
         <h2 className="text-[16px] font-bold text-foreground">{t("support.form.title")}</h2>
-        <form onSubmit={submit} className="mt-3">
+        <form onSubmit={(e) => { hapticImpact("light"); submit(e); }} className="mt-3">
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}

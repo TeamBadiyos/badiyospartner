@@ -4,6 +4,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { expertApi, useExpertSession } from "@/lib/expert-client";
 import { useT } from "@/lib/i18n";
+import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 const searchSchema = z.object({ booking_id: z.string().optional() });
 
@@ -97,7 +98,7 @@ function SosScreen() {
 
       <div className="mt-auto pt-8">
         <button
-          onClick={sendAlert}
+          onClick={() => { hapticNotification("error"); sendAlert(); }}
           disabled={state === "sending"}
           className="flex h-[64px] w-full items-center justify-center gap-2 rounded-[14px] bg-[color:var(--color-destructive)] text-[17px] font-bold text-white shadow-[0_10px_28px_-10px_rgba(239,68,68,0.6)] transition active:scale-[0.99] disabled:opacity-60"
         >
