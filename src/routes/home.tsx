@@ -20,6 +20,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
+import { PullToRefresh } from "@/components/pull-to-refresh";
+import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
+import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -458,6 +461,14 @@ function HomeDashboard() {
   });
 
 
+  const onPullRefresh = useCallback(async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["expert", userId] }),
+      qc.invalidateQueries({ queryKey: ["assigned-booking"] }),
+      qc.invalidateQueries({ queryKey: ["approved-skills"] }),
+    ]);
+  }, [qc, userId]);
+
   if (loading || !userId) {
     return <div className="flex min-h-[100dvh] items-center justify-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   }
@@ -465,6 +476,7 @@ function HomeDashboard() {
   const assigned = assignedQ.data;
 
   return (
+    <PullToRefresh className="relative" onRefresh={onPullRefresh}>
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pt-[env(safe-area-inset-top)] pb-[calc(env(safe-area-inset-bottom)+6rem)]">
       <header className="flex items-center justify-between px-6 pt-6 pb-4">
         <img src={badiyosGreen.url} alt="badiyos" className="h-7 w-auto" />
@@ -524,7 +536,10 @@ function HomeDashboard() {
             role="switch"
             aria-checked={online}
             disabled={toggle.isPending}
-            onClick={() => toggle.mutate(!online)}
+            onClick={() => {
+              hapticImpact("medium");
+              toggle.mutate(!online);
+            }}
             className={`mt-6 flex h-[52px] w-full items-center justify-between rounded-[14px] px-2 transition disabled:opacity-60 ${
               online ? "bg-primary-foreground/20" : "bg-muted"
             }`}
@@ -658,8 +673,9 @@ function HomeDashboard() {
           <div className="mx-auto flex w-full max-w-md flex-col gap-3 overflow-y-auto p-4 pb-[calc(env(safe-area-inset-bottom)+7.5rem)]" style={{ maxHeight: "100dvh" }}>
 
             {candidates.map((c) => (
-              <div
+              <SwipeToDismiss
                 key={c.booking.id}
+                onDismiss={() => dismissCandidate(c.booking.id)}
                 className="rounded-[18px] border border-border bg-card p-5 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.4)] animate-in slide-in-from-bottom-4"
               >
                 <div className="flex items-start justify-between">
@@ -698,7 +714,10 @@ function HomeDashboard() {
                 <div className="mt-4 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => dismissCandidate(c.booking.id)}
+                    onClick={() => {
+                      hapticImpact("light");
+                      dismissCandidate(c.booking.id);
+                    }}
                     className="h-[52px] flex-1 rounded-[14px] border border-border bg-card text-[15px] font-bold text-foreground"
                   >
                     {t("home.broadcast.dismiss")}
@@ -706,18 +725,22 @@ function HomeDashboard() {
                   <button
                     type="button"
                     disabled={acceptBroadcast.isPending && acceptBroadcast.variables === c.booking.id}
-                    onClick={() => acceptBroadcast.mutate(c.booking.id)}
+                    onClick={() => {
+                      hapticNotification("success");
+                      acceptBroadcast.mutate(c.booking.id);
+                    }}
                     className="h-[52px] flex-[1.4] rounded-[14px] bg-primary text-[15px] font-bold text-white disabled:opacity-60"
                   >
                     {acceptBroadcast.isPending && acceptBroadcast.variables === c.booking.id ? t("home.broadcast.accepting") : t("home.broadcast.accept")}
                   </button>
                 </div>
-              </div>
+              </SwipeToDismiss>
             ))}
           </div>
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }
 
