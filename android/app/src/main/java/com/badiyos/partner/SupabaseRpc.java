@@ -1,4 +1,4 @@
-package com.badiyo.expert;
+package com.badiyos.partner;
 
 import android.content.Context;
 import android.content.SharedPreferences;

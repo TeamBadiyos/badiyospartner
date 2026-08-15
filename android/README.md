@@ -93,7 +93,7 @@ Apply this by hand to `android/app/src/main/AndroidManifest.xml` after
     android:exported="false"
     android:launchMode="singleTask"
     android:excludeFromRecents="true"
-    android:taskAffinity="com.badiyo.expert.ring"
+    android:taskAffinity="com.badiyos.partner.ring"
     android:showOnLockScreen="true"
     android:turnScreenOn="true"
     android:showWhenLocked="true"

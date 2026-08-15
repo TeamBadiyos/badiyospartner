@@ -1,4 +1,4 @@
-package com.badiyo.expert;
+package com.badiyos.partner;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -52,8 +52,8 @@ public class BackgroundAvailabilityService extends Service {
     static final String STATUS_CHANNEL_ID = "expert_online_status";
     private static final int NOTIFICATION_ID = 4711;
 
-    public static final String ACTION_START = "com.badiyo.expert.action.START_AVAILABILITY";
-    public static final String ACTION_STOP = "com.badiyo.expert.action.STOP_AVAILABILITY";
+    public static final String ACTION_START = "com.badiyos.partner.action.START_AVAILABILITY";
+    public static final String ACTION_STOP = "com.badiyos.partner.action.STOP_AVAILABILITY";
 
     // Battery-conscious: background is a safety-net, not primary tracking.
     private static final long LOCATION_INTERVAL_MS = 60_000L;

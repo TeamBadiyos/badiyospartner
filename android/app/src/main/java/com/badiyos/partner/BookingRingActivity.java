@@ -1,4 +1,4 @@
-package com.badiyo.expert;
+package com.badiyos.partner;
 
 import android.app.Activity;
 import android.app.KeyguardManager;
@@ -47,7 +47,7 @@ public class BookingRingActivity extends Activity {
     public static final String EXTRA_DURATION = "duration";
     public static final String EXTRA_TIMEOUT = "timeout_seconds";
 
-    private static final String ACTION_DISMISS = "com.badiyo.expert.action.RING_DISMISS";
+    private static final String ACTION_DISMISS = "com.badiyos.partner.action.RING_DISMISS";
 
     private String bookingId = "";
     private MediaPlayer player;

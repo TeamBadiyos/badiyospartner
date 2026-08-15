@@ -1,4 +1,4 @@
-package com.badiyo.expert;
+package com.badiyos.partner;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -28,8 +28,8 @@ public class BookingAlertActions extends BroadcastReceiver {
 
     private static final String TAG = "BadiyoAlertAction";
 
-    public static final String ACTION_ACCEPT = "com.badiyo.expert.action.ALERT_ACCEPT";
-    public static final String ACTION_REJECT = "com.badiyo.expert.action.ALERT_REJECT";
+    public static final String ACTION_ACCEPT = "com.badiyos.partner.action.ALERT_ACCEPT";
+    public static final String ACTION_REJECT = "com.badiyos.partner.action.ALERT_REJECT";
     public static final String EXTRA_BOOKING_ID = "booking_id";
 
     static Intent acceptIntent(Context ctx, String bookingId) {
