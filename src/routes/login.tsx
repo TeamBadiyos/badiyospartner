@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Phone, Loader2, ChevronLeft } from "lucide-react";
+import { Phone, Loader2 } from "lucide-react";
 import badiyosWhite from "@/assets/badiyos-wordmark-white.png.asset.json";
 import { expertApi } from "@/lib/expert-client";
 import { useLanguage, useT, type Lang } from "@/lib/i18n";
