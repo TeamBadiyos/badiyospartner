@@ -24,6 +24,7 @@ import { Route as HomeRouteImport } from './routes/home'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DevicesRouteImport } from './routes/devices'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LegalSlugRouteImport } from './routes/legal.$slug'
 import { Route as BookingIdRouteImport } from './routes/booking.$id'
 
 const WalletRoute = WalletRouteImport.update({
@@ -101,6 +102,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LegalSlugRoute = LegalSlugRouteImport.update({
+  id: '/legal/$slug',
+  path: '/legal/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BookingIdRoute = BookingIdRouteImport.update({
   id: '/booking/$id',
   path: '/booking/$id',
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/wallet': typeof WalletRoute
   '/booking/$id': typeof BookingIdRoute
+  '/legal/$slug': typeof LegalSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/wallet': typeof WalletRoute
   '/booking/$id': typeof BookingIdRoute
+  '/legal/$slug': typeof LegalSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/wallet': typeof WalletRoute
   '/booking/$id': typeof BookingIdRoute
+  '/legal/$slug': typeof LegalSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/wallet'
     | '/booking/$id'
+    | '/legal/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/wallet'
     | '/booking/$id'
+    | '/legal/$slug'
   id:
     | '__root__'
     | '/'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/wallet'
     | '/booking/$id'
+    | '/legal/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   WalletRoute: typeof WalletRoute
   BookingIdRoute: typeof BookingIdRoute
+  LegalSlugRoute: typeof LegalSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -345,6 +358,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/legal/$slug': {
+      id: '/legal/$slug'
+      path: '/legal/$slug'
+      fullPath: '/legal/$slug'
+      preLoaderRoute: typeof LegalSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/booking/$id': {
       id: '/booking/$id'
       path: '/booking/$id'
@@ -372,6 +392,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   WalletRoute: WalletRoute,
   BookingIdRoute: BookingIdRoute,
+  LegalSlugRoute: LegalSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

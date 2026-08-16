@@ -93,6 +93,16 @@ export const en = {
   "lang.english": "English",
   "lang.marathi": "मराठी (Marathi)",
   "lang.saveFailed": "Could not update language. Please try again.",
+  // ---- Legal ----
+  "legal.section": "Legal",
+  "legal.title": "Legal",
+  "legal.privacy": "Privacy Policy",
+  "legal.terms": "Terms & Conditions",
+  "legal.updated": "Last updated",
+  "legal.error": "Could not load this page. Please try again.",
+  "legal.loginNote": "By continuing you agree to our",
+  "legal.and": "and",
+
   // ---- Common ----
   "common.back": "Back",
 
