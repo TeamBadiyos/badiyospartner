@@ -38,7 +38,7 @@ function Splash() {
   return (
     <div
       className="flex min-h-[100dvh] flex-col items-center justify-center px-8"
-      style={{ backgroundColor: "#0874FD" }}
+      style={{ backgroundColor: "#0074E4" }}
     >
       <img
         src={badiyosWhite.url}
