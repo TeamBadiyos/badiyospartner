@@ -14,7 +14,7 @@ const config: CapacitorConfig = {
       // resized so the top of the app starts below the clock/wifi/battery row.
       overlaysWebView: false,
       style: "LIGHT",
-      backgroundColor: "#0874FD",
+      backgroundColor: "#0074E4",
     },
   },
 };

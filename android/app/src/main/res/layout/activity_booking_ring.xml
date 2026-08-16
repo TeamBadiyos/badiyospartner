@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Full-screen incoming-booking alert (shown over the lockscreen).
-  Colours match the app theme: primary #0874FD, charcoal #222831.
+  Colours match the app theme: primary #0074E4, charcoal #222831.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:background="#0874FD"
+    android:background="#0074E4"
     android:padding="24dp">
 
     <TextView
@@ -69,7 +69,7 @@
         android:textAllCaps="false"
         android:textStyle="bold"
         android:textSize="18sp"
-        android:textColor="#0874FD"
+        android:textColor="#0074E4"
         android:backgroundTint="#FFFFFF" />
 
     <Button

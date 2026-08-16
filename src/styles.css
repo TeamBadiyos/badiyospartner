@@ -35,7 +35,7 @@
 
 :root {
   /* Badiyo brand */
-  --brand: #0874FD;
+  --brand: #0074E4;
   --brand-foreground: #FFFFFF;
   --charcoal: #222831;
   --text-secondary: #6B7280;
@@ -46,25 +46,26 @@
   --card-foreground: #222831;
   --popover: #FFFFFF;
   --popover-foreground: #222831;
-  --primary: #0874FD;
+  --primary: #0074E4;
   --primary-foreground: #FFFFFF;
   --secondary: #222831;
   --secondary-foreground: #FFFFFF;
   --muted: #F1F5F9;
   --muted-foreground: #6B7280;
   --accent: #E6F0FE;
-  --accent-foreground: #0874FD;
+  --accent-foreground: #0074E4;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   --border: #E5E7EB;
   --divider: #F1F5F9;
   --input: #E5E7EB;
-  --ring: #0874FD;
+  --ring: #0074E4;
 
   /* Derived brand tokens */
   --primary-glow: color-mix(in oklab, var(--primary) 60%, white);
-  --primary-soft: color-mix(in oklab, var(--primary) 12%, white);
-  --primary-strong: color-mix(in oklab, var(--primary) 85%, black);
+  --primary-soft: #E6F1FE;
+  --primary-strong: #0058B0;
+  --primary-pressed: #0058B0;
   --shadow-brand-sm: 0 6px 20px -6px color-mix(in oklab, var(--primary) 50%, transparent);
   --shadow-brand-md: 0 12px 32px -12px color-mix(in oklab, var(--primary) 50%, transparent);
   --shadow-card: 0 4px 16px -8px rgba(34, 40, 49, 0.08);

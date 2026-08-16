@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Inbox, MapPin, Loader2, Wallet, History, Award, LifeBuoy, Clock, X, AlertTriangle } from "lucide-react";
-import badiyosGreen from "@/assets/badiyos-green.png.asset.json";
+import badiyosBlue from "@/assets/badiyos-wordmark-blue.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, initials } from "@/lib/expert-client";
 import {
@@ -479,7 +479,7 @@ function HomeDashboard() {
     <PullToRefresh className="relative" onRefresh={onPullRefresh}>
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pt-[env(safe-area-inset-top)] pb-[calc(env(safe-area-inset-bottom)+6rem)]">
       <header className="flex items-center justify-between px-6 pt-6 pb-4">
-        <img src={badiyosGreen.url} alt="badiyos" className="h-7 w-auto" />
+        <img src={badiyosBlue.url} alt="badiyos" className="h-7 w-auto" />
         <div className="flex items-center gap-2">
           <Link
             to="/sos"
