@@ -151,6 +151,17 @@ function OtpScreen() {
             {loading && <Loader2 className="h-5 w-5 animate-spin" />}
             {loading ? t("otp.verifying") : t("otp.verify")}
           </button>
+          <p className="mt-4 text-center text-[12px] text-[color:var(--text-secondary)]">
+            {t("legal.loginNote")}{" "}
+            <Link to="/legal/$slug" params={{ slug: "terms" }} className="font-semibold text-primary underline">
+              {t("legal.terms")}
+            </Link>{" "}
+            {t("legal.and")}{" "}
+            <Link to="/legal/$slug" params={{ slug: "privacy-policy" }} className="font-semibold text-primary underline">
+              {t("legal.privacy")}
+            </Link>
+            .
+          </p>
         </div>
       </form>
     </div>
