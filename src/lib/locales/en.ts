@@ -240,15 +240,18 @@ export const en = {
 
   // ---- Login ----
   "login.title": "Welcome, Expert",
-  "login.sub": "Enter your registered mobile number. We'll send a 4-digit code on WhatsApp.",
+  "login.heading": "Login to your account",
+  "login.subheading": "We'll send an OTP on WhatsApp",
+  "login.tagline": "Join badiyos as a Partner",
   "login.label": "Mobile number",
   "login.placeholder": "98765 43210",
   "login.terms": "Only registered badiyos Experts can sign in. By continuing you agree to badiyos' Terms and Privacy Policy.",
-  "login.send": "Send code",
+  "login.send": "Send OTP on WhatsApp",
   "login.sending": "Sending…",
   "login.failed": "Failed to send code",
 
   // ---- OTP ----
+  "otp.heading": "Verify your number",
   "otp.title": "Enter verification code",
   "otp.sub": "We sent a 4-digit code on WhatsApp to",
   "otp.resendIn": "Resend code in {seconds}s",

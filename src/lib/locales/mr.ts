@@ -242,15 +242,18 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
 
   // ---- Login ----
   "login.title": "स्वागत आहे, एक्सपर्ट",
-  "login.sub": "तुमचा नोंदणीकृत मोबाइल क्रमांक टाका. आम्ही व्हॉट्सअ‍ॅपवर 4 अंकी कोड पाठवू.",
+  "login.heading": "तुमच्या खात्यात लॉग इन करा",
+  "login.subheading": "आम्ही व्हॉट्सअ‍ॅपवर OTP पाठवू",
+  "login.tagline": "badiyos सोबत पार्टनर म्हणून सामील व्हा",
   "login.label": "मोबाइल क्रमांक",
   "login.placeholder": "98765 43210",
   "login.terms": "फक्त नोंदणीकृत badiyos एक्सपर्ट साइन इन करू शकतात. पुढे जाऊन तुम्ही badiyos च्या अटी व गोपनीयता धोरणास सहमती देता.",
-  "login.send": "कोड पाठवा",
+  "login.send": "व्हॉट्सअ‍ॅपवर OTP पाठवा",
   "login.sending": "पाठवत आहे…",
   "login.failed": "कोड पाठवता आला नाही",
 
   // ---- OTP ----
+  "otp.heading": "तुमचा क्रमांक पडताळा",
   "otp.title": "पडताळणी कोड टाका",
   "otp.sub": "आम्ही व्हॉट्सअ‍ॅपवर 4 अंकी कोड पाठवला आहे",
   "otp.resendIn": "{seconds}s नंतर कोड पुन्हा पाठवा",
