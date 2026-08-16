@@ -46,8 +46,7 @@ public class BadiyoMessagingService extends MessagingService {
         Map<String, String> data = remoteMessage.getData();
         String alertType = data.get("alert_type");
 
-        boolean isBookingAlert =
-            "assigned".equals(alertType) || "broadcast".equals(alertType);
+        boolean isBookingAlert = isRingAlert(alertType);
 
         if (!isBookingAlert) {
             super.onMessageReceived(remoteMessage);
@@ -70,6 +69,30 @@ public class BadiyoMessagingService extends MessagingService {
         }
     }
 
+    /** Alert types that get the full-screen wake-the-lockscreen treatment. */
+    static boolean isRingAlert(String alertType) {
+        if (alertType == null) return false;
+        switch (alertType) {
+            case "assigned":
+            case "broadcast":
+            case "new_order":
+            case "extension_request":
+            case "order_cancelled":
+            case "order_completed":
+            case "reminder_10min":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /** Single "OK" dismiss alerts (informational). */
+    static boolean isInfoAlert(String alertType) {
+        return "order_cancelled".equals(alertType)
+            || "order_completed".equals(alertType)
+            || "reminder_10min".equals(alertType);
+    }
+
     private void showRingingNotification(Map<String, String> data) {
         String bookingId = orEmpty(data.get("booking_id"));
         String alertType = orEmpty(data.get("alert_type"));
@@ -77,7 +100,13 @@ public class BadiyoMessagingService extends MessagingService {
         String body = fallback(data.get("body"), "Tap to view details");
         String address = orEmpty(data.get("address"));
         String duration = orEmpty(data.get("duration"));
-        int timeoutSeconds = parseInt(data.get("timeout_seconds"), 60);
+        String soundUrl = orEmpty(data.get("sound_url"));
+        String extensionId = orEmpty(data.get("extension_id"));
+        String extraMinutes = orEmpty(data.get("extra_minutes"));
+        String extraPrice = orEmpty(data.get("extra_price"));
+        boolean info = isInfoAlert(alertType);
+        boolean extension = "extension_request".equals(alertType);
+        int timeoutSeconds = parseInt(data.get("timeout_seconds"), info ? 20 : 60);
 
         Log.d(TAG, "ring alert booking=" + bookingId + " type=" + alertType
             + " timeout=" + timeoutSeconds + "s");
@@ -95,22 +124,13 @@ public class BadiyoMessagingService extends MessagingService {
         ring.putExtra(BookingRingActivity.EXTRA_ADDRESS, address);
         ring.putExtra(BookingRingActivity.EXTRA_DURATION, duration);
         ring.putExtra(BookingRingActivity.EXTRA_TIMEOUT, timeoutSeconds);
+        ring.putExtra(BookingRingActivity.EXTRA_SOUND_URL, soundUrl);
+        ring.putExtra(BookingRingActivity.EXTRA_EXTENSION_ID, extensionId);
+        ring.putExtra(BookingRingActivity.EXTRA_EXTRA_MINUTES, extraMinutes);
+        ring.putExtra(BookingRingActivity.EXTRA_EXTRA_PRICE, extraPrice);
 
         PendingIntent fullScreen = PendingIntent.getActivity(
             this, bookingId.hashCode(), ring, piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-        );
-
-        PendingIntent acceptPi = PendingIntent.getBroadcast(
-            this,
-            ("accept:" + bookingId).hashCode(),
-            BookingAlertActions.acceptIntent(this, bookingId),
-            piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-        );
-        PendingIntent rejectPi = PendingIntent.getBroadcast(
-            this,
-            ("reject:" + bookingId).hashCode(),
-            BookingAlertActions.rejectIntent(this, bookingId),
-            piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
         );
 
         String text = address.isEmpty() ? body : (duration.isEmpty() ? address : duration + " · " + address);
@@ -128,9 +148,45 @@ public class BadiyoMessagingService extends MessagingService {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setTimeoutAfter(timeoutSeconds * 1000L)
             .setFullScreenIntent(fullScreen, true)
-            .setContentIntent(fullScreen)
-            .addAction(0, "Accept", acceptPi)
-            .addAction(0, "Reject", rejectPi);
+            .setContentIntent(fullScreen);
+
+        if (info) {
+            PendingIntent okPi = PendingIntent.getBroadcast(
+                this,
+                ("ok:" + bookingId + alertType).hashCode(),
+                BookingAlertActions.dismissIntent(this, bookingId),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            builder.addAction(0, "OK", okPi);
+        } else if (extension) {
+            PendingIntent acceptPi = PendingIntent.getBroadcast(
+                this,
+                ("ext-accept:" + extensionId).hashCode(),
+                BookingAlertActions.extensionIntent(this, bookingId, extensionId, true),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            PendingIntent declinePi = PendingIntent.getBroadcast(
+                this,
+                ("ext-decline:" + extensionId).hashCode(),
+                BookingAlertActions.extensionIntent(this, bookingId, extensionId, false),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            builder.addAction(0, "Accept", acceptPi).addAction(0, "Decline", declinePi);
+        } else {
+            PendingIntent acceptPi = PendingIntent.getBroadcast(
+                this,
+                ("accept:" + bookingId).hashCode(),
+                BookingAlertActions.acceptIntent(this, bookingId),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            PendingIntent rejectPi = PendingIntent.getBroadcast(
+                this,
+                ("reject:" + bookingId).hashCode(),
+                BookingAlertActions.rejectIntent(this, bookingId),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            builder.addAction(0, "Accept", acceptPi).addAction(0, "Reject", rejectPi);
+        }
 
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm == null) return;

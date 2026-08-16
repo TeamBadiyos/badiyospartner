@@ -18,6 +18,7 @@ import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
@@ -46,10 +47,15 @@ public class BookingRingActivity extends Activity {
     public static final String EXTRA_ADDRESS = "address";
     public static final String EXTRA_DURATION = "duration";
     public static final String EXTRA_TIMEOUT = "timeout_seconds";
+    public static final String EXTRA_SOUND_URL = "sound_url";
+    public static final String EXTRA_EXTENSION_ID = "extension_id";
+    public static final String EXTRA_EXTRA_MINUTES = "extra_minutes";
+    public static final String EXTRA_EXTRA_PRICE = "extra_price";
 
     private static final String ACTION_DISMISS = "com.badiyos.partner.action.RING_DISMISS";
 
     private String bookingId = "";
+    private String alertType = "";
     private MediaPlayer player;
     private Vibrator vibrator;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -100,37 +106,106 @@ public class BookingRingActivity extends Activity {
     private void applyIntent(Intent intent) {
         if (intent == null) return;
         bookingId = str(intent.getStringExtra(EXTRA_BOOKING_ID));
+        alertType = str(intent.getStringExtra(EXTRA_ALERT_TYPE));
+        String soundUrl = str(intent.getStringExtra(EXTRA_SOUND_URL));
+        String extensionId = str(intent.getStringExtra(EXTRA_EXTENSION_ID));
+        String extraMinutes = str(intent.getStringExtra(EXTRA_EXTRA_MINUTES));
+        String extraPrice = str(intent.getStringExtra(EXTRA_EXTRA_PRICE));
+        boolean info = BadiyoMessagingService.isInfoAlert(alertType);
+        boolean extension = "extension_request".equals(alertType);
         String title = str(intent.getStringExtra(EXTRA_TITLE));
         String body = str(intent.getStringExtra(EXTRA_BODY));
         String address = str(intent.getStringExtra(EXTRA_ADDRESS));
         String duration = str(intent.getStringExtra(EXTRA_DURATION));
-        int timeout = intent.getIntExtra(EXTRA_TIMEOUT, 60);
-        if (timeout <= 0) timeout = 60;
+        int defTimeout = info ? 20 : 60;
+        int timeout = intent.getIntExtra(EXTRA_TIMEOUT, defTimeout);
+        if (timeout <= 0) timeout = defTimeout;
 
         TextView titleView = findViewById(R.id.ring_title);
         TextView subtitleView = findViewById(R.id.ring_subtitle);
         TextView addressView = findViewById(R.id.ring_address);
         countdownView = findViewById(R.id.ring_countdown);
 
-        titleView.setText(title.isEmpty() ? "New booking" : title);
-        subtitleView.setText(duration.isEmpty() ? body : duration);
-        addressView.setText(address.isEmpty() ? body : address);
-
+        TextView detailView = findViewById(R.id.ring_detail);
         Button accept = findViewById(R.id.ring_accept);
         Button reject = findViewById(R.id.ring_reject);
-        accept.setOnClickListener(v -> {
-            stopRinging();
-            BadiyoMessagingService.cancelRingNotification(getApplicationContext());
-            BookingAlertActions.claimAsync(getApplicationContext(), bookingId);
-            finishRing();
-        });
-        reject.setOnClickListener(v -> {
-            // Silent local dismiss — no backend reject action exists today.
-            BadiyoMessagingService.cancelRingNotification(getApplicationContext());
-            finishRing();
-        });
+        Button ok = findViewById(R.id.ring_ok);
 
-        startRinging();
+        titleView.setText(title.isEmpty() ? defaultTitle(alertType) : title);
+        detailView.setVisibility(View.GONE);
+
+        if (extension) {
+            subtitleView.setText(body.isEmpty() ? "Customer requested more time" : body);
+            String detail = extensionDetail(extraMinutes, extraPrice);
+            if (!detail.isEmpty()) {
+                detailView.setText(detail);
+                detailView.setVisibility(View.VISIBLE);
+            }
+            addressView.setText(address);
+            addressView.setVisibility(address.isEmpty() ? View.GONE : View.VISIBLE);
+
+            accept.setVisibility(View.VISIBLE);
+            reject.setVisibility(View.VISIBLE);
+            ok.setVisibility(View.GONE);
+            accept.setText("Accept");
+            reject.setText("Decline");
+            accept.setOnClickListener(v -> {
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                BookingAlertActions.decideExtensionAsync(
+                    getApplicationContext(), bookingId, extensionId, true);
+                finishRing();
+            });
+            reject.setOnClickListener(v -> {
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                BookingAlertActions.decideExtensionAsync(
+                    getApplicationContext(), bookingId, extensionId, false);
+                finishRing();
+            });
+        } else if (info) {
+            subtitleView.setText(body);
+            subtitleView.setVisibility(body.isEmpty() ? View.GONE : View.VISIBLE);
+            addressView.setText(address);
+            addressView.setVisibility(address.isEmpty() ? View.GONE : View.VISIBLE);
+
+            accept.setVisibility(View.GONE);
+            reject.setVisibility(View.GONE);
+            ok.setVisibility(View.VISIBLE);
+            ok.setOnClickListener(v -> {
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                // Deep-link to the relevant booking on tap.
+                if (!bookingId.isEmpty()) {
+                    BookingAlertActions.openApp(getApplicationContext(), "/booking/" + bookingId);
+                }
+                finishRing();
+            });
+        } else {
+            subtitleView.setVisibility(View.VISIBLE);
+            addressView.setVisibility(View.VISIBLE);
+            subtitleView.setText(duration.isEmpty() ? body : duration);
+            addressView.setText(address.isEmpty() ? body : address);
+
+            accept.setVisibility(View.VISIBLE);
+            reject.setVisibility(View.VISIBLE);
+            ok.setVisibility(View.GONE);
+            accept.setText("Accept");
+            reject.setText("Reject");
+            accept.setOnClickListener(v -> {
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                BookingAlertActions.claimAsync(getApplicationContext(), bookingId);
+                finishRing();
+            });
+            reject.setOnClickListener(v -> {
+                // Silent local dismiss — no backend reject action exists today.
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                finishRing();
+            });
+        }
+
+        startRinging(soundUrl);
         startCountdown(timeout);
     }
 
@@ -154,7 +229,67 @@ public class BookingRingActivity extends Activity {
 
     // ---------------- sound + vibration ----------------
 
-    private void startRinging() {
+    private static String defaultTitle(String alertType) {
+        if (alertType == null) return "New booking";
+        switch (alertType) {
+            case "extension_request": return "Extension requested";
+            case "order_cancelled":   return "Booking cancelled";
+            case "order_completed":   return "Booking completed";
+            case "reminder_10min":    return "Starting in 10 minutes";
+            default:                  return "New booking";
+        }
+    }
+
+    private static String extensionDetail(String extraMinutes, String extraPrice) {
+        StringBuilder sb = new StringBuilder();
+        if (extraMinutes != null && !extraMinutes.isEmpty()) {
+            sb.append("+").append(extraMinutes).append(" min");
+        }
+        if (extraPrice != null && !extraPrice.isEmpty()) {
+            if (sb.length() > 0) sb.append("  ·  ");
+            sb.append("₹").append(extraPrice);
+        }
+        return sb.toString();
+    }
+
+    private void startRinging(String soundUrl) {
+        if (player != null) return;
+        // Remote (signed URL) sound first; fall back to the bundled raw
+        // resource / device ringtone if it is missing or fails to stream.
+        if (soundUrl != null && soundUrl.startsWith("http")) {
+            try {
+                player = new MediaPlayer();
+                player.setAudioAttributes(ringAttributes());
+                player.setDataSource(soundUrl);
+                player.setLooping(true);
+                player.setOnPreparedListener(MediaPlayer::start);
+                player.setOnErrorListener((mp, what, extra) -> {
+                    Log.w(TAG, "stream sound failed what=" + what + " extra=" + extra);
+                    try { mp.release(); } catch (Throwable ignored) {}
+                    player = null;
+                    startLocalRinging();
+                    return true;
+                });
+                player.prepareAsync();
+            } catch (Throwable t) {
+                Log.e(TAG, "stream sound setup failed", t);
+                player = null;
+                startLocalRinging();
+            }
+        } else {
+            startLocalRinging();
+        }
+        startVibration();
+    }
+
+    private AudioAttributes ringAttributes() {
+        return new AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build();
+    }
+
+    private void startLocalRinging() {
         if (player != null) return;
         try {
             Uri sound = customAlertUri();
@@ -165,12 +300,7 @@ public class BookingRingActivity extends Activity {
                 sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
             player = new MediaPlayer();
-            player.setAudioAttributes(
-                new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            );
+            player.setAudioAttributes(ringAttributes());
             player.setDataSource(this, sound);
             player.setLooping(true);
             player.prepare();
@@ -178,7 +308,9 @@ public class BookingRingActivity extends Activity {
         } catch (Throwable t) {
             Log.e(TAG, "ring sound failed", t);
         }
+    }
 
+    private void startVibration() {
         try {
             AudioManager am = getSystemService(AudioManager.class);
             boolean silent = am != null && am.getRingerMode() == AudioManager.RINGER_MODE_SILENT;
@@ -235,7 +367,10 @@ public class BookingRingActivity extends Activity {
             public void run() {
                 long left = Math.max(0, (endsAtMs - System.currentTimeMillis()) / 1000L);
                 if (countdownView != null) {
-                    countdownView.setText("Expires in " + left + "s");
+                    countdownView.setText(
+                        BadiyoMessagingService.isInfoAlert(alertType)
+                            ? "Closing in " + left + "s"
+                            : "Expires in " + left + "s");
                 }
                 if (left > 0) handler.postDelayed(this, 1000L);
             }

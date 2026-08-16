@@ -52,6 +52,17 @@
         android:ellipsize="end" />
 
     <TextView
+        android:id="@+id/ring_detail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/ring_countdown"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -82,5 +93,18 @@
         android:textSize="16sp"
         android:textColor="#FFFFFF"
         android:backgroundTint="#1565D8" />
+
+    <Button
+        android:id="@+id/ring_ok"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="40dp"
+        android:text="OK"
+        android:textAllCaps="false"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:textColor="#0074E4"
+        android:backgroundTint="#FFFFFF"
+        android:visibility="gone" />
 
 </LinearLayout>
