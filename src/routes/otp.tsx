@@ -8,7 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { registerThisDevice } from "@/lib/devices";
 import { useT } from "@/lib/i18n";
 
-const searchSchema = z.object({ phone: z.string().optional() });
+const searchSchema = z.object({
+  phone: z.union([z.string(), z.number()]).transform((v) => String(v)).optional(),
+});
 
 export const Route = createFileRoute("/otp")({
   validateSearch: (s) => searchSchema.parse(s),
