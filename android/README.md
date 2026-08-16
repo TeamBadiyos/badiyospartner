@@ -5,13 +5,13 @@ generation, copy in the tracked files below and edit `AndroidManifest.xml`
 manually — these are the only pieces the repo owns:
 
 ## Tracked Java sources
-- `android/app/src/main/java/com/badiyo/expert/MainActivity.java`
-- `android/app/src/main/java/com/badiyo/expert/BackgroundLocationPlugin.java`
-- `android/app/src/main/java/com/badiyo/expert/BackgroundAvailabilityService.java`
-- `android/app/src/main/java/com/badiyo/expert/BadiyoMessagingService.java`
-- `android/app/src/main/java/com/badiyo/expert/BookingRingActivity.java`
-- `android/app/src/main/java/com/badiyo/expert/BookingAlertActions.java`
-- `android/app/src/main/java/com/badiyo/expert/SupabaseRpc.java`
+- `android/app/src/main/java/com/badiyos/partner/MainActivity.java`
+- `android/app/src/main/java/com/badiyos/partner/BackgroundLocationPlugin.java`
+- `android/app/src/main/java/com/badiyos/partner/BackgroundAvailabilityService.java`
+- `android/app/src/main/java/com/badiyos/partner/BadiyoMessagingService.java`
+- `android/app/src/main/java/com/badiyos/partner/BookingRingActivity.java`
+- `android/app/src/main/java/com/badiyos/partner/BookingAlertActions.java`
+- `android/app/src/main/java/com/badiyos/partner/SupabaseRpc.java`
 - `android/app/src/main/res/layout/activity_booking_ring.xml`
 
 ## Required manifest edits (`android/app/src/main/AndroidManifest.xml`)
@@ -158,3 +158,49 @@ expert once via `Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT`.
 Also whitelist the app from battery optimisation / enable autostart on
 Xiaomi, Oppo, Vivo, Realme and Samsung — otherwise the process can be frozen
 and no FCM data message is delivered at all.
+
+
+---
+
+# MANUAL MERGE BLOCK — multi-type full-screen alerts (extension / cancelled / completed / 10-min reminder)
+
+No new components are introduced — the existing `BookingRingActivity`,
+`BookingAlertActions` receiver and `BadiyoMessagingService` entries from the
+block above already cover all alert types. Only ONE additive change is needed:
+
+## 1. Permission — streaming alert audio from `sound_url`
+
+`MediaPlayer.setDataSource(url)` needs network access. Capacitor's generated
+manifest normally already contains this line; confirm it exists inside
+`<manifest>` and add it if missing:
+
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+```
+
+## 2. Supported FCM data payload keys
+
+```
+alert_type       new_order | assigned | broadcast | extension_request
+                 | order_cancelled | order_completed | reminder_10min
+booking_id       uuid — used for the deep link (/booking/<id>)
+title, body      copy shown on the ring screen (per-type defaults exist)
+address          optional secondary line
+duration         optional (new-order only)
+sound_url        optional signed URL streamed via MediaPlayer; falls back to
+                 res/raw/booking_alert.* and then the device ringtone
+timeout_seconds  optional; defaults 60s (action alerts) / 20s (info alerts)
+extension_id     REQUIRED for alert_type=extension_request
+extra_minutes    e.g. "30"  -> rendered as "+30 min"
+extra_price      e.g. "250" -> rendered as "₹250"
+```
+
+## 3. Button behaviour per alert_type
+
+| alert_type | buttons | backend call |
+|---|---|---|
+| new_order / assigned / broadcast | Accept / Reject | `claim_booking_as_expert` (accept), local dismiss (reject) |
+| extension_request | Accept / Decline | `partner_decide_extension(_extension_id, 'accepted' \| 'declined')` |
+| order_cancelled / order_completed / reminder_10min | OK only, auto-dismiss after 20s | none; OK deep-links to `/booking/<booking_id>` |
+
+Nothing else in the manifest changes.
