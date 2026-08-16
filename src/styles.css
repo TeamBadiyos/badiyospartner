@@ -63,8 +63,9 @@
 
   /* Derived brand tokens */
   --primary-glow: color-mix(in oklab, var(--primary) 60%, white);
-  --primary-soft: color-mix(in oklab, var(--primary) 12%, white);
-  --primary-strong: color-mix(in oklab, var(--primary) 85%, black);
+  --primary-soft: #E6F1FE;
+  --primary-strong: #0058B0;
+  --primary-pressed: #0058B0;
   --shadow-brand-sm: 0 6px 20px -6px color-mix(in oklab, var(--primary) 50%, transparent);
   --shadow-brand-md: 0 12px 32px -12px color-mix(in oklab, var(--primary) 50%, transparent);
   --shadow-card: 0 4px 16px -8px rgba(34, 40, 49, 0.08);
