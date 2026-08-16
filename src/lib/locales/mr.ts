@@ -95,6 +95,16 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "lang.marathi": "मराठी (Marathi)",
   "lang.saveFailed": "भाषा बदलता आली नाही. कृपया पुन्हा प्रयत्न करा.",
 
+  // ---- Legal ----
+  "legal.section": "कायदेशीर",
+  "legal.title": "कायदेशीर",
+  "legal.privacy": "गोपनीयता धोरण",
+  "legal.terms": "अटी व शर्ती",
+  "legal.updated": "शेवटचे अद्यतन",
+  "legal.error": "हे पान लोड करता आले नाही. कृपया पुन्हा प्रयत्न करा.",
+  "legal.loginNote": "पुढे जाऊन तुम्ही आमच्या",
+  "legal.and": "आणि",
+
   // ---- Common ----
   "common.back": "मागे",
 
