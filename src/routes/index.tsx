@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import badiyosWhite from "@/assets/badiyos-white.png.asset.json";
+import badiyosWhite from "@/assets/badiyos-wordmark-white.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
