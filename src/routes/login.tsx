@@ -86,7 +86,15 @@ function LoginScreen() {
         {error && <p className="mt-3 text-[13px] font-semibold text-[color:var(--color-destructive)]">{error}</p>}
 
         <p className="mt-4 text-[13px] text-[color:var(--text-secondary)]">
-          {t("login.terms")}
+          {t("legal.loginNote")}{" "}
+          <Link to="/legal/$slug" params={{ slug: "terms" }} className="font-semibold text-primary underline">
+            {t("legal.terms")}
+          </Link>{" "}
+          {t("legal.and")}{" "}
+          <Link to="/legal/$slug" params={{ slug: "privacy-policy" }} className="font-semibold text-primary underline">
+            {t("legal.privacy")}
+          </Link>
+          .
         </p>
 
         <div className="mt-auto pt-8">

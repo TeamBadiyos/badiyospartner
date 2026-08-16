@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, LogOut, Phone, MapPin, Award, ShieldCheck, Loader2, Camera, Radio, Wrench, Smartphone, Languages, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Phone, MapPin, Award, ShieldCheck, Loader2, Camera, Radio, Wrench, Smartphone, Languages, Check, FileText } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -255,6 +255,31 @@ function ProfileScreen() {
             ))}
           </div>
           {langError && <p className="mt-2 text-[12px] text-red-600">{langError}</p>}
+        </div>
+      </section>
+
+      <section className="mt-6 px-6">
+        <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+          {t("legal.section")}
+        </h3>
+        <div className="space-y-2">
+          {([
+            { slug: "privacy-policy", label: t("legal.privacy") },
+            { slug: "terms", label: t("legal.terms") },
+          ]).map(({ slug, label }) => (
+            <Link
+              key={slug}
+              to="/legal/$slug"
+              params={{ slug }}
+              className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <p className="flex-1 text-[15px] font-semibold text-foreground">{label}</p>
+              <ChevronRight className="h-5 w-5 text-[color:var(--text-secondary)]" />
+            </Link>
+          ))}
         </div>
       </section>
 
