@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Phone, Loader2, ChevronLeft } from "lucide-react";
+import { Phone, Loader2 } from "lucide-react";
 import badiyosWhite from "@/assets/badiyos-wordmark-white.png.asset.json";
 import { expertApi } from "@/lib/expert-client";
 import { useLanguage, useT, type Lang } from "@/lib/i18n";
@@ -92,14 +92,6 @@ function LoginScreen() {
 
       {/* White bottom-sheet card */}
       <div className="relative -mt-6 flex flex-1 flex-col rounded-t-[24px] bg-card px-6 pb-[max(env(safe-area-inset-bottom),2rem)] pt-8">
-        <Link
-          to="/"
-          className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
-          aria-label={t("common.back")}
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Link>
-
         <h1 className="text-[24px] font-bold leading-tight text-foreground">
           {t("login.heading")}
         </h1>
