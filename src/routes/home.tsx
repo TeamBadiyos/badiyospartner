@@ -44,7 +44,15 @@ type BroadcastBooking = {
   booking_lat: number | null;
   booking_lng: number | null;
   assigned_expert_id: string | null;
+  created_at?: string | null;
+  deleted_at?: string | null;
+  dispatch_exhausted_at?: string | null;
 };
+
+// Only bookings created within this window are treated as live broadcasts.
+// Prevents stale/undelivered rows from popping up when an expert goes online.
+const BROADCAST_MAX_AGE_MS = 30 * 60_000;
+
 
 type BroadcastCandidate = {
   booking: BroadcastBooking;
