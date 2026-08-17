@@ -81,7 +81,7 @@ function HistoryScreen() {
 
   return (
     <PullToRefresh className="relative" onRefresh={() => q.refetch()}>
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),2rem)]">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),1rem)]">
       <header className="sticky top-0 z-30 flex items-center gap-3 bg-background px-6 pb-4 pt-[calc(var(--safe-top)+1.5rem)]">
         <Link to="/home" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted">
           <ChevronLeft className="h-6 w-6" />
@@ -96,9 +96,9 @@ function HistoryScreen() {
             <p className="mt-1 text-[13px] text-[color:var(--text-secondary)]">{t("history.empty.sub")}</p>
           </div>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-3 pb-4">
             {items.map((b) => (
-              <li key={b.id} className="rounded-[18px] border border-border bg-card p-4">
+              <li key={b.id} className="rounded-[18px] border border-border bg-card p-4 card-lift">
                 <div className="flex items-center justify-between">
                   <span className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ${
                     b.status === "completed" ? "bg-[color:var(--color-accent)] text-primary"
@@ -107,7 +107,7 @@ function HistoryScreen() {
                   }`}>
                     {STATUS_KEYS.has(b.status) ? t(`history.status.${b.status}` as TranslationKey) : b.status.replace("_", " ")}
                   </span>
-                  <span className="text-[16px] font-bold text-foreground">{formatINR(b.price)}</span>
+                  <span className="amount-strong text-[18px] text-foreground">{formatINR(b.price)}</span>
                 </div>
                 <p className="mt-2 text-[15px] font-semibold text-foreground">{t("history.service", { minutes: b.service_duration_minutes })}</p>
                 <p className="mt-1 text-[12px] text-[color:var(--text-secondary)]">{b.created_at ? new Date(b.created_at).toLocaleString("en-IN") : ""}</p>

@@ -524,12 +524,12 @@ function HomeDashboard() {
         <div
           className={`rounded-[18px] border p-6 transition ${
             online
-              ? "border-primary bg-primary shadow-[var(--shadow-brand-md)]"
-              : "border-border bg-card shadow-[var(--shadow-card)]"
+              ? "border-primary bg-primary shadow-[var(--shadow-brand-md)] card-lift"
+              : "border-border bg-card card-lift"
           }`}
         >
           <p
-            className={`text-[13px] font-semibold uppercase tracking-wider ${
+            className={`text-[12px] font-bold uppercase tracking-[0.08em] ${
               online ? "text-primary-foreground/85" : "text-muted-foreground"
             }`}
           >
@@ -643,7 +643,7 @@ function HomeDashboard() {
         <section className="mt-6 px-6">
           <button
             onClick={() => navigate({ to: "/booking/$id", params: { id: assigned.id } })}
-            className="w-full rounded-[18px] border border-border bg-card p-5 text-left shadow-[0_4px_16px_-8px_rgba(34,40,49,0.08)] transition active:scale-[0.99]"
+            className="w-full rounded-[18px] border border-border bg-card p-5 text-left card-lift transition active:scale-[0.99]"
           >
             <div className="flex items-center justify-between">
               <span className="rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
@@ -658,7 +658,7 @@ function HomeDashboard() {
         </section>
       ) : (
         <section className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[color:var(--color-accent)]">
+          <div className="icon-tile-strong flex h-20 w-20 items-center justify-center rounded-full">
             <Inbox className="h-9 w-9 text-primary" strokeWidth={2} />
           </div>
           <h2 className="mt-5 text-[20px] font-bold text-foreground">
@@ -679,7 +679,7 @@ function HomeDashboard() {
           { to: "/rewards" as const, label: t("home.nav.rewards"), Icon: Award },
           { to: "/support" as const, label: t("home.nav.help"), Icon: LifeBuoy },
         ].map(({ to, label, Icon }) => (
-          <Link key={to} to={to} className="flex flex-col items-center gap-1 rounded-[14px] border border-border bg-card py-3 text-center">
+          <Link key={to} to={to} className="flex flex-col items-center gap-1 rounded-[14px] border border-border bg-card py-3 text-center card-lift">
             <Icon className="h-5 w-5 text-primary" strokeWidth={2} />
             <span className="text-[12px] font-semibold text-foreground">{label}</span>
           </Link>

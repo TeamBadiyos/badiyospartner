@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronLeft, Award, Star, Zap, Gift } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { SectionHeading } from "@/components/section-heading";
 
 export const Route = createFileRoute("/rewards")({
   head: () => ({
@@ -21,7 +22,7 @@ function RewardsScreen() {
   const pct = Math.min(100, (jobs / target) * 100);
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),2rem)]">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),1rem)]">
       <header className="sticky top-0 z-30 flex items-center gap-3 bg-background px-6 pb-4 pt-[calc(var(--safe-top)+1.5rem)]">
         <Link to="/home" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted">
           <ChevronLeft className="h-6 w-6" />
@@ -30,11 +31,11 @@ function RewardsScreen() {
       </header>
 
       <section className="px-6">
-        <div className="rounded-[18px] border border-border bg-card p-6">
+        <div className="rounded-[18px] border border-border bg-card p-6 card-lift">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--color-accent)]"><Award className="h-6 w-6 text-primary" /></div>
+            <div className="icon-tile-strong flex h-12 w-12 items-center justify-center rounded-full"><Award className="h-6 w-6 text-primary" /></div>
             <div>
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">{t("rewards.currentLevel")}</p>
+              <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">{t("rewards.currentLevel")}</p>
               <p className="text-[22px] font-bold text-foreground">{level}</p>
             </div>
           </div>
@@ -51,15 +52,15 @@ function RewardsScreen() {
       </section>
 
       <section className="mt-6 px-6">
-        <h2 className="text-[16px] font-bold text-foreground">{t("rewards.perks")}</h2>
+        <SectionHeading>{t("rewards.perks")}</SectionHeading>
         <ul className="mt-3 space-y-3">
           {[
             { Icon: Star, title: t("rewards.perk.priority.title"), desc: t("rewards.perk.priority.desc") },
             { Icon: Zap, title: t("rewards.perk.payout.title"), desc: t("rewards.perk.payout.desc") },
             { Icon: Gift, title: t("rewards.perk.bonus.title"), desc: t("rewards.perk.bonus.desc") },
           ].map(({ Icon, title, desc }) => (
-            <li key={title} className="flex items-start gap-3 rounded-[14px] border border-border bg-card p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]"><Icon className="h-5 w-5 text-primary" /></div>
+            <li key={title} className="flex items-start gap-3 rounded-[14px] border border-border bg-card p-4 card-lift">
+              <div className="icon-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-full"><Icon className="h-5 w-5 text-primary" /></div>
               <div>
                 <p className="text-[15px] font-bold text-foreground">{title}</p>
                 <p className="text-[13px] text-[color:var(--text-secondary)]">{desc}</p>
@@ -67,7 +68,7 @@ function RewardsScreen() {
             </li>
           ))}
         </ul>
-        <p className="mt-6 text-center text-[12px] text-[color:var(--text-secondary)]">{t("rewards.soon")}</p>
+        <p className="mt-4 pb-2 text-center text-[12px] text-[color:var(--text-secondary)]">{t("rewards.soon")}</p>
       </section>
     </div>
   );
