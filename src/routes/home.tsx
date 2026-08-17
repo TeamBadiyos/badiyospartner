@@ -303,7 +303,9 @@ function HomeDashboard() {
     if (!online || isBusy) {
       candidatesRef.current.forEach((c) => c.soundHandle.stop());
       setCandidates([]);
-      dismissedRef.current.clear();
+      // Keep dismissedRef intact: a booking dismissed earlier must not be
+      // re-offered just because the expert toggled offline/online again.
+
     }
   }, [online, isBusy]);
   useEffect(() => () => stopAllNotificationLoops(), []);
