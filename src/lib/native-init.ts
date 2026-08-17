@@ -21,6 +21,9 @@ export async function initNativeShell(): Promise<void> {
     await StatusBar.setOverlaysWebView({ overlay: false });
     await StatusBar.setStyle({ style: Style.Light });
     await StatusBar.setBackgroundColor({ color: "#0074E4" });
+    const { remeasureSafeArea } = await import("./safe-area");
+    remeasureSafeArea();
+    setTimeout(remeasureSafeArea, 400);
   } catch (err) {
     console.warn("[native] StatusBar init failed", err);
   }

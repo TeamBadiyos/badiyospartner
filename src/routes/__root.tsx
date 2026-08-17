@@ -15,6 +15,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
 import { LanguageProvider } from "../lib/i18n";
 import { SwipeBack } from "../components/swipe-back";
+import { OfflineGate } from "../components/offline-gate";
+import { initSafeArea } from "../lib/safe-area";
 
 function NotFoundComponent() {
   return (
@@ -136,6 +138,7 @@ function RootComponent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
+    initSafeArea();
     void import("../lib/native-init").then((m) => m.initNativeShell());
   }, []);
 
@@ -143,9 +146,11 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <LanguageProvider>
-        <SwipeBack fallbackTo="/home" disabled={NO_SWIPE_BACK.includes(pathname)}>
-          <Outlet />
-        </SwipeBack>
+        <OfflineGate>
+          <SwipeBack fallbackTo="/home" disabled={NO_SWIPE_BACK.includes(pathname)}>
+            <Outlet />
+          </SwipeBack>
+        </OfflineGate>
       </LanguageProvider>
       <Toaster position="top-center" richColors closeButton />
     </QueryClientProvider>
