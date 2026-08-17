@@ -1,7 +1,7 @@
-// Android WebViews frequently report var(--safe-top) as 0 even when
+// Android WebViews frequently report env(safe-area-inset-top) as 0 even when
 // the status bar is visible, so headers end up under the clock/battery row.
 // We measure the real inset at runtime and expose it as --safe-top-min, then
-// --safe-top = max(var(--safe-top), --safe-top-min).
+// --safe-top = max(env(safe-area-inset-top), --safe-top-min).
 
 const FALLBACK_PX = 28;
 
@@ -20,7 +20,7 @@ function measure(): void {
   // Read whatever the platform reports through the CSS env var.
   const probe = document.createElement("div");
   probe.style.cssText =
-    "position:fixed;top:0;left:0;height:var(--safe-top);width:0;visibility:hidden;pointer-events:none;";
+    "position:fixed;top:0;left:0;height:env(safe-area-inset-top);width:0;visibility:hidden;pointer-events:none;";
   document.body.appendChild(probe);
   const reported = probe.getBoundingClientRect().height;
   probe.remove();
