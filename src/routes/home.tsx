@@ -155,6 +155,12 @@ function HomeDashboard() {
       if (candidatesRef.current.some((c) => c.booking.id === booking.id)) return reject("dup");
       if (booking.assigned_expert_id) return reject("already assigned");
       if (booking.status !== "accepted") return reject(`status=${booking.status}`);
+      if (booking.deleted_at) return reject("deleted");
+      if (booking.dispatch_exhausted_at) return reject("dispatch exhausted");
+      if (booking.created_at) {
+        const ageMs = Date.now() - new Date(booking.created_at).getTime();
+        if (ageMs > BROADCAST_MAX_AGE_MS) return reject(`stale (${Math.round(ageMs / 60000)}min old)`);
+      }
       const myCoords = coordsRef.current;
       if (!myCoords) return reject("no expert coords");
       if (booking.booking_lat == null || booking.booking_lng == null) return reject("no booking coords");
