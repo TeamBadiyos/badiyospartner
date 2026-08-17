@@ -191,22 +191,22 @@ function ProfileScreen() {
       </section>
 
       <section className="mt-6 space-y-2 px-6">
-        <Link to="/skills" className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]">
+        <Link to="/skills" className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4 card-lift">
+          <div className="icon-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
             <Wrench className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1">
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">{t("profile.section.skills")}</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">{t("profile.section.skills")}</p>
             <p className="text-[15px] font-semibold text-foreground">{t("profile.row.mySkills")}</p>
           </div>
           <ChevronRight className="h-5 w-5 text-[color:var(--text-secondary)]" />
         </Link>
-        <Link to="/devices" search={{}} className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]">
+        <Link to="/devices" search={{}} className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4 card-lift">
+          <div className="icon-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
             <Smartphone className="h-5 w-5 text-primary" />
           </div>
           <div className="flex-1">
-            <p className="text-[12px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">{t("profile.section.security")}</p>
+            <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">{t("profile.section.security")}</p>
             <p className="text-[15px] font-semibold text-foreground">{t("profile.row.devices")}</p>
           </div>
           <ChevronRight className="h-5 w-5 text-[color:var(--text-secondary)]" />
@@ -219,12 +219,12 @@ function ProfileScreen() {
 
 
       <section className="mt-6 px-6">
-        <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+        <h3 className="mb-2 text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">
           {t("lang.section")}
         </h3>
-        <div className="rounded-[18px] border border-border bg-card p-4">
+        <div className="rounded-[18px] border border-border bg-card p-4 card-lift">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]">
+            <div className="icon-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
               <Languages className="h-5 w-5 text-primary" />
             </div>
             <p className="text-[15px] font-semibold text-foreground">{t("lang.title")}</p>
@@ -259,7 +259,7 @@ function ProfileScreen() {
       </section>
 
       <section className="mt-6 px-6">
-        <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+        <h3 className="mb-2 text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">
           {t("legal.section")}
         </h3>
         <div className="space-y-2">
@@ -271,9 +271,9 @@ function ProfileScreen() {
               key={slug}
               to="/legal/$slug"
               params={{ slug }}
-              className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4"
+              className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4 card-lift"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]">
+              <div className="icon-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                 <FileText className="h-5 w-5 text-primary" />
               </div>
               <p className="flex-1 text-[15px] font-semibold text-foreground">{label}</p>
@@ -285,12 +285,12 @@ function ProfileScreen() {
 
       {bgStatus && !bgStatus.unavailable && (
         <section className="mt-6 px-6">
-          <h3 className="mb-2 text-[12px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">
+          <h3 className="mb-2 text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">
             {t("profile.bg.section")}
           </h3>
-          <div className="rounded-[18px] border border-border bg-card p-4">
+          <div className="rounded-[18px] border border-border bg-card p-4 card-lift">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]">
+              <div className="icon-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                 <Radio className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
@@ -350,10 +350,10 @@ function ProfileScreen() {
 
 function Row({ Icon, label, value, highlight }: { Icon: React.ComponentType<{ className?: string }>; label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]"><Icon className="h-5 w-5 text-primary" /></div>
+    <div className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4 card-lift">
+      <div className="icon-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-full"><Icon className="h-5 w-5 text-primary" /></div>
       <div className="flex-1">
-        <p className="text-[12px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)]">{label}</p>
+        <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">{label}</p>
         <p className={`text-[15px] font-semibold ${highlight ? "text-primary" : "text-foreground"}`}>{value}</p>
       </div>
     </div>

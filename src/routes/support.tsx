@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExpertSession } from "@/lib/expert-client";
 import { useT } from "@/lib/i18n";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
+import { SectionHeading } from "@/components/section-heading";
 
 export const Route = createFileRoute("/support")({
   head: () => ({
@@ -36,7 +37,7 @@ function SupportScreen() {
   if (loading) return <div className="flex min-h-[100dvh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),2rem)]">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),1rem)]">
       <header className="sticky top-0 z-30 flex items-center gap-3 bg-background px-6 pb-4 pt-[calc(var(--safe-top)+1.5rem)]">
         <Link to="/home" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted">
           <ChevronLeft className="h-6 w-6" />
@@ -45,30 +46,30 @@ function SupportScreen() {
       </header>
 
       <section className="grid grid-cols-2 gap-3 px-6">
-        <a href={`tel:${support}`} className="flex h-24 flex-col items-center justify-center gap-1 rounded-[18px] border border-border bg-card">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]"><Phone className="h-5 w-5 text-primary" /></div>
+        <a href={`tel:${support}`} className="flex h-24 flex-col items-center justify-center gap-1 rounded-[18px] border border-border bg-card card-lift">
+          <div className="icon-tile flex h-10 w-10 items-center justify-center rounded-full"><Phone className="h-5 w-5 text-primary" /></div>
           <span className="text-[13px] font-bold text-foreground">{t("support.call")}</span>
         </a>
-        <a href={`https://wa.me/${support.replace(/[^\d]/g, "")}`} target="_blank" rel="noreferrer" className="flex h-24 flex-col items-center justify-center gap-1 rounded-[18px] border border-border bg-card">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-accent)]"><MessageCircle className="h-5 w-5 text-primary" /></div>
+        <a href={`https://wa.me/${support.replace(/[^\d]/g, "")}`} target="_blank" rel="noreferrer" className="flex h-24 flex-col items-center justify-center gap-1 rounded-[18px] border border-border bg-card card-lift">
+          <div className="icon-tile flex h-10 w-10 items-center justify-center rounded-full"><MessageCircle className="h-5 w-5 text-primary" /></div>
           <span className="text-[13px] font-bold text-foreground">{t("support.whatsapp")}</span>
         </a>
       </section>
 
       <section className="mt-6 px-6">
-        <h2 className="text-[16px] font-bold text-foreground">{t("support.form.title")}</h2>
+        <SectionHeading>{t("support.form.title")}</SectionHeading>
         <form onSubmit={(e) => { hapticImpact("light"); submit(e); }} className="mt-3">
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder={t("support.placeholder")}
             rows={5}
-            className="w-full rounded-[14px] border border-border bg-card p-4 text-[15px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            className="w-full rounded-[14px] border border-border bg-card card-lift p-4 text-[15px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           {err && <p className="mt-2 text-[13px] font-semibold text-[color:var(--color-destructive)]">{err}</p>}
           {state === "sent" && <p className="mt-2 text-[13px] font-semibold text-primary">{t("support.sent")}</p>}
           <button type="submit" disabled={!message.trim() || state === "sending"}
-            className="mt-3 flex h-[52px] w-full items-center justify-center gap-2 rounded-[14px] bg-primary text-[16px] font-bold text-primary-foreground shadow-[var(--shadow-brand-sm)] disabled:opacity-40">
+            className="mt-3 mb-2 flex h-[52px] w-full items-center justify-center gap-2 rounded-[14px] bg-primary text-[16px] font-bold text-primary-foreground shadow-[var(--shadow-brand-sm)] disabled:opacity-40">
             {state === "sending" ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
             {state === "sending" ? t("support.sending") : t("support.submit")}
           </button>

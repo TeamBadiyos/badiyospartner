@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import { useT } from "@/lib/i18n";
 import { PullToRefresh } from "@/components/pull-to-refresh";
+import { SectionHeading } from "@/components/section-heading";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
@@ -51,7 +52,7 @@ function WalletScreen() {
 
   return (
     <PullToRefresh className="relative" onRefresh={() => ledgerQ.refetch()}>
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),2rem)]">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),1rem)]">
       <header className="sticky top-0 z-30 flex items-center gap-3 bg-background px-6 pb-4 pt-[calc(var(--safe-top)+1.5rem)]">
         <Link to="/home" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted">
           <ChevronLeft className="h-6 w-6" />
@@ -60,29 +61,29 @@ function WalletScreen() {
       </header>
 
       <section className="px-6">
-        <div className="rounded-[18px] bg-primary p-6 text-primary-foreground shadow-[var(--shadow-brand-md)]">
-          <p className="text-[13px] font-semibold uppercase tracking-wider opacity-85">{t("wallet.balance.label")}</p>
-          <p className="mt-2 text-[36px] font-bold leading-none">{formatINR(expert?.wallet_balance ?? 0)}</p>
+        <div className="rounded-[18px] bg-primary p-6 text-primary-foreground shadow-[var(--shadow-brand-md)] card-lift">
+          <p className="text-[12px] font-bold uppercase tracking-[0.08em] opacity-85">{t("wallet.balance.label")}</p>
+          <p className="amount-strong mt-2 text-[40px] leading-none">{formatINR(expert?.wallet_balance ?? 0)}</p>
           <p className="mt-2 text-[13px] opacity-85">{t("wallet.balance.note")}</p>
         </div>
       </section>
 
       <section className="mt-6 px-6">
-        <h2 className="text-[16px] font-bold text-foreground">{t("wallet.tx.title")}</h2>
+        <SectionHeading>{t("wallet.tx.title")}</SectionHeading>
         {items.length === 0 ? (
           <p className="mt-4 text-[13px] text-[color:var(--text-secondary)]">{t("wallet.tx.empty")}</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {items.map((tx) => (
-              <li key={tx.id} className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${tx.type === "credit" ? "bg-[color:var(--color-accent)] text-primary" : "bg-red-50 text-red-600"}`}>
+              <li key={tx.id} className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4 card-lift">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${tx.type === "credit" ? "icon-tile text-primary" : "bg-red-50 text-red-600"}`}>
                   {tx.type === "credit" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
                 </div>
                 <div className="flex-1">
                   <p className="text-[14px] font-semibold text-foreground">{formatReason(tx.reason, tx.type, { credit: t("wallet.credit"), debit: t("wallet.debit") })}</p>
                   <p className="text-[12px] text-[color:var(--text-secondary)]">{new Date(tx.created_at).toLocaleString("en-IN")}</p>
                 </div>
-                <span className={`text-[15px] font-bold ${tx.type === "credit" ? "text-primary" : "text-red-600"}`}>
+                <span className={`amount-strong text-[16px] ${tx.type === "credit" ? "text-primary" : "text-red-600"}`}>
                   {tx.type === "credit" ? "+" : "−"}{formatINR(tx.amount)}
                 </span>
               </li>
