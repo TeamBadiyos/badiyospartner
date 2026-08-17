@@ -81,7 +81,7 @@ function DevicesScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background px-6 pt-[max(env(safe-area-inset-top),1.5rem)] pb-[max(env(safe-area-inset-bottom),2rem)]">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background px-6 pt-[max(var(--safe-top),1.5rem)] pb-[max(env(safe-area-inset-bottom),2rem)]">
       <header className="flex items-center gap-3 py-4">
         {!limitMode && (
           <button

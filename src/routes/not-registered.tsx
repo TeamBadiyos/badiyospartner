@@ -16,7 +16,7 @@ function NotRegistered() {
   const t = useT();
   const support = "+918007444464";
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background px-6 pb-[max(env(safe-area-inset-bottom),2rem)] pt-[max(env(safe-area-inset-top),1.5rem)]">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background px-6 pb-[max(env(safe-area-inset-bottom),2rem)] pt-[max(var(--safe-top),1.5rem)]">
       <Link to="/login" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted" aria-label={t("common.back")}>
         <ChevronLeft className="h-6 w-6" />
       </Link>
