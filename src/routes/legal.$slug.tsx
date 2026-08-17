@@ -42,8 +42,8 @@ function LegalScreen() {
   });
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pt-[env(safe-area-inset-top)] pb-[max(env(safe-area-inset-bottom),2rem)]">
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background px-6 pt-6 pb-4">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),2rem)]">
+      <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background px-6 pb-4 pt-[calc(var(--safe-top)+1.5rem)]">
         <button
           type="button"
           onClick={() => router.history.back()}

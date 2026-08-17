@@ -104,7 +104,7 @@ function OtpScreen() {
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-card">
       {/* Gradient header */}
-      <div className="relative flex shrink-0 flex-col items-center justify-center bg-gradient-to-b from-[#0058B0] to-[#0074E4] px-6 pb-10 pt-[max(env(safe-area-inset-top),1.5rem)] text-white">
+      <div className="relative flex shrink-0 flex-col items-center justify-center bg-gradient-to-b from-[#0058B0] to-[#0074E4] px-6 pb-10 pt-[max(var(--safe-top),1.5rem)] text-white">
         <img src={badiyosWhite.url} alt="badiyos" className="h-10 w-auto" />
         <p className="mt-3 text-center text-[15px] font-medium text-white/90">
           {t("otp.heading")}

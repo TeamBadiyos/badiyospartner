@@ -132,8 +132,8 @@ function BookingScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pt-[env(safe-area-inset-top)] pb-[max(env(safe-area-inset-bottom),1.5rem)]">
-      <header className="flex items-center justify-between px-6 pt-6 pb-4">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),1.5rem)]">
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-background px-6 pb-4 pt-[calc(var(--safe-top)+1.5rem)]">
         <Link to="/home" className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted">
           <ChevronLeft className="h-6 w-6" />
         </Link>

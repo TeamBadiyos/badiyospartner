@@ -101,7 +101,7 @@ export function PullToRefresh({
           transition: pull === 0 || refreshing ? "transform 220ms ease, opacity 220ms ease" : "none",
         }}
       >
-        <div className="mt-[env(safe-area-inset-top)] flex h-9 w-9 items-center justify-center rounded-full bg-card shadow-[var(--shadow-card)] ring-1 ring-border">
+        <div className="mt-[var(--safe-top)] flex h-9 w-9 items-center justify-center rounded-full bg-card shadow-[var(--shadow-card)] ring-1 ring-border">
           <Loader2
             className={`h-4 w-4 text-primary ${refreshing ? "animate-spin" : ""}`}
             style={refreshing ? undefined : { transform: `rotate(${progress * 270}deg)` }}

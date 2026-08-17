@@ -66,8 +66,8 @@ function LoginScreen() {
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-card">
       {/* Gradient header */}
-      <div className="relative flex shrink-0 flex-col items-center justify-center bg-gradient-to-b from-[#0058B0] to-[#0074E4] px-6 pb-10 pt-[max(env(safe-area-inset-top),1.5rem)] text-white">
-        <div className="absolute right-4 top-[max(env(safe-area-inset-top),1rem)]">
+      <div className="relative flex shrink-0 flex-col items-center justify-center bg-gradient-to-b from-[#0058B0] to-[#0074E4] px-6 pb-10 pt-[max(var(--safe-top),1.5rem)] text-white">
+        <div className="absolute right-4 top-[max(var(--safe-top),1rem)]">
           <div className="flex rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur-sm">
             {(["en", "mr"] as Lang[]).map((code) => (
               <button

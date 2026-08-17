@@ -80,6 +80,12 @@
   --warning-border: #FCA5A5;
   --warning-strong: #991B1B;
   --warning-icon: #B91C1C;
+
+  /* Runtime-measured status-bar inset (see src/lib/safe-area.ts). Android
+     WebViews report env(safe-area-inset-top) as 0, so we take the larger of
+     the reported inset and the measured fallback. */
+  --safe-top-min: 0px;
+  --safe-top: max(env(safe-area-inset-top), var(--safe-top-min));
 }
 
 @layer base {
