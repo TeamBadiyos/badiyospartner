@@ -477,8 +477,8 @@ function HomeDashboard() {
 
   return (
     <PullToRefresh className="relative" onRefresh={onPullRefresh}>
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pt-[env(safe-area-inset-top)] pb-[calc(env(safe-area-inset-bottom)+6rem)]">
-      <header className="flex items-center justify-between px-6 pt-6 pb-4">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)]">
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-background px-6 pb-4 pt-[calc(var(--safe-top)+1.5rem)]">
         <img src={badiyosBlue.url} alt="badiyos" className="h-7 w-auto" />
         <div className="flex items-center gap-2">
           <Link
