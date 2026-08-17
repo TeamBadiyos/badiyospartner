@@ -159,3 +159,26 @@
     user-select: none;
   }
 }
+
+/* --- Visual polish utilities (blue brand) --- */
+@utility card-lift {
+  box-shadow: var(--shadow-m);
+}
+
+@utility icon-tile {
+  background-image: var(--gradient-icon);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7),
+              0 2px 6px -2px color-mix(in oklab, var(--primary) 35%, transparent);
+}
+
+@utility icon-tile-strong {
+  background-image: var(--gradient-icon-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7),
+              0 4px 12px -4px color-mix(in oklab, var(--primary) 45%, transparent);
+}
+
+@utility amount-strong {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
