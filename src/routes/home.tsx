@@ -263,10 +263,13 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id",
+          "id, status, service_duration_minutes, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at",
         )
         .eq("status", "accepted")
         .is("assigned_expert_id", null)
+        .is("deleted_at", null)
+        .is("dispatch_exhausted_at", null)
+        .gte("created_at", new Date(Date.now() - BROADCAST_MAX_AGE_MS).toISOString())
         .limit(50);
       if (cancelled) return;
       if (error) {
