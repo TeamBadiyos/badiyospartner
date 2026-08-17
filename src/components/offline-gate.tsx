@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { WifiOff, Loader2 } from "lucide-react";
 
 /**
@@ -25,6 +25,8 @@ async function probeReachability(): Promise<boolean> {
 export function OfflineGate({ children }: { children: React.ReactNode }) {
   const [offline, setOffline] = useState(false);
   const [checking, setChecking] = useState(false);
+  const offlineRef = useRef(false);
+  offlineRef.current = offline;
 
   const check = useCallback(async () => {
     setChecking(true);
@@ -71,12 +73,7 @@ export function OfflineGate({ children }: { children: React.ReactNode }) {
       window.removeEventListener("offline", onOffline);
       removeNetworkListener?.();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [check]);
-
-  // Keep the latest value readable inside the interval without resubscribing.
-  const offlineRef = useState(() => ({ current: false }))[0];
-  offlineRef.current = offline;
 
   if (!offline) return <>{children}</>;
 
