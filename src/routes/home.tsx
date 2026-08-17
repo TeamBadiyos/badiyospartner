@@ -44,7 +44,15 @@ type BroadcastBooking = {
   booking_lat: number | null;
   booking_lng: number | null;
   assigned_expert_id: string | null;
+  created_at?: string | null;
+  deleted_at?: string | null;
+  dispatch_exhausted_at?: string | null;
 };
+
+// Only bookings created within this window are treated as live broadcasts.
+// Prevents stale/undelivered rows from popping up when an expert goes online.
+const BROADCAST_MAX_AGE_MS = 30 * 60_000;
+
 
 type BroadcastCandidate = {
   booking: BroadcastBooking;
@@ -147,6 +155,12 @@ function HomeDashboard() {
       if (candidatesRef.current.some((c) => c.booking.id === booking.id)) return reject("dup");
       if (booking.assigned_expert_id) return reject("already assigned");
       if (booking.status !== "accepted") return reject(`status=${booking.status}`);
+      if (booking.deleted_at) return reject("deleted");
+      if (booking.dispatch_exhausted_at) return reject("dispatch exhausted");
+      if (booking.created_at) {
+        const ageMs = Date.now() - new Date(booking.created_at).getTime();
+        if (ageMs > BROADCAST_MAX_AGE_MS) return reject(`stale (${Math.round(ageMs / 60000)}min old)`);
+      }
       const myCoords = coordsRef.current;
       if (!myCoords) return reject("no expert coords");
       if (booking.booking_lat == null || booking.booking_lng == null) return reject("no booking coords");
@@ -249,10 +263,13 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id",
+          "id, status, service_duration_minutes, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at",
         )
         .eq("status", "accepted")
         .is("assigned_expert_id", null)
+        .is("deleted_at", null)
+        .is("dispatch_exhausted_at", null)
+        .gte("created_at", new Date(Date.now() - BROADCAST_MAX_AGE_MS).toISOString())
         .limit(50);
       if (cancelled) return;
       if (error) {
@@ -286,7 +303,9 @@ function HomeDashboard() {
     if (!online || isBusy) {
       candidatesRef.current.forEach((c) => c.soundHandle.stop());
       setCandidates([]);
-      dismissedRef.current.clear();
+      // Keep dismissedRef intact: a booking dismissed earlier must not be
+      // re-offered just because the expert toggled offline/online again.
+
     }
   }, [online, isBusy]);
   useEffect(() => () => stopAllNotificationLoops(), []);
