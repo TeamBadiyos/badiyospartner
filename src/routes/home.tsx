@@ -201,14 +201,19 @@ function HomeDashboard() {
         const addr = Array.isArray(addrRows) ? addrRows[0] : addrRows;
         if (addr) address = { full_address: addr.full_address, area: addr.area, city: addr.city };
       }
-      const soundHandle = startNotificationLoop();
+      const wasDismissed = dismissedRef.current.has(booking.id);
+      const soundHandle = wasDismissed ? { stop: () => {} } : startNotificationLoop();
       setCandidates((prev) => {
         if (prev.some((c) => c.booking.id === booking.id)) {
           soundHandle.stop();
           return prev;
         }
-        return [...prev, { booking, address, distanceKm, soundHandle }];
+        return [
+          ...prev,
+          { booking, address, distanceKm, soundHandle, dismissed: wasDismissed, addedAt: Date.now() },
+        ];
       });
+
     },
     [online, isBusy, radiusKm],
   );
