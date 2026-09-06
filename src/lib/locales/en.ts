@@ -31,6 +31,8 @@ export const en = {
   "home.nav.wallet": "Wallet",
   "home.nav.rewards": "Rewards",
   "home.nav.help": "Help",
+  "home.toast.forcedOffline": "You were set offline. Turn availability back on to receive jobs.",
+  "home.broadcast.listTitle": "Job requests near you",
   "home.broadcast.badge": "New booking request",
   "home.broadcast.dismiss": "Dismiss",
   "home.broadcast.accept": "Accept",

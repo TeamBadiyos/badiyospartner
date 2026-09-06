@@ -89,7 +89,15 @@ export function useExpert(authUserId: string | null) {
   return useQuery({
     queryKey: ["expert", authUserId],
     enabled: !!authUserId,
+    // Re-sync with the backend regularly so a staff "Force offline" or the
+    // stale-online sweeper is reflected in the app instead of the client
+    // holding on to a stale "online" state.
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: "always",
+    refetchOnMount: "always",
     queryFn: async () => {
+
       const { data, error } = await supabase
         .from("experts")
         .select(

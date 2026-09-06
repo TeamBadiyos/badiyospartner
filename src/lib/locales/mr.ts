@@ -32,6 +32,8 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "home.nav.wallet": "वॉलेट",
   "home.nav.rewards": "बक्षिसे",
   "home.nav.help": "मदत",
+  "home.toast.forcedOffline": "तुम्हाला ऑफलाइन करण्यात आले आहे. कामे मिळवण्यासाठी उपलब्धता पुन्हा सुरू करा.",
+  "home.broadcast.listTitle": "तुमच्या जवळील कामाच्या विनंत्या",
   "home.broadcast.badge": "नवीन बुकिंग विनंती",
   "home.broadcast.dismiss": "नाकारा",
   "home.broadcast.accept": "स्वीकारा",

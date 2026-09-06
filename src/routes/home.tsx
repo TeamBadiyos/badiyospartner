@@ -59,7 +59,11 @@ type BroadcastCandidate = {
   address: { full_address: string | null; area: string | null; city: string | null } | null;
   distanceKm: number;
   soundHandle: { stop: () => void };
+  /** Deprioritized by the expert — stays in the list, sorted to the bottom. */
+  dismissed: boolean;
+  addedAt: number;
 };
+
 
 function HomeDashboard() {
   const { loading, userId } = useExpertSession();
@@ -139,10 +143,19 @@ function HomeDashboard() {
     });
   }, []);
 
+  // "Dismiss" only deprioritizes: the booking stays eligible and visible,
+  // sorted to the bottom of the list. It is never permanently removed here.
   const dismissCandidate = useCallback((bookingId: string) => {
     dismissedRef.current.add(bookingId);
-    removeCandidate(bookingId);
-  }, [removeCandidate]);
+    setCandidates((prev) =>
+      prev.map((c) => {
+        if (c.booking.id !== bookingId || c.dismissed) return c;
+        c.soundHandle.stop();
+        return { ...c, dismissed: true };
+      }),
+    );
+  }, []);
+
 
   const evaluateBooking = useCallback(
     async (booking: BroadcastBooking) => {
@@ -151,7 +164,9 @@ function HomeDashboard() {
       };
       if (!online) return reject("offline");
       if (isBusy) return reject("isBusy");
-      if (dismissedRef.current.has(booking.id)) return reject("dismissed");
+      // NOTE: previously-dismissed bookings are still eligible — they simply
+      // render at the bottom of the list (see `dismissed` flag below).
+
       if (candidatesRef.current.some((c) => c.booking.id === booking.id)) return reject("dup");
       if (booking.assigned_expert_id) return reject("already assigned");
       if (booking.status !== "accepted") return reject(`status=${booking.status}`);
@@ -186,14 +201,19 @@ function HomeDashboard() {
         const addr = Array.isArray(addrRows) ? addrRows[0] : addrRows;
         if (addr) address = { full_address: addr.full_address, area: addr.area, city: addr.city };
       }
-      const soundHandle = startNotificationLoop();
+      const wasDismissed = dismissedRef.current.has(booking.id);
+      const soundHandle = wasDismissed ? { stop: () => {} } : startNotificationLoop();
       setCandidates((prev) => {
         if (prev.some((c) => c.booking.id === booking.id)) {
           soundHandle.stop();
           return prev;
         }
-        return [...prev, { booking, address, distanceKm, soundHandle }];
+        return [
+          ...prev,
+          { booking, address, distanceKm, soundHandle, dismissed: wasDismissed, addedAt: Date.now() },
+        ];
       });
+
     },
     [online, isBusy, radiusKm],
   );
@@ -309,6 +329,23 @@ function HomeDashboard() {
     }
   }, [online, isBusy]);
   useEffect(() => () => stopAllNotificationLoops(), []);
+
+  // Backend is the source of truth for availability. If staff force the expert
+  // offline (or the stale-online sweeper does), the next status sync flips
+  // `online` to false here — stop the background service and tell the expert.
+  const prevOnlineRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (expert === undefined) return;
+    const was = prevOnlineRef.current;
+    prevOnlineRef.current = online;
+    if (was === true && online === false && !toggle.isPending) {
+      void stopBackgroundAvailabilityService();
+      toast.info(t("home.toast.forcedOffline"));
+    }
+    if (!online) void stopBackgroundAvailabilityService();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online, expert === undefined]);
+
 
   // Periodic re-verification: RLS hides UPDATE events for bookings claimed by
   // other experts (row no longer matches the public unassigned policy), so
@@ -494,6 +531,15 @@ function HomeDashboard() {
 
   const assigned = assignedQ.data;
 
+  // Newest first; dismissed items sink to the bottom but stay acceptable.
+  const sortedCandidates = [...candidates].sort((a, b) => {
+    if (a.dismissed !== b.dismissed) return a.dismissed ? 1 : -1;
+    const at = a.booking.created_at ? new Date(a.booking.created_at).getTime() : a.addedAt;
+    const bt = b.booking.created_at ? new Date(b.booking.created_at).getTime() : b.addedAt;
+    return bt - at;
+  });
+
+
   return (
     <PullToRefresh className="relative" onRefresh={onPullRefresh}>
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)]">
@@ -656,6 +702,84 @@ function HomeDashboard() {
             </div>
           </button>
         </section>
+      ) : sortedCandidates.length > 0 ? (
+        <section className="mt-6 flex-1 px-6">
+          <h2 className="mb-3 text-[16px] font-bold text-foreground">
+            {t("home.broadcast.listTitle")} ({sortedCandidates.length})
+          </h2>
+          <ul className="flex flex-col gap-3 pb-4">
+            {sortedCandidates.map((c) => (
+              <li key={c.booking.id}>
+                <SwipeToDismiss
+                  onDismiss={() => dismissCandidate(c.booking.id)}
+                  className={`rounded-[18px] border border-border bg-card p-5 card-lift transition ${
+                    c.dismissed ? "opacity-70" : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+                      {t("home.broadcast.badge")}
+                    </span>
+                    {!c.dismissed && (
+                      <button
+                        type="button"
+                        aria-label="Dismiss"
+                        onClick={() => dismissCandidate(c.booking.id)}
+                        className="rounded-full p-1 text-[color:var(--text-secondary)] hover:bg-[color:var(--divider)]"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-[15px] font-bold text-foreground">
+                    <Clock className="h-4 w-4 text-primary" />
+                    {t("home.card.service", { minutes: c.booking.service_duration_minutes ?? "—" })}
+                    {c.booking.scheduled_time_slot ? ` · ${c.booking.scheduled_time_slot}` : ""}
+                  </div>
+                  <div className="mt-3 flex items-start gap-2 rounded-[14px] bg-[color:var(--divider)] p-3">
+                    <MapPin className="mt-0.5 h-4 w-4 text-primary" />
+                    <div className="text-[13px] leading-snug text-foreground">
+                      <p className="font-semibold">{c.address?.full_address ?? t("home.broadcast.address")}</p>
+                      {(c.address?.area || c.address?.city) && (
+                        <p className="text-[color:var(--text-secondary)]">
+                          {[c.address?.area, c.address?.city].filter(Boolean).join(", ")}
+                        </p>
+                      )}
+                      <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-secondary)]">
+                        {c.distanceKm < 0.1 ? t("home.broadcast.nearby") : t("home.broadcast.kmAway", { km: c.distanceKm.toFixed(2) })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-3">
+                    {!c.dismissed && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          hapticImpact("light");
+                          dismissCandidate(c.booking.id);
+                        }}
+                        className="h-[52px] flex-1 rounded-[14px] border border-border bg-card text-[15px] font-bold text-foreground"
+                      >
+                        {t("home.broadcast.dismiss")}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={acceptBroadcast.isPending && acceptBroadcast.variables === c.booking.id}
+                      onClick={() => {
+                        hapticNotification("success");
+                        acceptBroadcast.mutate(c.booking.id);
+                      }}
+                      className="h-[52px] flex-[1.4] rounded-[14px] bg-primary text-[15px] font-bold text-white disabled:opacity-60"
+                    >
+                      {acceptBroadcast.isPending && acceptBroadcast.variables === c.booking.id ? t("home.broadcast.accepting") : t("home.broadcast.accept")}
+                    </button>
+                  </div>
+                </SwipeToDismiss>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : (
         <section className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
           <div className="icon-tile-strong flex h-20 w-20 items-center justify-center rounded-full">
@@ -672,6 +796,7 @@ function HomeDashboard() {
         </section>
       )}
 
+
       <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto grid w-full max-w-md grid-cols-4 gap-2 border-t border-border bg-background px-6 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
         {[
           { to: "/history" as const, label: t("home.nav.history"), Icon: History },
@@ -686,78 +811,6 @@ function HomeDashboard() {
         ))}
       </nav>
 
-      {/* Broadcast overlay stack — scrolls within available space above the bottom nav */}
-      {candidates.length > 0 && (
-        <div className="fixed inset-0 z-40 flex flex-col justify-end bg-[rgba(34,40,49,0.55)] backdrop-blur-sm">
-          <div className="mx-auto flex w-full max-w-md flex-col gap-3 overflow-y-auto p-4 pb-[calc(env(safe-area-inset-bottom)+7.5rem)]" style={{ maxHeight: "100dvh" }}>
-
-            {candidates.map((c) => (
-              <SwipeToDismiss
-                key={c.booking.id}
-                onDismiss={() => dismissCandidate(c.booking.id)}
-                className="rounded-[18px] border border-border bg-card p-5 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.4)] animate-in slide-in-from-bottom-4"
-              >
-                <div className="flex items-start justify-between">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
-                    {t("home.broadcast.badge")}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label="Dismiss"
-                    onClick={() => dismissCandidate(c.booking.id)}
-                    className="rounded-full p-1 text-[color:var(--text-secondary)] hover:bg-[color:var(--divider)]"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="mt-3 flex items-center gap-2 text-[15px] font-bold text-foreground">
-                  <Clock className="h-4 w-4 text-primary" />
-                  {t("home.card.service", { minutes: c.booking.service_duration_minutes ?? "—" })}
-                  {c.booking.scheduled_time_slot ? ` · ${c.booking.scheduled_time_slot}` : ""}
-                </div>
-                <div className="mt-3 flex items-start gap-2 rounded-[14px] bg-[color:var(--divider)] p-3">
-                  <MapPin className="mt-0.5 h-4 w-4 text-primary" />
-                  <div className="text-[13px] leading-snug text-foreground">
-                    <p className="font-semibold">{c.address?.full_address ?? t("home.broadcast.address")}</p>
-                    {(c.address?.area || c.address?.city) && (
-                      <p className="text-[color:var(--text-secondary)]">
-                        {[c.address?.area, c.address?.city].filter(Boolean).join(", ")}
-                      </p>
-                    )}
-                    <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-secondary)]">
-                      {c.distanceKm < 0.1 ? t("home.broadcast.nearby") : t("home.broadcast.kmAway", { km: c.distanceKm.toFixed(2) })}
-                    </p>
-
-                  </div>
-                </div>
-                <div className="mt-4 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      hapticImpact("light");
-                      dismissCandidate(c.booking.id);
-                    }}
-                    className="h-[52px] flex-1 rounded-[14px] border border-border bg-card text-[15px] font-bold text-foreground"
-                  >
-                    {t("home.broadcast.dismiss")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={acceptBroadcast.isPending && acceptBroadcast.variables === c.booking.id}
-                    onClick={() => {
-                      hapticNotification("success");
-                      acceptBroadcast.mutate(c.booking.id);
-                    }}
-                    className="h-[52px] flex-[1.4] rounded-[14px] bg-primary text-[15px] font-bold text-white disabled:opacity-60"
-                  >
-                    {acceptBroadcast.isPending && acceptBroadcast.variables === c.booking.id ? t("home.broadcast.accepting") : t("home.broadcast.accept")}
-                  </button>
-                </div>
-              </SwipeToDismiss>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
     </PullToRefresh>
   );

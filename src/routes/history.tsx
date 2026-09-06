@@ -33,16 +33,32 @@ function HistoryScreen() {
     refetchOnMount: "always",
     refetchOnWindowFocus: "always",
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("id, status, price, service_duration_minutes, created_at, updated_at")
-        .eq("assigned_expert_id", expert!.id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data ?? [];
+      const [bookingsRes, ledgerRes] = await Promise.all([
+        supabase
+          .from("bookings")
+          .select("id, status, service_duration_minutes, created_at, updated_at")
+          .eq("assigned_expert_id", expert!.id)
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("wallet_ledger")
+          .select("amount, type, reason")
+          .eq("owner_type", "expert")
+          .eq("owner_id", expert!.id)
+          .eq("type", "credit")
+          .like("reason", "Booking payout:%")
+          .limit(500),
+      ]);
+      if (bookingsRes.error) throw bookingsRes.error;
+      const payouts = new Map<string, number>();
+      for (const row of ledgerRes.data ?? []) {
+        const m = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(row.reason ?? "");
+        if (m) payouts.set(m[1], (payouts.get(m[1]) ?? 0) + Number(row.amount ?? 0));
+      }
+      return (bookingsRes.data ?? []).map((b) => ({ ...b, payout: payouts.get(b.id) ?? null }));
     },
   });
+
 
   // Refetch whenever the app returns to foreground (screen unlock / app switch)
   // so a booking created while the app was backgrounded shows up without the
@@ -107,7 +123,12 @@ function HistoryScreen() {
                   }`}>
                     {STATUS_KEYS.has(b.status) ? t(`history.status.${b.status}` as TranslationKey) : b.status.replace("_", " ")}
                   </span>
-                  <span className="amount-strong text-[18px] text-foreground">{formatINR(b.price)}</span>
+                  {b.payout != null ? (
+                    <span className="amount-strong text-[18px] text-foreground">{formatINR(b.payout)}</span>
+                  ) : (
+                    <span className="text-[13px] font-semibold text-[color:var(--text-secondary)]">—</span>
+                  )}
+
                 </div>
                 <p className="mt-2 text-[15px] font-semibold text-foreground">{t("history.service", { minutes: b.service_duration_minutes })}</p>
                 <p className="mt-1 text-[12px] text-[color:var(--text-secondary)]">{b.created_at ? new Date(b.created_at).toLocaleString("en-IN") : ""}</p>
