@@ -59,7 +59,11 @@ type BroadcastCandidate = {
   address: { full_address: string | null; area: string | null; city: string | null } | null;
   distanceKm: number;
   soundHandle: { stop: () => void };
+  /** Deprioritized by the expert — stays in the list, sorted to the bottom. */
+  dismissed: boolean;
+  addedAt: number;
 };
+
 
 function HomeDashboard() {
   const { loading, userId } = useExpertSession();
