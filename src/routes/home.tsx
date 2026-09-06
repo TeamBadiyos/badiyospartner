@@ -330,6 +330,23 @@ function HomeDashboard() {
   }, [online, isBusy]);
   useEffect(() => () => stopAllNotificationLoops(), []);
 
+  // Backend is the source of truth for availability. If staff force the expert
+  // offline (or the stale-online sweeper does), the next status sync flips
+  // `online` to false here — stop the background service and tell the expert.
+  const prevOnlineRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (expert === undefined) return;
+    const was = prevOnlineRef.current;
+    prevOnlineRef.current = online;
+    if (was === true && online === false && !toggle.isPending) {
+      void stopBackgroundAvailabilityService();
+      toast.info(t("home.toast.forcedOffline"));
+    }
+    if (!online) void stopBackgroundAvailabilityService();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online, expert === undefined]);
+
+
   // Periodic re-verification: RLS hides UPDATE events for bookings claimed by
   // other experts (row no longer matches the public unassigned policy), so
   // realtime never tells us they were taken. Poll the currently-displayed
