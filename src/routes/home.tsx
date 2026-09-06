@@ -514,6 +514,15 @@ function HomeDashboard() {
 
   const assigned = assignedQ.data;
 
+  // Newest first; dismissed items sink to the bottom but stay acceptable.
+  const sortedCandidates = [...candidates].sort((a, b) => {
+    if (a.dismissed !== b.dismissed) return a.dismissed ? 1 : -1;
+    const at = a.booking.created_at ? new Date(a.booking.created_at).getTime() : a.addedAt;
+    const bt = b.booking.created_at ? new Date(b.booking.created_at).getTime() : b.addedAt;
+    return bt - at;
+  });
+
+
   return (
     <PullToRefresh className="relative" onRefresh={onPullRefresh}>
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)]">
