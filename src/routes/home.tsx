@@ -143,10 +143,19 @@ function HomeDashboard() {
     });
   }, []);
 
+  // "Dismiss" only deprioritizes: the booking stays eligible and visible,
+  // sorted to the bottom of the list. It is never permanently removed here.
   const dismissCandidate = useCallback((bookingId: string) => {
     dismissedRef.current.add(bookingId);
-    removeCandidate(bookingId);
-  }, [removeCandidate]);
+    setCandidates((prev) =>
+      prev.map((c) => {
+        if (c.booking.id !== bookingId || c.dismissed) return c;
+        c.soundHandle.stop();
+        return { ...c, dismissed: true };
+      }),
+    );
+  }, []);
+
 
   const evaluateBooking = useCallback(
     async (booking: BroadcastBooking) => {
