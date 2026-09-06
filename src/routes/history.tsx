@@ -123,7 +123,12 @@ function HistoryScreen() {
                   }`}>
                     {STATUS_KEYS.has(b.status) ? t(`history.status.${b.status}` as TranslationKey) : b.status.replace("_", " ")}
                   </span>
-                  <span className="amount-strong text-[18px] text-foreground">{formatINR(b.price)}</span>
+                  {b.payout != null ? (
+                    <span className="amount-strong text-[18px] text-foreground">{formatINR(b.payout)}</span>
+                  ) : (
+                    <span className="text-[13px] font-semibold text-[color:var(--text-secondary)]">—</span>
+                  )}
+
                 </div>
                 <p className="mt-2 text-[15px] font-semibold text-foreground">{t("history.service", { minutes: b.service_duration_minutes })}</p>
                 <p className="mt-1 text-[12px] text-[color:var(--text-secondary)]">{b.created_at ? new Date(b.created_at).toLocaleString("en-IN") : ""}</p>
