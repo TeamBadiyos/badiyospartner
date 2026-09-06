@@ -164,7 +164,9 @@ function HomeDashboard() {
       };
       if (!online) return reject("offline");
       if (isBusy) return reject("isBusy");
-      if (dismissedRef.current.has(booking.id)) return reject("dismissed");
+      // NOTE: previously-dismissed bookings are still eligible — they simply
+      // render at the bottom of the list (see `dismissed` flag below).
+
       if (candidatesRef.current.some((c) => c.booking.id === booking.id)) return reject("dup");
       if (booking.assigned_expert_id) return reject("already assigned");
       if (booking.status !== "accepted") return reject(`status=${booking.status}`);
