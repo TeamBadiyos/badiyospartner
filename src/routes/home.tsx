@@ -685,6 +685,84 @@ function HomeDashboard() {
             </div>
           </button>
         </section>
+      ) : sortedCandidates.length > 0 ? (
+        <section className="mt-6 flex-1 px-6">
+          <h2 className="mb-3 text-[16px] font-bold text-foreground">
+            {t("home.broadcast.listTitle")} ({sortedCandidates.length})
+          </h2>
+          <ul className="flex flex-col gap-3 pb-4">
+            {sortedCandidates.map((c) => (
+              <li key={c.booking.id}>
+                <SwipeToDismiss
+                  onDismiss={() => dismissCandidate(c.booking.id)}
+                  className={`rounded-[18px] border border-border bg-card p-5 card-lift transition ${
+                    c.dismissed ? "opacity-70" : ""
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+                      {t("home.broadcast.badge")}
+                    </span>
+                    {!c.dismissed && (
+                      <button
+                        type="button"
+                        aria-label="Dismiss"
+                        onClick={() => dismissCandidate(c.booking.id)}
+                        className="rounded-full p-1 text-[color:var(--text-secondary)] hover:bg-[color:var(--divider)]"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center gap-2 text-[15px] font-bold text-foreground">
+                    <Clock className="h-4 w-4 text-primary" />
+                    {t("home.card.service", { minutes: c.booking.service_duration_minutes ?? "—" })}
+                    {c.booking.scheduled_time_slot ? ` · ${c.booking.scheduled_time_slot}` : ""}
+                  </div>
+                  <div className="mt-3 flex items-start gap-2 rounded-[14px] bg-[color:var(--divider)] p-3">
+                    <MapPin className="mt-0.5 h-4 w-4 text-primary" />
+                    <div className="text-[13px] leading-snug text-foreground">
+                      <p className="font-semibold">{c.address?.full_address ?? t("home.broadcast.address")}</p>
+                      {(c.address?.area || c.address?.city) && (
+                        <p className="text-[color:var(--text-secondary)]">
+                          {[c.address?.area, c.address?.city].filter(Boolean).join(", ")}
+                        </p>
+                      )}
+                      <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-secondary)]">
+                        {c.distanceKm < 0.1 ? t("home.broadcast.nearby") : t("home.broadcast.kmAway", { km: c.distanceKm.toFixed(2) })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-3">
+                    {!c.dismissed && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          hapticImpact("light");
+                          dismissCandidate(c.booking.id);
+                        }}
+                        className="h-[52px] flex-1 rounded-[14px] border border-border bg-card text-[15px] font-bold text-foreground"
+                      >
+                        {t("home.broadcast.dismiss")}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={acceptBroadcast.isPending && acceptBroadcast.variables === c.booking.id}
+                      onClick={() => {
+                        hapticNotification("success");
+                        acceptBroadcast.mutate(c.booking.id);
+                      }}
+                      className="h-[52px] flex-[1.4] rounded-[14px] bg-primary text-[15px] font-bold text-white disabled:opacity-60"
+                    >
+                      {acceptBroadcast.isPending && acceptBroadcast.variables === c.booking.id ? t("home.broadcast.accepting") : t("home.broadcast.accept")}
+                    </button>
+                  </div>
+                </SwipeToDismiss>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : (
         <section className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">
           <div className="icon-tile-strong flex h-20 w-20 items-center justify-center rounded-full">
@@ -700,6 +778,7 @@ function HomeDashboard() {
           </p>
         </section>
       )}
+
 
       <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto grid w-full max-w-md grid-cols-4 gap-2 border-t border-border bg-background px-6 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
         {[
