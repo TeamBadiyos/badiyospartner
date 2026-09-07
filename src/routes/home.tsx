@@ -425,6 +425,13 @@ function HomeDashboard() {
     mutationFn: async (next: boolean) => {
       try {
         if (next) {
+          // Permission can be granted while the phone's Location toggle is OFF.
+          // Detect that first and refuse to go online.
+          if (!(await isDeviceLocationEnabled())) {
+            const e = new Error("Location services are off") as Error & { code?: string };
+            e.code = "GPS_OFF";
+            throw e;
+          }
           // Outer safety net: whatever hangs — permission dialog, GPS fix,
           // or the RPC — this guarantees the mutation settles in ≤20s so the
           // UI can never stay in "Updating…" forever.
