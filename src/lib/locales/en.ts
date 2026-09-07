@@ -49,6 +49,12 @@ export const en = {
 
   "home.location.openSettings": "Open Settings",
   "home.location.dismiss": "Not now",
+  "home.gps.offTitle": "Location services are off",
+  "home.gps.offBody":
+    "Location services are turned off. Please enable Location in your phone settings to receive nearby bookings.",
+  "home.gps.offOnlineBody":
+    "Location is turned off, so you won’t receive nearby bookings. You’ve been set offline — turn Location on and tap to go online again.",
+  "home.gps.openLocationSettings": "Open Location settings",
   "home.toast.locationPermission": "Couldn't get your location — check permissions and try again.",
   "home.toast.locationTimeout": "Couldn't get your location — move to an open area and try again.",
   "home.toast.statusFailed": "Could not update your status.",
