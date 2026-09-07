@@ -322,8 +322,8 @@ public class BackgroundAvailabilityService extends Service {
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0, openApp, piFlags);
 
         Notification n = new NotificationCompat.Builder(this, STATUS_CHANNEL_ID)
-            .setContentTitle("badiyos Expert — Online")
-            .setContentText("You're receiving nearby job alerts")
+            .setContentTitle(title)
+            .setContentText(text)
             .setSmallIcon(android.R.drawable.presence_online)
             .setOngoing(true)
             .setAutoCancel(false)
