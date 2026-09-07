@@ -425,6 +425,13 @@ function HomeDashboard() {
     mutationFn: async (next: boolean) => {
       try {
         if (next) {
+          // Permission can be granted while the phone's Location toggle is OFF.
+          // Detect that first and refuse to go online.
+          if (!(await isDeviceLocationEnabled())) {
+            const e = new Error("Location services are off") as Error & { code?: string };
+            e.code = "GPS_OFF";
+            throw e;
+          }
           // Outer safety net: whatever hangs — permission dialog, GPS fix,
           // or the RPC — this guarantees the mutation settles in ≤20s so the
           // UI can never stay in "Updating…" forever.
@@ -471,10 +478,15 @@ function HomeDashboard() {
     },
     onSuccess: () => {
       setLocationBlocked(false);
+      setGpsOff(false);
       qc.invalidateQueries({ queryKey: ["expert", userId] });
     },
     onError: (err: Error) => {
       const msg = err.message || "";
+      if ((err as Error & { code?: string }).code === "GPS_OFF") {
+        setGpsOff(true);
+        return;
+      }
       if (isLocationBlockedError(err)) {
         setLocationBlocked(true);
         return;
@@ -488,6 +500,38 @@ function HomeDashboard() {
       }
     },
   });
+
+  // Mid-session watchdog: the expert can switch the phone's Location toggle off
+  // after going online. Poll every 20s (and on app resume) and, when it's off,
+  // set them offline so dispatch never treats them as reachable.
+  useEffect(() => {
+    if (!online) return;
+    let cancelled = false;
+    const check = async () => {
+      const enabled = await isDeviceLocationEnabled();
+      if (cancelled) return;
+      if (enabled) {
+        setGpsOff(false);
+        return;
+      }
+      setGpsOff(true);
+      await stopBackgroundAvailabilityService();
+      const { error } = await supabase.rpc("expert_set_online", { _online: false });
+      if (error) console.warn("[expert][gps-watchdog] set offline failed", error);
+      qc.invalidateQueries({ queryKey: ["expert", userId] });
+    };
+    void check();
+    const interval = window.setInterval(() => void check(), 20_000);
+    const onVis = () => {
+      if (!document.hidden) void check();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [online, qc, userId]);
 
 
   const acceptBroadcast = useMutation({
@@ -578,6 +622,29 @@ function HomeDashboard() {
           </Link>
         </div>
       </header>
+
+      {gpsOff && (
+        <section className="px-6 pb-4">
+          <div className="rounded-[18px] border border-[color:var(--color-destructive)]/30 bg-[color:var(--color-destructive)]/5 p-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-[color:var(--color-destructive)]" />
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-foreground">{t("home.gps.offTitle")}</p>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  {online ? t("home.gps.offOnlineBody") : t("home.gps.offBody")}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { hapticImpact("light"); void openDeviceLocationSettings(); }}
+              className="mt-3 flex h-11 w-full items-center justify-center rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground"
+            >
+              {t("home.gps.openLocationSettings")}
+            </button>
+          </div>
+        </section>
+      )}
 
 
       {locationBlocked && (
