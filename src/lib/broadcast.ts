@@ -204,20 +204,28 @@ export function useExpertLocationTracking(enabled: boolean): LocationTracker {
   const ensureFix = useCallback(async (): Promise<Coords> => {
     setState((prev) => (prev.status === "ok" ? prev : { status: "requesting" }));
     try {
-      const pos = await getCurrentPositionOnce();
+      const pos = await getCurrentPositionOnce(true);
       const coords = applyPosition(pos);
       await withTimeout(pushLocation(coords), 10_000, "pushLocation");
       setLastPushedAt(Date.now());
       return coords;
     } catch (err) {
       applyError(err as GeolocationPositionError | Error);
-      const message =
-        (err as GeolocationPositionError).code === 1
-          ? "Location permission denied. Enable location access to receive bookings."
-          : (err as Error).message || "Could not get your location";
-      throw new Error(message);
+      const code = (err as { code?: string | number }).code;
+      if (code === LOCATION_BLOCKED || code === LOCATION_DENIED) throw err;
+      // Browser PERMISSION_DENIED (code 1) — on native this means the WebView
+      // itself was refused even though the OS grant looked fine: treat as blocked.
+      if (code === 1) {
+        setState({ status: "denied" });
+        throw permError(
+          LOCATION_BLOCKED,
+          "Location permission is blocked. Enable it in Settings to go online.",
+        );
+      }
+      throw new Error((err as Error).message || "Could not get your location");
     }
   }, [applyPosition, applyError]);
+
 
   // Track page visibility so we can pause tracking while hidden (backgrounded
   // OR screen locked). On Android, screen lock reliably fires visibilitychange
