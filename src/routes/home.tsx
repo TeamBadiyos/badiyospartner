@@ -623,6 +623,29 @@ function HomeDashboard() {
         </div>
       </header>
 
+      {gpsOff && (
+        <section className="px-6 pb-4">
+          <div className="rounded-[18px] border border-[color:var(--color-destructive)]/30 bg-[color:var(--color-destructive)]/5 p-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-5 w-5 text-[color:var(--color-destructive)]" />
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-foreground">{t("home.gps.offTitle")}</p>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  {online ? t("home.gps.offOnlineBody") : t("home.gps.offBody")}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { hapticImpact("light"); void openDeviceLocationSettings(); }}
+              className="mt-3 flex h-11 w-full items-center justify-center rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground"
+            >
+              {t("home.gps.openLocationSettings")}
+            </button>
+          </div>
+        </section>
+      )}
+
 
       {locationBlocked && (
         <section className="px-6 pb-4">
