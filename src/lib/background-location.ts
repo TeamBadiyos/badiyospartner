@@ -5,6 +5,8 @@ import { registerPlugin, Capacitor } from "@capacitor/core";
 export type BgLocationStatus = {
   foreground: boolean;
   background: boolean;
+  /** True when the device's Location toggle (GPS) is ON. */
+  locationEnabled?: boolean;
   sdkInt: number;
   /** True on Android 11+ where request() cannot open a dialog — must openSettings(). */
   mustUseSettings: boolean;
@@ -21,6 +23,8 @@ interface BackgroundLocationPlugin {
   check(): Promise<Omit<BgLocationStatus, "unavailable">>;
   request(): Promise<BgLocationRequestResult>;
   openSettings(): Promise<void>;
+  isLocationEnabled(): Promise<{ enabled: boolean }>;
+  openLocationSettings(): Promise<void>;
   startBackgroundService(): Promise<{ started: boolean; reason?: string }>;
   stopBackgroundService(): Promise<{ stopped: boolean }>;
 }
@@ -44,6 +48,32 @@ export async function checkBackgroundLocation(): Promise<BgLocationStatus> {
   } catch (err) {
     console.warn("[bg-location] check failed", err);
     return { foreground: false, background: false, sdkInt: 0, mustUseSettings: false, unavailable: true };
+  }
+}
+
+/**
+ * Whether the device's Location (GPS) master switch is ON — independent of
+ * whether the app holds location permission. Returns true on web/iOS (where
+ * we can't tell) so the caller never blocks the flow there.
+ */
+export async function isDeviceLocationEnabled(): Promise<boolean> {
+  if (!isAndroid()) return true;
+  try {
+    const res = await Plugin.isLocationEnabled();
+    return res?.enabled !== false;
+  } catch (err) {
+    console.warn("[bg-location] isLocationEnabled failed", err);
+    return true; // fail open — never block going online on a bridge error
+  }
+}
+
+/** Deep-links to the phone's Location settings page (not app settings). */
+export async function openDeviceLocationSettings(): Promise<void> {
+  if (!isAndroid()) return;
+  try {
+    await Plugin.openLocationSettings();
+  } catch (err) {
+    console.warn("[bg-location] openLocationSettings failed", err);
   }
 }
 

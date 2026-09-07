@@ -14,6 +14,8 @@ import {
 import {
   openAppLocationSettings,
   checkBackgroundLocation,
+  isDeviceLocationEnabled,
+  openDeviceLocationSettings,
   startBackgroundAvailabilityService,
   stopBackgroundAvailabilityService,
 } from "@/lib/background-location";
@@ -134,6 +136,8 @@ function HomeDashboard() {
   // Broadcast queue
   const [candidates, setCandidates] = useState<BroadcastCandidate[]>([]);
   const [locationBlocked, setLocationBlocked] = useState(false);
+  // Device Location (GPS) master switch is OFF — distinct from permission denial.
+  const [gpsOff, setGpsOff] = useState(false);
   const candidatesRef = useRef(candidates);
   candidatesRef.current = candidates;
   const dismissedRef = useRef<Set<string>>(new Set());

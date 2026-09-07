@@ -164,6 +164,20 @@ public class BackgroundAvailabilityService extends Service {
             Log.w(TAG, "cycle skipped — no fine location permission");
             return;
         }
+        if (!isLocationServicesEnabled()) {
+            // Permission can be granted while the phone's Location toggle is OFF.
+            // Surface it in the ongoing notification instead of failing silently.
+            Log.w(TAG, "cycle skipped — device location services are OFF");
+            updateStatusNotification(
+                "badiyos Expert — Location off",
+                "Turn on Location to keep receiving nearby jobs"
+            );
+            return;
+        }
+        updateStatusNotification(
+            "badiyos Expert — Online",
+            "You're receiving nearby job alerts"
+        );
         CancellationTokenSource cts = new CancellationTokenSource();
         fused.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.getToken())
             .addOnSuccessListener(loc -> {
@@ -179,6 +193,29 @@ public class BackgroundAvailabilityService extends Service {
                 }
             })
             .addOnFailureListener(err -> Log.e(TAG, "getCurrentLocation failed", err));
+    }
+
+    private boolean isLocationServicesEnabled() {
+        try {
+            android.location.LocationManager lm =
+                (android.location.LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            if (lm == null) return false;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) return lm.isLocationEnabled();
+            return lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
+                || lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER);
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private void updateStatusNotification(String title, String text) {
+        try {
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm == null) return;
+            nm.notify(NOTIFICATION_ID, buildStatusNotification(title, text));
+        } catch (Throwable t) {
+            Log.w(TAG, "notification update failed", t);
+        }
     }
 
     private void pushLocationSafe(Location loc) {
@@ -271,6 +308,13 @@ public class BackgroundAvailabilityService extends Service {
     }
 
     private Notification buildStatusNotification() {
+        return buildStatusNotification(
+            "badiyos Expert — Online",
+            "You're receiving nearby job alerts"
+        );
+    }
+
+    private Notification buildStatusNotification(String title, String text) {
         Intent openApp = new Intent(this, MainActivity.class);
         openApp.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         int piFlags = PendingIntent.FLAG_UPDATE_CURRENT
@@ -278,8 +322,8 @@ public class BackgroundAvailabilityService extends Service {
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0, openApp, piFlags);
 
         Notification n = new NotificationCompat.Builder(this, STATUS_CHANNEL_ID)
-            .setContentTitle("badiyos Expert — Online")
-            .setContentText("You're receiving nearby job alerts")
+            .setContentTitle(title)
+            .setContentText(text)
             .setSmallIcon(android.R.drawable.presence_online)
             .setOngoing(true)
             .setAutoCancel(false)
