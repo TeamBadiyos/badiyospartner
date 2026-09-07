@@ -44,7 +44,9 @@ export const en = {
   "home.toast.takenByOther": "This booking was already accepted by another expert.",
   "home.toast.acceptFailed": "Could not accept this booking — please try again.",
   "home.location.blockedTitle": "Location access needed",
-  "home.location.blockedBody": "Location permission is turned off, so you can"t go online. Open Settings and allow location for badiyos Expert, then try again.",
+  "home.location.blockedBody":
+    "Location permission is turned off, so you can’t go online. Open Settings and allow location for badiyos Expert, then try again.",
+
   "home.location.openSettings": "Open Settings",
   "home.location.dismiss": "Not now",
   "home.toast.locationPermission": "Couldn't get your location — check permissions and try again.",
