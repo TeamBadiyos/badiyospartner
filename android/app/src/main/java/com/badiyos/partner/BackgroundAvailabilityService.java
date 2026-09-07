@@ -308,6 +308,13 @@ public class BackgroundAvailabilityService extends Service {
     }
 
     private Notification buildStatusNotification() {
+        return buildStatusNotification(
+            "badiyos Expert — Online",
+            "You're receiving nearby job alerts"
+        );
+    }
+
+    private Notification buildStatusNotification(String title, String text) {
         Intent openApp = new Intent(this, MainActivity.class);
         openApp.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         int piFlags = PendingIntent.FLAG_UPDATE_CURRENT
