@@ -501,6 +501,38 @@ function HomeDashboard() {
     },
   });
 
+  // Mid-session watchdog: the expert can switch the phone's Location toggle off
+  // after going online. Poll every 20s (and on app resume) and, when it's off,
+  // set them offline so dispatch never treats them as reachable.
+  useEffect(() => {
+    if (!online) return;
+    let cancelled = false;
+    const check = async () => {
+      const enabled = await isDeviceLocationEnabled();
+      if (cancelled) return;
+      if (enabled) {
+        setGpsOff(false);
+        return;
+      }
+      setGpsOff(true);
+      await stopBackgroundAvailabilityService();
+      const { error } = await supabase.rpc("expert_set_online", { _online: false });
+      if (error) console.warn("[expert][gps-watchdog] set offline failed", error);
+      qc.invalidateQueries({ queryKey: ["expert", userId] });
+    };
+    void check();
+    const interval = window.setInterval(() => void check(), 20_000);
+    const onVis = () => {
+      if (!document.hidden) void check();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [online, qc, userId]);
+
 
   const acceptBroadcast = useMutation({
     mutationFn: async (bookingId: string) => {
