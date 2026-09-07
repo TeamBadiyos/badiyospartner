@@ -190,6 +190,11 @@ export function useExpertLocationTracking(enabled: boolean): LocationTracker {
     // throttle or time out watchPosition/getCurrentPosition when the tab is
     // hidden, and that's expected OS behavior, not a genuine failure.
     if (hiddenRef.current) return;
+    const c = (err as { code?: string | number }).code;
+    if (c === LOCATION_BLOCKED || c === LOCATION_DENIED) {
+      setState({ status: "denied" });
+      return;
+    }
     if ("code" in err && err.code === err.PERMISSION_DENIED) {
       setState({ status: "denied" });
       return;

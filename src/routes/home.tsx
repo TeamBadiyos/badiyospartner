@@ -8,9 +8,11 @@ import {
   startNotificationLoop,
   stopAllNotificationLoops,
   useExpertLocationTracking,
+  isLocationBlockedError,
   type Coords,
 } from "@/lib/broadcast";
 import {
+  openAppLocationSettings,
   checkBackgroundLocation,
   startBackgroundAvailabilityService,
   stopBackgroundAvailabilityService,
@@ -465,6 +467,10 @@ function HomeDashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["expert", userId] }),
     onError: (err: Error) => {
       const msg = err.message || "";
+      if (isLocationBlockedError(err)) {
+        setLocationBlocked(true);
+        return;
+      }
       if (/permission/i.test(msg) || /denied/i.test(msg)) {
         toast.error(t("home.toast.locationPermission"));
       } else if (/timed out/i.test(msg) || /timeout/i.test(msg)) {
