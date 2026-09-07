@@ -68,34 +68,77 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   });
 }
 
-// One-shot session flag: we call Capacitor Geolocation.requestPermissions()
-// exactly once per app session to trigger Android's native runtime permission
-// dialog. After that we rely purely on navigator.geolocation (which works
-// reliably in the WebView once the WebChromeClient override is in place AND
-// the OS-level permission has been granted).
-let osPermissionRequested = false;
+/** Thrown when the OS will no longer show the permission prompt and the
+ * expert must enable location from system Settings. */
+export const LOCATION_BLOCKED = "LOCATION_BLOCKED";
+/** Thrown when the expert declined the prompt this time. */
+export const LOCATION_DENIED = "LOCATION_DENIED";
 
-async function triggerNativeOsPermissionDialog(): Promise<void> {
-  if (osPermissionRequested) return;
-  osPermissionRequested = true;
-  try {
-    const { Capacitor } = await import("@capacitor/core");
-    if (!Capacitor.isNativePlatform?.()) return;
-    const { Geolocation } = await import("@capacitor/geolocation");
-    try {
-      await withTimeout(
-        Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] }),
-        5_000,
-        "requestPermissions(os-dialog)",
-      );
-    } catch {
-      // Timed out or denied — proceed anyway; navigator.geolocation will
-      // surface the real error if permission is still missing.
-    }
-  } catch {
-    // Plugin unavailable — this is fine on web.
-  }
+export function isLocationBlockedError(err: unknown): boolean {
+  return (err as { code?: string })?.code === LOCATION_BLOCKED;
 }
+
+function permError(code: string, message: string): Error & { code: string } {
+  const e = new Error(message) as Error & { code: string };
+  e.code = code;
+  return e;
+}
+
+/**
+ * Re-runs the OS permission flow on EVERY attempt (no session caching), so a
+ * previously-denied or revoked permission is asked for again. When Android has
+ * hard-denied (the prompt will not appear anymore), throws LOCATION_BLOCKED so
+ * the caller can direct the expert to app Settings.
+ */
+async function ensureNativeLocationPermission(): Promise<void> {
+  let Capacitor: typeof import("@capacitor/core").Capacitor;
+  try {
+    ({ Capacitor } = await import("@capacitor/core"));
+  } catch {
+    return; // web — navigator.geolocation handles its own prompt
+  }
+  if (!Capacitor.isNativePlatform?.()) return;
+
+  const { Geolocation } = await import("@capacitor/geolocation");
+
+  let before: string | undefined;
+  try {
+    const status = await withTimeout(Geolocation.checkPermissions(), 5_000, "checkPermissions");
+    before = status.location;
+    if (before === "granted" || status.coarseLocation === "granted") return;
+  } catch {
+    // Fall through to a request attempt.
+  }
+
+  let after: string | undefined;
+  try {
+    const res = await withTimeout(
+      Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] }),
+      20_000,
+      "requestPermissions",
+    );
+    after = res.location === "granted" || res.coarseLocation === "granted" ? "granted" : res.location;
+  } catch {
+    // Timed out (no dialog appeared) — treat as blocked so we can offer Settings.
+    throw permError(
+      LOCATION_BLOCKED,
+      "Location permission is blocked. Enable it in Settings to go online.",
+    );
+  }
+
+  if (after === "granted") return;
+
+  // Android returns "denied" instantly without showing a dialog once the user
+  // has hard-denied; detect that by the state being denied both before & after.
+  if (before === "denied" || after === "denied") {
+    throw permError(
+      LOCATION_BLOCKED,
+      "Location permission is blocked. Enable it in Settings to go online.",
+    );
+  }
+  throw permError(LOCATION_DENIED, "Location permission denied.");
+}
+
 
 async function getCurrentPositionOnce(): Promise<GeolocationPosition> {
   // Trigger the native Android OS permission dialog once per session before
