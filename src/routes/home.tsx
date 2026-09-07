@@ -478,10 +478,15 @@ function HomeDashboard() {
     },
     onSuccess: () => {
       setLocationBlocked(false);
+      setGpsOff(false);
       qc.invalidateQueries({ queryKey: ["expert", userId] });
     },
     onError: (err: Error) => {
       const msg = err.message || "";
+      if ((err as Error & { code?: string }).code === "GPS_OFF") {
+        setGpsOff(true);
+        return;
+      }
       if (isLocationBlockedError(err)) {
         setLocationBlocked(true);
         return;
