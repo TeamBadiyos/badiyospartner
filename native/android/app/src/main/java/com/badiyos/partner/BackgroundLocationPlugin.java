@@ -1,8 +1,10 @@
 package com.badiyos.partner;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
@@ -46,9 +48,47 @@ public class BackgroundLocationPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("foreground", hasForegroundLocation());
         ret.put("background", hasBackgroundLocation());
+        ret.put("locationEnabled", isLocationServicesEnabled());
         ret.put("sdkInt", Build.VERSION.SDK_INT);
         ret.put("mustUseSettings", Build.VERSION.SDK_INT >= Build.VERSION_CODES.R);
         call.resolve(ret);
+    }
+
+    /** True when the device's Location toggle (GPS/Network) is ON, regardless
+     * of whether the app holds location permission. */
+    @PluginMethod
+    public void isLocationEnabled(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("enabled", isLocationServicesEnabled());
+        call.resolve(ret);
+    }
+
+    /** Deep-links to the system Location settings page (not app settings). */
+    @PluginMethod
+    public void openLocationSettings(PluginCall call) {
+        Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            getContext().startActivity(intent);
+        } catch (Throwable t) {
+            Intent fallback = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            fallback.setData(Uri.fromParts("package", getContext().getPackageName(), null));
+            fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(fallback);
+        }
+        call.resolve();
+    }
+
+    private boolean isLocationServicesEnabled() {
+        try {
+            LocationManager lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
+            if (lm == null) return false;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) return lm.isLocationEnabled();
+            return lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                || lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     @PluginMethod
