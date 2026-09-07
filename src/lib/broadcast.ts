@@ -140,10 +140,11 @@ async function ensureNativeLocationPermission(): Promise<void> {
 }
 
 
-async function getCurrentPositionOnce(): Promise<GeolocationPosition> {
-  // Trigger the native Android OS permission dialog once per session before
-  // asking the WebView for a location fix. On web/iOS this is a no-op.
-  await triggerNativeOsPermissionDialog();
+async function getCurrentPositionOnce(requestPermission = false): Promise<GeolocationPosition> {
+  // On an explicit user action (going online) re-run the OS permission flow
+  // every time so a previous denial can be corrected. On web this is a no-op.
+  if (requestPermission) await ensureNativeLocationPermission();
+
 
   return withTimeout(
     new Promise<GeolocationPosition>((resolve, reject) => {
