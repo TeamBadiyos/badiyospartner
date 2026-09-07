@@ -8,9 +8,11 @@ import {
   startNotificationLoop,
   stopAllNotificationLoops,
   useExpertLocationTracking,
+  isLocationBlockedError,
   type Coords,
 } from "@/lib/broadcast";
 import {
+  openAppLocationSettings,
   checkBackgroundLocation,
   startBackgroundAvailabilityService,
   stopBackgroundAvailabilityService,
@@ -131,6 +133,7 @@ function HomeDashboard() {
 
   // Broadcast queue
   const [candidates, setCandidates] = useState<BroadcastCandidate[]>([]);
+  const [locationBlocked, setLocationBlocked] = useState(false);
   const candidatesRef = useRef(candidates);
   candidatesRef.current = candidates;
   const dismissedRef = useRef<Set<string>>(new Set());
@@ -462,9 +465,16 @@ function HomeDashboard() {
         throw err;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["expert", userId] }),
+    onSuccess: () => {
+      setLocationBlocked(false);
+      qc.invalidateQueries({ queryKey: ["expert", userId] });
+    },
     onError: (err: Error) => {
       const msg = err.message || "";
+      if (isLocationBlockedError(err)) {
+        setLocationBlocked(true);
+        return;
+      }
       if (/permission/i.test(msg) || /denied/i.test(msg)) {
         toast.error(t("home.toast.locationPermission"));
       } else if (/timed out/i.test(msg) || /timeout/i.test(msg)) {
@@ -565,6 +575,31 @@ function HomeDashboard() {
         </div>
       </header>
 
+
+      {locationBlocked && (
+        <section className="px-6 pb-4">
+          <div className="rounded-[18px] border border-[color:var(--color-destructive)]/30 bg-[color:var(--color-destructive)]/5 p-4">
+            <p className="text-[15px] font-bold text-foreground">{t("home.location.blockedTitle")}</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">{t("home.location.blockedBody")}</p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => { hapticImpact("light"); openAppLocationSettings(); }}
+                className="flex h-11 flex-1 items-center justify-center rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground"
+              >
+                {t("home.location.openSettings")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocationBlocked(false)}
+                className="flex h-11 items-center justify-center rounded-[14px] border border-border bg-card px-4 text-[15px] font-bold text-foreground"
+              >
+                {t("home.location.dismiss")}
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="px-6">
         <div

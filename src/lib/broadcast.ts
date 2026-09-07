@@ -68,39 +68,83 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   });
 }
 
-// One-shot session flag: we call Capacitor Geolocation.requestPermissions()
-// exactly once per app session to trigger Android's native runtime permission
-// dialog. After that we rely purely on navigator.geolocation (which works
-// reliably in the WebView once the WebChromeClient override is in place AND
-// the OS-level permission has been granted).
-let osPermissionRequested = false;
+/** Thrown when the OS will no longer show the permission prompt and the
+ * expert must enable location from system Settings. */
+export const LOCATION_BLOCKED = "LOCATION_BLOCKED";
+/** Thrown when the expert declined the prompt this time. */
+export const LOCATION_DENIED = "LOCATION_DENIED";
 
-async function triggerNativeOsPermissionDialog(): Promise<void> {
-  if (osPermissionRequested) return;
-  osPermissionRequested = true;
-  try {
-    const { Capacitor } = await import("@capacitor/core");
-    if (!Capacitor.isNativePlatform?.()) return;
-    const { Geolocation } = await import("@capacitor/geolocation");
-    try {
-      await withTimeout(
-        Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] }),
-        5_000,
-        "requestPermissions(os-dialog)",
-      );
-    } catch {
-      // Timed out or denied — proceed anyway; navigator.geolocation will
-      // surface the real error if permission is still missing.
-    }
-  } catch {
-    // Plugin unavailable — this is fine on web.
-  }
+export function isLocationBlockedError(err: unknown): boolean {
+  return (err as { code?: string })?.code === LOCATION_BLOCKED;
 }
 
-async function getCurrentPositionOnce(): Promise<GeolocationPosition> {
-  // Trigger the native Android OS permission dialog once per session before
-  // asking the WebView for a location fix. On web/iOS this is a no-op.
-  await triggerNativeOsPermissionDialog();
+function permError(code: string, message: string): Error & { code: string } {
+  const e = new Error(message) as Error & { code: string };
+  e.code = code;
+  return e;
+}
+
+/**
+ * Re-runs the OS permission flow on EVERY attempt (no session caching), so a
+ * previously-denied or revoked permission is asked for again. When Android has
+ * hard-denied (the prompt will not appear anymore), throws LOCATION_BLOCKED so
+ * the caller can direct the expert to app Settings.
+ */
+async function ensureNativeLocationPermission(): Promise<void> {
+  let Capacitor: typeof import("@capacitor/core").Capacitor;
+  try {
+    ({ Capacitor } = await import("@capacitor/core"));
+  } catch {
+    return; // web — navigator.geolocation handles its own prompt
+  }
+  if (!Capacitor.isNativePlatform?.()) return;
+
+  const { Geolocation } = await import("@capacitor/geolocation");
+
+  let before: string | undefined;
+  try {
+    const status = await withTimeout(Geolocation.checkPermissions(), 5_000, "checkPermissions");
+    before = status.location;
+    if (before === "granted" || status.coarseLocation === "granted") return;
+  } catch {
+    // Fall through to a request attempt.
+  }
+
+  let after: string | undefined;
+  try {
+    const res = await withTimeout(
+      Geolocation.requestPermissions({ permissions: ["location", "coarseLocation"] }),
+      20_000,
+      "requestPermissions",
+    );
+    after = res.location === "granted" || res.coarseLocation === "granted" ? "granted" : res.location;
+  } catch {
+    // Timed out (no dialog appeared) — treat as blocked so we can offer Settings.
+    throw permError(
+      LOCATION_BLOCKED,
+      "Location permission is blocked. Enable it in Settings to go online.",
+    );
+  }
+
+  if (after === "granted") return;
+
+  // Android returns "denied" instantly without showing a dialog once the user
+  // has hard-denied; detect that by the state being denied both before & after.
+  if (before === "denied" || after === "denied") {
+    throw permError(
+      LOCATION_BLOCKED,
+      "Location permission is blocked. Enable it in Settings to go online.",
+    );
+  }
+  throw permError(LOCATION_DENIED, "Location permission denied.");
+}
+
+
+async function getCurrentPositionOnce(requestPermission = false): Promise<GeolocationPosition> {
+  // On an explicit user action (going online) re-run the OS permission flow
+  // every time so a previous denial can be corrected. On web this is a no-op.
+  if (requestPermission) await ensureNativeLocationPermission();
+
 
   return withTimeout(
     new Promise<GeolocationPosition>((resolve, reject) => {
@@ -146,6 +190,11 @@ export function useExpertLocationTracking(enabled: boolean): LocationTracker {
     // throttle or time out watchPosition/getCurrentPosition when the tab is
     // hidden, and that's expected OS behavior, not a genuine failure.
     if (hiddenRef.current) return;
+    const c = (err as { code?: string | number }).code;
+    if (c === LOCATION_BLOCKED || c === LOCATION_DENIED) {
+      setState({ status: "denied" });
+      return;
+    }
     if ("code" in err && err.code === err.PERMISSION_DENIED) {
       setState({ status: "denied" });
       return;
@@ -160,20 +209,28 @@ export function useExpertLocationTracking(enabled: boolean): LocationTracker {
   const ensureFix = useCallback(async (): Promise<Coords> => {
     setState((prev) => (prev.status === "ok" ? prev : { status: "requesting" }));
     try {
-      const pos = await getCurrentPositionOnce();
+      const pos = await getCurrentPositionOnce(true);
       const coords = applyPosition(pos);
       await withTimeout(pushLocation(coords), 10_000, "pushLocation");
       setLastPushedAt(Date.now());
       return coords;
     } catch (err) {
       applyError(err as GeolocationPositionError | Error);
-      const message =
-        (err as GeolocationPositionError).code === 1
-          ? "Location permission denied. Enable location access to receive bookings."
-          : (err as Error).message || "Could not get your location";
-      throw new Error(message);
+      const code = (err as { code?: string | number }).code;
+      if (code === LOCATION_BLOCKED || code === LOCATION_DENIED) throw err;
+      // Browser PERMISSION_DENIED (code 1) — on native this means the WebView
+      // itself was refused even though the OS grant looked fine: treat as blocked.
+      if (code === 1) {
+        setState({ status: "denied" });
+        throw permError(
+          LOCATION_BLOCKED,
+          "Location permission is blocked. Enable it in Settings to go online.",
+        );
+      }
+      throw new Error((err as Error).message || "Could not get your location");
     }
   }, [applyPosition, applyError]);
+
 
   // Track page visibility so we can pause tracking while hidden (backgrounded
   // OR screen locked). On Android, screen lock reliably fires visibilitychange
