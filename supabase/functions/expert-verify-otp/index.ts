@@ -50,6 +50,9 @@ Deno.serve(async (req) => {
     if (record.code !== otp) return json({ error: "Invalid code" }, { status: 400 });
 
     await admin.from("otp_codes").update({ is_verified: true }).eq("id", record.id);
+    }
+
+
 
 
     // Find expert
