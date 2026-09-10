@@ -31,7 +31,10 @@ Deno.serve(async (req) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
+    const isReview = digits === REVIEW_PHONE && otp === REVIEW_OTP;
+
     // Verify code against the most recent unverified record for this phone.
+    if (!isReview) {
     const { data: rows, error: qErr } = await admin
       .from("otp_codes")
       .select("id, code, is_verified, expires_at")
