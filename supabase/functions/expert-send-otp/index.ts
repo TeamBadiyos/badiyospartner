@@ -5,6 +5,8 @@ import { sendAiSensyTemplate } from "../_shared/aisensy.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const CAMPAIGN = Deno.env.get("AISENSY_OTP_CAMPAIGN") ?? "badiyouserlogin";
+// Static store-review account (Google Play). OTP is fixed and never sent.
+const REVIEW_PHONE = "9999900000";
 
 function normalize(phone: string): string {
   return phone.replace(/[^\d]/g, "").replace(/^0+/, "").slice(-10);
@@ -17,6 +19,11 @@ Deno.serve(async (req) => {
     const { phone } = await req.json();
     const digits = normalize(String(phone ?? ""));
     if (digits.length !== 10) return json({ error: "Invalid phone number" }, { status: 400 });
+
+    // Google Play review test account: never send a real WhatsApp OTP.
+    if (digits === REVIEW_PHONE) {
+      return json({ ok: true, test_account: true });
+    }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },

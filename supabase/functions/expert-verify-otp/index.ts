@@ -12,6 +12,10 @@ function expertEmail(digits: string) {
   return `expert-${digits}@badiyos.internal`;
 }
 
+// Static store-review account (Google Play): fixed phone + fixed code.
+const REVIEW_PHONE = "9999900000";
+const REVIEW_OTP = "1234";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -27,7 +31,10 @@ Deno.serve(async (req) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
+    const isReview = digits === REVIEW_PHONE && otp === REVIEW_OTP;
+
     // Verify code against the most recent unverified record for this phone.
+    if (!isReview) {
     const { data: rows, error: qErr } = await admin
       .from("otp_codes")
       .select("id, code, is_verified, expires_at")
@@ -43,6 +50,9 @@ Deno.serve(async (req) => {
     if (record.code !== otp) return json({ error: "Invalid code" }, { status: 400 });
 
     await admin.from("otp_codes").update({ is_verified: true }).eq("id", record.id);
+    }
+
+
 
 
     // Find expert
