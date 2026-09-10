@@ -44,7 +44,26 @@ function routeFromData(
   data: unknown,
   navigate: NavigateFn,
 ): (() => void) | undefined {
-  const d = (data ?? {}) as { route?: string; booking_id?: string; type?: string };
+  const d = (data ?? {}) as {
+    route?: string;
+    booking_id?: string;
+    type?: string;
+    alert_type?: string;
+  };
+  // Informational alerts route to their own screen, never to a booking.
+  const infoRoutes: Record<string, string> = {
+    support_resolved: "/support",
+    payout_credited: "/wallet",
+    tip_received: "/wallet",
+    reward_credited: "/rewards",
+    skill_decision: "/skills",
+    account_status: "/home",
+    forced_offline: "/home",
+  };
+  const infoRoute = d.alert_type ? infoRoutes[d.alert_type] : undefined;
+  if (infoRoute) {
+    return () => navigate({ to: infoRoute });
+  }
   // Broadcast notifications are for unassigned bookings — always land on Home,
   // where the broadcast card stack will surface eligible bookings. Never route
   // to a booking-detail view (the expert isn't assigned yet, so it 403s).
