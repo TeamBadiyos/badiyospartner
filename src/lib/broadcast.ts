@@ -128,9 +128,12 @@ async function ensureNativeLocationPermission(): Promise<void> {
 
   if (after === "granted") return;
 
-  // Android returns "denied" instantly without showing a dialog once the user
-  // has hard-denied; detect that by the state being denied both before & after.
-  if (before === "denied" || after === "denied") {
+  // A single soft denial returns location: "denied" from requestPermissions,
+  // but the NEXT checkPermissions() then reports "prompt-with-rationale" —
+  // Android only reports a persistent "denied" once the dialog will no longer
+  // appear. So treat before==="denied" as hard-blocked, and everything else
+  // as a soft denial the expert can retry by tapping again.
+  if (before === "denied" && after === "denied") {
     throw permError(
       LOCATION_BLOCKED,
       "Location permission is blocked. Enable it in Settings to go online.",
