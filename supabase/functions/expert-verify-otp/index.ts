@@ -12,6 +12,10 @@ function expertEmail(digits: string) {
   return `expert-${digits}@badiyos.internal`;
 }
 
+// Static store-review account (Google Play): fixed phone + fixed code.
+const REVIEW_PHONE = "9999900000";
+const REVIEW_OTP = "1234";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
