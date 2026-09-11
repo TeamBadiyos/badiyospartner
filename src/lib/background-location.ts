@@ -25,6 +25,7 @@ interface BackgroundLocationPlugin {
   openSettings(): Promise<void>;
   isLocationEnabled(): Promise<{ enabled: boolean }>;
   openLocationSettings(): Promise<void>;
+  promptEnableLocation(): Promise<{ enabled: boolean; resolvable: boolean }>;
   startBackgroundService(): Promise<{ started: boolean; reason?: string }>;
   stopBackgroundService(): Promise<{ stopped: boolean }>;
 }
