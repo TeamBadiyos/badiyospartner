@@ -9,8 +9,20 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 
+import android.app.Activity;
+import android.content.IntentSender;
+
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.tasks.Task;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
