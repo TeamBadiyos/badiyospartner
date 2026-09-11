@@ -16,6 +16,7 @@ import {
   checkBackgroundLocation,
   isDeviceLocationEnabled,
   openDeviceLocationSettings,
+  promptEnableDeviceLocation,
   startBackgroundAvailabilityService,
   stopBackgroundAvailabilityService,
 } from "@/lib/background-location";
@@ -575,6 +576,28 @@ function HomeDashboard() {
   });
 
 
+  // GPS banner: try the in-app "Turn on location?" dialog first, then fall
+  // back to deep-linking the phone's Location settings page.
+  const handleEnableLocation = useCallback(async () => {
+    hapticImpact("light");
+    const res = await promptEnableDeviceLocation();
+    if (res.enabled) {
+      setGpsOff(false);
+      toast.success(t("home.gps.enabled"));
+      if (!online) toggle.mutate(true);
+      return;
+    }
+    if (res.resolvable) return; // user declined the dialog — leave the banner
+    const opened = await openDeviceLocationSettings();
+    if (!opened) toast.error(t("home.location.settingsFailed"));
+  }, [online, t, toggle]);
+
+  const handleOpenAppSettings = useCallback(async () => {
+    hapticImpact("light");
+    const opened = await openAppLocationSettings();
+    if (!opened) toast.error(t("home.location.settingsFailed"));
+  }, [t]);
+
   const onPullRefresh = useCallback(async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["expert", userId] }),
@@ -637,7 +660,7 @@ function HomeDashboard() {
             </div>
             <button
               type="button"
-              onClick={() => { hapticImpact("light"); void openDeviceLocationSettings(); }}
+              onClick={() => { void handleEnableLocation(); }}
               className="mt-3 flex h-11 w-full items-center justify-center rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground"
             >
               {t("home.gps.openLocationSettings")}
@@ -655,7 +678,7 @@ function HomeDashboard() {
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
-                onClick={() => { hapticImpact("light"); openAppLocationSettings(); }}
+                onClick={() => { void handleOpenAppSettings(); }}
                 className="flex h-11 flex-1 items-center justify-center rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground"
               >
                 {t("home.location.openSettings")}

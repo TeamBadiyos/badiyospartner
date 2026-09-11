@@ -38,6 +38,9 @@ line in every Java file and all `com.badiyos.partner.action.*` action strings.
 
 ```gradle
 implementation "com.google.android.gms:play-services-location:21.3.0"
+// ^ required by BackgroundLocationPlugin.promptEnableLocation(), which shows
+//   Google's in-app "Turn on location?" dialog (SettingsClient +
+//   ResolvableApiException.startResolutionForResult, requestCode 4711).
 implementation platform("com.google.firebase:firebase-bom:33.7.0")
 implementation "com.google.firebase:firebase-messaging"
 ```

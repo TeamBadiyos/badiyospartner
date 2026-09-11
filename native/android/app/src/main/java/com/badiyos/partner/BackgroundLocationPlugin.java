@@ -9,8 +9,20 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 
+import android.app.Activity;
+import android.content.IntentSender;
+
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationSettingsRequest;
+import com.google.android.gms.location.LocationSettingsResponse;
+import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.tasks.Task;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -77,6 +89,74 @@ public class BackgroundLocationPlugin extends Plugin {
             getContext().startActivity(fallback);
         }
         call.resolve();
+    }
+
+    private static final int REQ_ENABLE_LOCATION = 4711;
+    private PluginCall pendingEnableCall;
+
+    /**
+     * Shows Google's in-app "Turn on location?" dialog (Play services).
+     * Resolves { enabled, resolvable }. resolvable=false means the caller
+     * should fall back to openLocationSettings().
+     */
+    @PluginMethod
+    public void promptEnableLocation(final PluginCall call) {
+        if (isLocationServicesEnabled()) {
+            JSObject ret = new JSObject();
+            ret.put("enabled", true);
+            ret.put("resolvable", true);
+            call.resolve(ret);
+            return;
+        }
+        final Activity activity = getActivity();
+        if (activity == null) {
+            resolveEnable(call, false, false);
+            return;
+        }
+        try {
+            LocationRequest request = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(60_000L);
+            LocationSettingsRequest settingsRequest = new LocationSettingsRequest.Builder()
+                .addLocationRequest(request)
+                .setAlwaysShow(true)
+                .build();
+            SettingsClient client = LocationServices.getSettingsClient(activity);
+            Task<LocationSettingsResponse> task = client.checkLocationSettings(settingsRequest);
+            task.addOnSuccessListener(activity, response -> resolveEnable(call, isLocationServicesEnabled(), true));
+            task.addOnFailureListener(activity, e -> {
+                if (e instanceof ResolvableApiException) {
+                    try {
+                        pendingEnableCall = call;
+                        ((ResolvableApiException) e).startResolutionForResult(activity, REQ_ENABLE_LOCATION);
+                    } catch (IntentSender.SendIntentException sie) {
+                        pendingEnableCall = null;
+                        resolveEnable(call, false, false);
+                    }
+                } else {
+                    resolveEnable(call, false, false);
+                }
+            });
+        } catch (Throwable t) {
+            resolveEnable(call, false, false);
+        }
+    }
+
+    private void resolveEnable(PluginCall call, boolean enabled, boolean resolvable) {
+        JSObject ret = new JSObject();
+        ret.put("enabled", enabled);
+        ret.put("resolvable", resolvable);
+        call.resolve(ret);
+    }
+
+    @Override
+    protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
+        super.handleOnActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQ_ENABLE_LOCATION) return;
+        PluginCall call = pendingEnableCall;
+        pendingEnableCall = null;
+        if (call == null) return;
+        resolveEnable(call, isLocationServicesEnabled(), true);
     }
 
     private boolean isLocationServicesEnabled() {
