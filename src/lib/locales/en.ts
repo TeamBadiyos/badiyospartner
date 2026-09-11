@@ -54,7 +54,10 @@ export const en = {
     "Location services are turned off. Please enable Location in your phone settings to receive nearby bookings.",
   "home.gps.offOnlineBody":
     "Location is turned off, so you won’t receive nearby bookings. You’ve been set offline — turn Location on and tap to go online again.",
-  "home.gps.openLocationSettings": "Open Location settings",
+  "home.gps.openLocationSettings": "Turn on Location",
+  "home.gps.enabled": "Location is on — you're all set.",
+  "home.location.settingsFailed":
+    "Couldn't open settings automatically. Please open your phone Settings and allow Location for badiyos Expert.",
   "home.toast.locationPermission": "Couldn't get your location — check permissions and try again.",
   "home.toast.locationTimeout": "Couldn't get your location — move to an open area and try again.",
   "home.toast.statusFailed": "Could not update your status.",
