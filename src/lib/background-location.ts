@@ -68,13 +68,36 @@ export async function isDeviceLocationEnabled(): Promise<boolean> {
   }
 }
 
-/** Deep-links to the phone's Location settings page (not app settings). */
-export async function openDeviceLocationSettings(): Promise<void> {
-  if (!isAndroid()) return;
+/**
+ * Deep-links to the phone's Location settings page (not app settings).
+ * Returns false when the page could not be opened (web/iOS or bridge error)
+ * so the caller can show an explanatory message instead of doing nothing.
+ */
+export async function openDeviceLocationSettings(): Promise<boolean> {
+  if (!isAndroid()) return false;
   try {
     await Plugin.openLocationSettings();
+    return true;
   } catch (err) {
     console.warn("[bg-location] openLocationSettings failed", err);
+    return false;
+  }
+}
+
+/**
+ * Shows Google's in-app "Turn on location?" dialog. Resolves with
+ * `enabled: true` once the device Location toggle is on.
+ * `resolvable: false` means the dialog could not be shown (no Play services,
+ * web/iOS, or plugin missing) — caller should fall back to opening settings.
+ */
+export async function promptEnableDeviceLocation(): Promise<{ enabled: boolean; resolvable: boolean }> {
+  if (!isAndroid()) return { enabled: false, resolvable: false };
+  try {
+    const res = await Plugin.promptEnableLocation();
+    return { enabled: !!res?.enabled, resolvable: res?.resolvable !== false };
+  } catch (err) {
+    console.warn("[bg-location] promptEnableLocation failed", err);
+    return { enabled: false, resolvable: false };
   }
 }
 
