@@ -576,6 +576,28 @@ function HomeDashboard() {
   });
 
 
+  // GPS banner: try the in-app "Turn on location?" dialog first, then fall
+  // back to deep-linking the phone's Location settings page.
+  const handleEnableLocation = useCallback(async () => {
+    hapticImpact("light");
+    const res = await promptEnableDeviceLocation();
+    if (res.enabled) {
+      setGpsOff(false);
+      toast.success(t("home.gps.enabled"));
+      if (!online) toggle.mutate(true);
+      return;
+    }
+    if (res.resolvable) return; // user declined the dialog — leave the banner
+    const opened = await openDeviceLocationSettings();
+    if (!opened) toast.error(t("home.location.settingsFailed"));
+  }, [online, t, toggle]);
+
+  const handleOpenAppSettings = useCallback(async () => {
+    hapticImpact("light");
+    const opened = await openAppLocationSettings();
+    if (!opened) toast.error(t("home.location.settingsFailed"));
+  }, [t]);
+
   const onPullRefresh = useCallback(async () => {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["expert", userId] }),
