@@ -678,7 +678,7 @@ function HomeDashboard() {
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
-                onClick={() => { hapticImpact("light"); openAppLocationSettings(); }}
+                onClick={() => { void handleOpenAppSettings(); }}
                 className="flex h-11 flex-1 items-center justify-center rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground"
               >
                 {t("home.location.openSettings")}
