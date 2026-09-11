@@ -16,6 +16,7 @@ import {
   checkBackgroundLocation,
   isDeviceLocationEnabled,
   openDeviceLocationSettings,
+  promptEnableDeviceLocation,
   startBackgroundAvailabilityService,
   stopBackgroundAvailabilityService,
 } from "@/lib/background-location";
