@@ -106,9 +106,17 @@ export async function requestBackgroundLocation(): Promise<BgLocationRequestResu
   return Plugin.request();
 }
 
-export async function openAppLocationSettings(): Promise<void> {
-  if (!isAndroid()) return;
-  await Plugin.openSettings();
+/** Opens this app's system settings page. Returns false when it could not
+ * be opened (web/iOS or bridge error) so the UI can explain what happened. */
+export async function openAppLocationSettings(): Promise<boolean> {
+  if (!isAndroid()) return false;
+  try {
+    await Plugin.openSettings();
+    return true;
+  } catch (err) {
+    console.warn("[bg-location] openSettings failed", err);
+    return false;
+  }
 }
 
 /** Starts the sticky foreground service. Safe no-op on web/iOS or when
