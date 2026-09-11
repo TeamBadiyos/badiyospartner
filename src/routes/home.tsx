@@ -660,7 +660,7 @@ function HomeDashboard() {
             </div>
             <button
               type="button"
-              onClick={() => { hapticImpact("light"); void openDeviceLocationSettings(); }}
+              onClick={() => { void handleEnableLocation(); }}
               className="mt-3 flex h-11 w-full items-center justify-center rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground"
             >
               {t("home.gps.openLocationSettings")}
