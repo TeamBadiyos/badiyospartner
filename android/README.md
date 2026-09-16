@@ -52,18 +52,23 @@ npx cap sync android
 cd android && ./gradlew assembleDebug
 ```
 
-## Required Gradle dependency (`android/app/build.gradle`)
+## Gradle dependencies — automated, do NOT add by hand
 
-Phase 3 uses Google Play services location (`FusedLocationProviderClient`)
-inside `BackgroundAvailabilityService` to poll the expert's position every
-60s while the app is closed. Add to the `dependencies { ... }` block:
+All repo-owned native dependencies live in the tracked file
+`android/app/badiyo-native.gradle` (Play Services location for the in-app
+"Turn on location?" dialog and `FusedLocationProviderClient`, plus the
+Firebase BOM + messaging for push).
 
-```gradle
-implementation "com.google.android.gms:play-services-location:21.3.0"
+Instead of `npx cap sync android`, always run:
+
+```bash
+bun run sync:android
 ```
 
-Then re-sync Gradle. No Google Maps API key is required for the location
-API — only the `google-services.json` already present for FCM.
+That syncs Capacitor and then runs `scripts/patch-android-gradle.ts`, which
+inserts `apply from: "badiyo-native.gradle"` into `android/app/build.gradle`
+(idempotent) and warns if `google-services.json` is missing or belongs to a
+different package. No Google Maps API key is required for the location API.
 
 
 
