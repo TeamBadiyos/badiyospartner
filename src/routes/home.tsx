@@ -525,10 +525,12 @@ function HomeDashboard() {
   useEffect(() => {
     if (!online) return;
     let cancelled = false;
+    let prompted = false;
     const check = async () => {
       const enabled = await isDeviceLocationEnabled();
       if (cancelled) return;
       if (enabled) {
+        prompted = false;
         setGpsOff(false);
         return;
       }
@@ -537,6 +539,11 @@ function HomeDashboard() {
       const { error } = await supabase.rpc("expert_set_online", { _online: false });
       if (error) console.warn("[expert][gps-watchdog] set offline failed", error);
       qc.invalidateQueries({ queryKey: ["expert", userId] });
+      // Ask once per "location switched off" episode, not every 20s.
+      if (!prompted) {
+        prompted = true;
+        void autoPromptGps();
+      }
     };
     void check();
     const interval = window.setInterval(() => void check(), 20_000);
