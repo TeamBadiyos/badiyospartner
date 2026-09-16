@@ -252,3 +252,17 @@ No web changes are needed in this pass; the hooks already exist:
   change lets an expert log out while still online.
 - `src/lib/push.ts` registers the FCM token (`register_device_token`) and
   routes taps; `expert-send-push` sends the data-only payload above.
+
+---
+
+## Live URL (critical — wrong host = app closes after splash)
+
+`capacitor.config.ts` `server.url` MUST be a live, published host for this
+project: `https://expert.badiyos.com` (fallback `badiyosexpert.lovable.app`).
+The old `partner.badiyos.com` host no longer resolves; an APK built with it
+shows the logo and then dies. `bun run check:capacitor` enforces this.
+
+`implementation "com.google.android.gms:play-services-location:21.3.0"` is
+required in `android/app/build.gradle`. Without it the in-app "Turn on
+location?" dialog is simply skipped (the plugin probes for the classes first
+and falls back to opening the Location settings page) — it no longer crashes.

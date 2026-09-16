@@ -113,33 +113,56 @@ public class BackgroundLocationPlugin extends Plugin {
             resolveEnable(call, false, false);
             return;
         }
+        // Play services location is an optional, manually-added dependency.
+        // Probe for it BEFORE touching any of its classes so a build without
+        // the dependency degrades gracefully instead of crashing the app.
+        if (!hasPlayServicesLocation()) {
+            resolveEnable(call, false, false);
+            return;
+        }
         try {
-            LocationRequest request = LocationRequest.create()
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(60_000L);
-            LocationSettingsRequest settingsRequest = new LocationSettingsRequest.Builder()
-                .addLocationRequest(request)
-                .setAlwaysShow(true)
-                .build();
-            SettingsClient client = LocationServices.getSettingsClient(activity);
-            Task<LocationSettingsResponse> task = client.checkLocationSettings(settingsRequest);
-            task.addOnSuccessListener(activity, response -> resolveEnable(call, isLocationServicesEnabled(), true));
-            task.addOnFailureListener(activity, e -> {
-                if (e instanceof ResolvableApiException) {
-                    try {
-                        pendingEnableCall = call;
-                        ((ResolvableApiException) e).startResolutionForResult(activity, REQ_ENABLE_LOCATION);
-                    } catch (IntentSender.SendIntentException sie) {
-                        pendingEnableCall = null;
-                        resolveEnable(call, false, false);
-                    }
-                } else {
-                    resolveEnable(call, false, false);
-                }
-            });
+            showPlayServicesLocationDialog(call, activity);
         } catch (Throwable t) {
+            pendingEnableCall = null;
             resolveEnable(call, false, false);
         }
+    }
+
+    private static boolean hasPlayServicesLocation() {
+        try {
+            Class.forName("com.google.android.gms.location.LocationServices");
+            Class.forName("com.google.android.gms.location.SettingsClient");
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** Isolated so Play Services classes are only verified when actually called. */
+    private void showPlayServicesLocationDialog(final PluginCall call, final Activity activity) {
+        LocationRequest request = LocationRequest.create()
+            .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+            .setInterval(60_000L);
+        LocationSettingsRequest settingsRequest = new LocationSettingsRequest.Builder()
+            .addLocationRequest(request)
+            .setAlwaysShow(true)
+            .build();
+        SettingsClient client = LocationServices.getSettingsClient(activity);
+        Task<LocationSettingsResponse> task = client.checkLocationSettings(settingsRequest);
+        task.addOnSuccessListener(activity, response -> resolveEnable(call, isLocationServicesEnabled(), true));
+        task.addOnFailureListener(activity, e -> {
+            if (e instanceof ResolvableApiException) {
+                try {
+                    pendingEnableCall = call;
+                    ((ResolvableApiException) e).startResolutionForResult(activity, REQ_ENABLE_LOCATION);
+                } catch (IntentSender.SendIntentException sie) {
+                    pendingEnableCall = null;
+                    resolveEnable(call, false, false);
+                }
+            } else {
+                resolveEnable(call, false, false);
+            }
+        });
     }
 
     private void resolveEnable(PluginCall call, boolean enabled, boolean resolvable) {

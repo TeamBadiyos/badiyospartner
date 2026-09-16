@@ -17,8 +17,14 @@ function Splash() {
     (async () => {
       let hasSession = false;
       try {
-        const { data } = await supabase.auth.getSession();
-        hasSession = !!data.session;
+        // Never let a hung/failed session lookup strand the splash screen.
+        const { data } = (await Promise.race([
+          supabase.auth.getSession(),
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: { session: null } }), 6000),
+          ),
+        ])) as { data: { session: unknown } };
+        hasSession = !!data?.session;
       } catch (err) {
         console.warn("[splash] getSession failed", err);
       }
@@ -26,7 +32,11 @@ function Splash() {
       const wait = Math.max(0, 1200 - elapsed);
       setTimeout(() => {
         if (cancelled) return;
-        navigate({ to: hasSession ? "/home" : "/login", replace: true });
+        try {
+          navigate({ to: hasSession ? "/home" : "/login", replace: true });
+        } catch {
+          navigate({ to: "/login", replace: true });
+        }
       }, wait);
     })();
 

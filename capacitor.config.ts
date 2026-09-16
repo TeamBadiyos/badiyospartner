@@ -5,21 +5,25 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // NOT committed to this repo — this file is the source of truth for their
 // runtime configuration.
 //
-// LIVE MODE: the shell loads https://partner.badiyos.com directly instead of
+// LIVE MODE: the shell loads https://expert.badiyos.com directly instead of
 // the bundled `dist/` output, so web-layer changes ship on the next app open
 // without a new APK. `server.errorPath` points at the bundled offline page so
 // a cold start without connectivity still shows a branded screen.
+//
+// IMPORTANT: this host MUST be a live, published domain for this project.
+// partner.badiyos.com does NOT resolve — pointing the shell there makes the
+// app die right after the splash screen.
 const config: CapacitorConfig = {
   appId: "com.badiyos.partner",
   appName: "badiyos Partner",
   webDir: "dist",
   server: {
-    url: "https://partner.badiyos.com",
+    url: "https://expert.badiyos.com",
     cleartext: false,
     androidScheme: "https",
     iosScheme: "https",
     errorPath: "offline.html",
-    allowNavigation: ["partner.badiyos.com"],
+    allowNavigation: ["expert.badiyos.com", "badiyosexpert.lovable.app"],
   },
   android: {
     backgroundColor: "#0074E4",
