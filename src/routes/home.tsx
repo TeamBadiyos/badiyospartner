@@ -556,7 +556,7 @@ function HomeDashboard() {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [online, qc, userId]);
+  }, [online, qc, userId, autoPromptGps]);
 
 
   const acceptBroadcast = useMutation({
