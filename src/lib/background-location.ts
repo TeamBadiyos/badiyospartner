@@ -151,7 +151,7 @@ export async function openAppLocationSettings(): Promise<boolean> {
     return true;
   } catch (err) {
     console.warn("[bg-location] openSettings failed", err);
-    return false;
+    return openViaNativeSettings("app");
   }
 }
 
