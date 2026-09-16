@@ -285,10 +285,11 @@ project: `https://expert.badiyos.com` (fallback `badiyosexpert.lovable.app`).
 The old `partner.badiyos.com` host no longer resolves; an APK built with it
 shows the logo and then dies. `bun run check:capacitor` enforces this.
 
-`implementation "com.google.android.gms:play-services-location:21.3.0"` is
-required in `android/app/build.gradle`. Without it the in-app "Turn on
-location?" dialog is simply skipped (the plugin probes for the classes first
-and falls back to opening the Location settings page) — it no longer crashes.
+Play Services location is required for the in-app dialog and is supplied by
+`android/app/badiyo-native.gradle` via `bun run sync:android`. Without it the
+in-app "Turn on location?" dialog is simply skipped (the plugin probes for the
+classes first and falls back to opening the Location settings page) — it no
+longer crashes.
 
 ---
 
@@ -296,12 +297,10 @@ and falls back to opening the Location settings page) — it no longer crashes.
 
 `capacitor-native-settings` is now a JS dependency and is used as a fallback
 when the custom `BackgroundLocation` plugin is missing from the build (its
-`openLocationSettings` / `openSettings` methods). Run `npx cap sync android`
+`openLocationSettings` / `openSettings` methods). Run `bun run sync:android`
 after pulling so the plugin is auto-registered in `capacitor.settings.gradle`
 and `MainActivity`'s plugin list — no manual Java edit is required.
 
-Still mandatory for the in-app "Turn on location?" popup:
-
-```gradle
-implementation "com.google.android.gms:play-services-location:21.3.0"
-```
+Play Services location (mandatory for the in-app "Turn on location?" popup) is
+applied automatically from `android/app/badiyo-native.gradle` by the same
+command.
