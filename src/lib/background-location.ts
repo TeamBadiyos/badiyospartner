@@ -24,6 +24,7 @@ interface BackgroundLocationPlugin {
   request(): Promise<BgLocationRequestResult>;
   openSettings(): Promise<void>;
   isLocationEnabled(): Promise<{ enabled: boolean }>;
+  isFirebaseAvailable(): Promise<{ available: boolean }>;
   openLocationSettings(): Promise<void>;
   promptEnableLocation(): Promise<{ enabled: boolean; resolvable: boolean }>;
   startBackgroundService(): Promise<{ started: boolean; reason?: string }>;
@@ -65,6 +66,22 @@ export async function isDeviceLocationEnabled(): Promise<boolean> {
   } catch (err) {
     console.warn("[bg-location] isLocationEnabled failed", err);
     return true; // fail open — never block going online on a bridge error
+  }
+}
+
+/**
+ * Whether Firebase is initialized natively (google-services.json present at
+ * build time). PushNotifications.register() crashes the whole process when it
+ * is not, so push init MUST be gated on this. Returns false on any doubt.
+ */
+export async function isNativeFirebaseAvailable(): Promise<boolean> {
+  if (!isAndroid()) return true; // web push / iOS unaffected
+  try {
+    const res = await Plugin.isFirebaseAvailable();
+    return res?.available === true;
+  } catch (err) {
+    console.warn("[bg-location] isFirebaseAvailable failed", err);
+    return false;
   }
 }
 
