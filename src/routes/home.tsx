@@ -602,19 +602,14 @@ function HomeDashboard() {
 
   // GPS banner: try the in-app "Turn on location?" dialog first, then fall
   // back to deep-linking the phone's Location settings page.
+  retryOnlineRef.current = () => {
+    if (!online) toggle.mutate(true);
+  };
+
   const handleEnableLocation = useCallback(async () => {
     hapticImpact("light");
-    const res = await promptEnableDeviceLocation();
-    if (res.enabled) {
-      setGpsOff(false);
-      toast.success(t("home.gps.enabled"));
-      if (!online) toggle.mutate(true);
-      return;
-    }
-    if (res.resolvable) return; // user declined the dialog — leave the banner
-    const opened = await openDeviceLocationSettings();
-    if (!opened) toast.error(t("home.location.settingsFailed"));
-  }, [online, t, toggle]);
+    await autoPromptGps();
+  }, [autoPromptGps]);
 
   const handleOpenAppSettings = useCallback(async () => {
     hapticImpact("light");
