@@ -86,6 +86,25 @@ export async function isNativeFirebaseAvailable(): Promise<boolean> {
 }
 
 /**
+ * Fallback path that does NOT depend on our hand-merged native plugin.
+ * Uses the capacitor-native-settings plugin, so if the custom plugin is
+ * missing from the installed build the buttons still work.
+ */
+async function openViaNativeSettings(which: "location" | "app"): Promise<boolean> {
+  try {
+    const { NativeSettings, AndroidSettings, IOSSettings } = await import("capacitor-native-settings");
+    await NativeSettings.open({
+      optionAndroid: which === "location" ? AndroidSettings.Location : AndroidSettings.ApplicationDetails,
+      optionIOS: IOSSettings.App,
+    });
+    return true;
+  } catch (err) {
+    console.warn("[bg-location] native-settings fallback failed", which, err);
+    return false;
+  }
+}
+
+/**
  * Deep-links to the phone's Location settings page (not app settings).
  * Returns false when the page could not be opened (web/iOS or bridge error)
  * so the caller can show an explanatory message instead of doing nothing.
@@ -97,7 +116,7 @@ export async function openDeviceLocationSettings(): Promise<boolean> {
     return true;
   } catch (err) {
     console.warn("[bg-location] openLocationSettings failed", err);
-    return false;
+    return openViaNativeSettings("location");
   }
 }
 
