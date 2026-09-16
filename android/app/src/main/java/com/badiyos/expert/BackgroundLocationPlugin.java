@@ -1,4 +1,4 @@
-package com.badiyos.partner;
+package com.badiyos.expert;
 
 import android.Manifest;
 import android.content.Context;

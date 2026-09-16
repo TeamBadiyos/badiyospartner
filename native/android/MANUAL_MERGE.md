@@ -28,9 +28,9 @@ The `android/` folder is generated (not committed), so after running
 | `native/android/app/src/main/java/com/badiyos/partner/BookingAlertActions.java`   | same path under `android/`                                                  |
 | `native/android/app/src/main/res/layout/activity_booking_ring.xml`                | `android/app/src/main/res/layout/activity_booking_ring.xml`                 |
 
-`applicationId` / package must be `com.badiyos.partner` (matches
+`applicationId` / package must be `com.badiyos.expert` (matches
 `capacitor.config.ts`). If the package ever changes, update the `package`
-line in every Java file and all `com.badiyos.partner.action.*` action strings.
+line in every Java file and all `com.badiyos.expert.action.*` action strings.
 
 ### Gradle
 
