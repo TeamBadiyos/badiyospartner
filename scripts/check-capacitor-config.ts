@@ -26,8 +26,8 @@ const checks: Check[] = [
     test: (s) => (s.match(/#0074E4/gi) ?? []).length >= 3,
   },
   {
-    label: 'server.url points at https://partner.badiyos.com (live mode)',
-    test: (s) => /url\s*:\s*["']https:\/\/partner\.badiyos\.com["']/.test(s),
+    label: 'server.url points at https://expert.badiyos.com (live mode)',
+    test: (s) => /url\s*:\s*["']https:\/\/expert\.badiyos\.com["']/.test(s),
   },
   {
     label: 'server.errorPath: "offline.html" (offline cold start)',
