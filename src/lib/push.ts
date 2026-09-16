@@ -114,15 +114,20 @@ export async function initExpertPush(navigate: NavigateFn) {
 
   const { PushNotifications } = await import("@capacitor/push-notifications");
 
-  const perm = await PushNotifications.checkPermissions();
-  let granted = perm.receive === "granted";
-  if (!granted) {
-    const req = await PushNotifications.requestPermissions();
-    granted = req.receive === "granted";
-  }
-  if (!granted) return;
+  try {
+    const perm = await PushNotifications.checkPermissions();
+    let granted = perm.receive === "granted";
+    if (!granted) {
+      const req = await PushNotifications.requestPermissions();
+      granted = req.receive === "granted";
+    }
+    if (!granted) return;
 
-  await PushNotifications.register();
+    await PushNotifications.register();
+  } catch (err) {
+    console.warn("[push] registration flow failed — push disabled", err);
+    return;
+  }
 
   const platform = Capacitor.getPlatform();
   currentPlatform = platform;
