@@ -422,6 +422,22 @@ function HomeDashboard() {
     },
   });
 
+  // Shows Google's in-app "Turn on location?" dialog and, when the expert
+  // accepts, resumes the go-online flow automatically.
+  const retryOnlineRef = useRef<() => void>(() => {});
+  const autoPromptGps = useCallback(async () => {
+    const res = await promptEnableDeviceLocation();
+    if (res.enabled) {
+      setGpsOff(false);
+      toast.success(t("home.gps.enabled"));
+      retryOnlineRef.current();
+      return;
+    }
+    if (res.resolvable) return; // expert tapped "No thanks" — banner stays
+    const opened = await openDeviceLocationSettings();
+    if (!opened) toast.error(t("home.location.settingsFailed"));
+  }, [t]);
+
   const toggle = useMutation({
     mutationFn: async (next: boolean) => {
       try {
