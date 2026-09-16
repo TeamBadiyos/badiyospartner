@@ -32,9 +32,10 @@ The `android/` folder is generated (not committed), so after running
 `capacitor.config.ts`). If the package ever changes, update the `package`
 line in every Java file and all `com.badiyos.expert.action.*` action strings.
 
-### Gradle
+### Gradle — automated, do NOT add by hand
 
-`android/app/build.gradle` — dependencies:
+These dependencies now live in the tracked file
+`android/app/badiyo-native.gradle`:
 
 ```gradle
 implementation "com.google.android.gms:play-services-location:21.3.0"
@@ -44,6 +45,10 @@ implementation "com.google.android.gms:play-services-location:21.3.0"
 implementation platform("com.google.firebase:firebase-bom:33.7.0")
 implementation "com.google.firebase:firebase-messaging"
 ```
+
+Run `bun run sync:android` (instead of `npx cap sync android`) — it wires
+`apply from: "badiyo-native.gradle"` into `android/app/build.gradle`
+automatically and is idempotent.
 
 Also required for push to work: `google-services.json` at `android/app/`, the
 `com.google.gms.google-services` plugin applied in `android/app/build.gradle`,
