@@ -19,13 +19,13 @@ The `android/` folder is generated (not committed), so after running
 
 | Source (this repo)                                                              | Destination (generated `android/` project)                                |
 | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `native/android/app/src/main/java/com/badiyos/partner/MainActivity.java`          | `android/app/src/main/java/com/badiyos/partner/MainActivity.java` (replace) |
-| `native/android/app/src/main/java/com/badiyos/partner/SupabaseRpc.java`           | same path under `android/`                                                  |
-| `native/android/app/src/main/java/com/badiyos/partner/BackgroundAvailabilityService.java` | same path under `android/`                                          |
-| `native/android/app/src/main/java/com/badiyos/partner/BackgroundLocationPlugin.java` | same path under `android/`                                              |
-| `native/android/app/src/main/java/com/badiyos/partner/BadiyoMessagingService.java` | same path under `android/`                                                |
-| `native/android/app/src/main/java/com/badiyos/partner/BookingRingActivity.java`   | same path under `android/`                                                  |
-| `native/android/app/src/main/java/com/badiyos/partner/BookingAlertActions.java`   | same path under `android/`                                                  |
+| `native/android/app/src/main/java/com/badiyos/expert/MainActivity.java`          | `android/app/src/main/java/com/badiyos/expert/MainActivity.java` (replace) |
+| `native/android/app/src/main/java/com/badiyos/expert/SupabaseRpc.java`           | same path under `android/`                                                  |
+| `native/android/app/src/main/java/com/badiyos/expert/BackgroundAvailabilityService.java` | same path under `android/`                                          |
+| `native/android/app/src/main/java/com/badiyos/expert/BackgroundLocationPlugin.java` | same path under `android/`                                              |
+| `native/android/app/src/main/java/com/badiyos/expert/BadiyoMessagingService.java` | same path under `android/`                                                |
+| `native/android/app/src/main/java/com/badiyos/expert/BookingRingActivity.java`   | same path under `android/`                                                  |
+| `native/android/app/src/main/java/com/badiyos/expert/BookingAlertActions.java`   | same path under `android/`                                                  |
 | `native/android/app/src/main/res/layout/activity_booking_ring.xml`                | `android/app/src/main/res/layout/activity_booking_ring.xml`                 |
 
 `applicationId` / package must be `com.badiyos.expert` (matches
