@@ -14,7 +14,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // partner.badiyos.com does NOT resolve — pointing the shell there makes the
 // app die right after the splash screen.
 const config: CapacitorConfig = {
-  appId: "com.badiyos.partner",
+  appId: "com.badiyos.expert",
   appName: "badiyos Partner",
   webDir: "dist",
   server: {

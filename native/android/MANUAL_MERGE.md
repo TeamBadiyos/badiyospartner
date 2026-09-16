@@ -19,18 +19,18 @@ The `android/` folder is generated (not committed), so after running
 
 | Source (this repo)                                                              | Destination (generated `android/` project)                                |
 | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `native/android/app/src/main/java/com/badiyos/partner/MainActivity.java`          | `android/app/src/main/java/com/badiyos/partner/MainActivity.java` (replace) |
-| `native/android/app/src/main/java/com/badiyos/partner/SupabaseRpc.java`           | same path under `android/`                                                  |
-| `native/android/app/src/main/java/com/badiyos/partner/BackgroundAvailabilityService.java` | same path under `android/`                                          |
-| `native/android/app/src/main/java/com/badiyos/partner/BackgroundLocationPlugin.java` | same path under `android/`                                              |
-| `native/android/app/src/main/java/com/badiyos/partner/BadiyoMessagingService.java` | same path under `android/`                                                |
-| `native/android/app/src/main/java/com/badiyos/partner/BookingRingActivity.java`   | same path under `android/`                                                  |
-| `native/android/app/src/main/java/com/badiyos/partner/BookingAlertActions.java`   | same path under `android/`                                                  |
+| `native/android/app/src/main/java/com/badiyos/expert/MainActivity.java`          | `android/app/src/main/java/com/badiyos/expert/MainActivity.java` (replace) |
+| `native/android/app/src/main/java/com/badiyos/expert/SupabaseRpc.java`           | same path under `android/`                                                  |
+| `native/android/app/src/main/java/com/badiyos/expert/BackgroundAvailabilityService.java` | same path under `android/`                                          |
+| `native/android/app/src/main/java/com/badiyos/expert/BackgroundLocationPlugin.java` | same path under `android/`                                              |
+| `native/android/app/src/main/java/com/badiyos/expert/BadiyoMessagingService.java` | same path under `android/`                                                |
+| `native/android/app/src/main/java/com/badiyos/expert/BookingRingActivity.java`   | same path under `android/`                                                  |
+| `native/android/app/src/main/java/com/badiyos/expert/BookingAlertActions.java`   | same path under `android/`                                                  |
 | `native/android/app/src/main/res/layout/activity_booking_ring.xml`                | `android/app/src/main/res/layout/activity_booking_ring.xml`                 |
 
-`applicationId` / package must be `com.badiyos.partner` (matches
+`applicationId` / package must be `com.badiyos.expert` (matches
 `capacitor.config.ts`). If the package ever changes, update the `package`
-line in every Java file and all `com.badiyos.partner.action.*` action strings.
+line in every Java file and all `com.badiyos.expert.action.*` action strings.
 
 ### Gradle
 
@@ -45,11 +45,29 @@ implementation platform("com.google.firebase:firebase-bom:33.7.0")
 implementation "com.google.firebase:firebase-messaging"
 ```
 
-Also required: `google-services.json` at `android/app/`, the
+Also required for push to work: `google-services.json` at `android/app/`, the
 `com.google.gms.google-services` plugin applied in `android/app/build.gradle`,
 and its classpath in `android/build.gradle`. `@capacitor/push-notifications`
 must be installed (it provides `MessagingService`, which
 `BadiyoMessagingService` extends so JS token registration keeps working).
+
+#### google-services.json (exact steps)
+
+1. Firebase console → project → Project settings → Your apps → add/open the
+   Android app with package name **`com.badiyos.expert`** (must match
+   `applicationId` exactly, or Firebase stays uninitialized and push is dead).
+2. Add the debug and release SHA-1 signing fingerprints.
+3. Download `google-services.json`, place it at `android/app/google-services.json`.
+4. Verify the file contains `"package_name": "com.badiyos.expert"`.
+5. `android/build.gradle`: `classpath "com.google.gms:google-services:4.4.2"`.
+6. `android/app/build.gradle` (top or bottom): `apply plugin: "com.google.gms.google-services"`.
+
+**Without this file the app must NOT crash:** `BackgroundLocationPlugin.isFirebaseAvailable()`
+returns `available: false` (reflection-based, safe even when Firebase classes are
+absent) and `src/lib/push.ts` skips push registration entirely. Historically,
+calling `PushNotifications.register()` with no default FirebaseApp threw
+`IllegalStateException: Default FirebaseApp is not initialized` on the
+Capacitor plugin thread — uncatchable from JS, killing the app at startup.
 
 ---
 

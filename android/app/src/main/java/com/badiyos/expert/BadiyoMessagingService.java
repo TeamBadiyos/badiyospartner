@@ -1,4 +1,4 @@
-package com.badiyos.partner;
+package com.badiyos.expert;
 
 import android.app.KeyguardManager;
 import android.app.Notification;

@@ -1,4 +1,4 @@
-package com.badiyos.partner;
+package com.badiyos.expert;
 
 import android.app.Activity;
 import android.app.KeyguardManager;
@@ -52,7 +52,7 @@ public class BookingRingActivity extends Activity {
     public static final String EXTRA_EXTRA_MINUTES = "extra_minutes";
     public static final String EXTRA_EXTRA_PRICE = "extra_price";
 
-    private static final String ACTION_DISMISS = "com.badiyos.partner.action.RING_DISMISS";
+    private static final String ACTION_DISMISS = "com.badiyos.expert.action.RING_DISMISS";
 
     private String bookingId = "";
     private String alertType = "";

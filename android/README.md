@@ -5,13 +5,13 @@ generation, copy in the tracked files below and edit `AndroidManifest.xml`
 manually — these are the only pieces the repo owns:
 
 ## Tracked Java sources
-- `android/app/src/main/java/com/badiyos/partner/MainActivity.java`
-- `android/app/src/main/java/com/badiyos/partner/BackgroundLocationPlugin.java`
-- `android/app/src/main/java/com/badiyos/partner/BackgroundAvailabilityService.java`
-- `android/app/src/main/java/com/badiyos/partner/BadiyoMessagingService.java`
-- `android/app/src/main/java/com/badiyos/partner/BookingRingActivity.java`
-- `android/app/src/main/java/com/badiyos/partner/BookingAlertActions.java`
-- `android/app/src/main/java/com/badiyos/partner/SupabaseRpc.java`
+- `android/app/src/main/java/com/badiyos/expert/MainActivity.java`
+- `android/app/src/main/java/com/badiyos/expert/BackgroundLocationPlugin.java`
+- `android/app/src/main/java/com/badiyos/expert/BackgroundAvailabilityService.java`
+- `android/app/src/main/java/com/badiyos/expert/BadiyoMessagingService.java`
+- `android/app/src/main/java/com/badiyos/expert/BookingRingActivity.java`
+- `android/app/src/main/java/com/badiyos/expert/BookingAlertActions.java`
+- `android/app/src/main/java/com/badiyos/expert/SupabaseRpc.java`
 - `android/app/src/main/res/layout/activity_booking_ring.xml`
 
 ## Required manifest edits (`android/app/src/main/AndroidManifest.xml`)
@@ -93,7 +93,7 @@ Apply this by hand to `android/app/src/main/AndroidManifest.xml` after
     android:exported="false"
     android:launchMode="singleTask"
     android:excludeFromRecents="true"
-    android:taskAffinity="com.badiyos.partner.ring"
+    android:taskAffinity="com.badiyos.expert.ring"
     android:showOnLockScreen="true"
     android:turnScreenOn="true"
     android:showWhenLocked="true"

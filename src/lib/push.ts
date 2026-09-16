@@ -96,17 +96,38 @@ export async function initExpertPush(navigate: NavigateFn) {
   if (!Capacitor?.isNativePlatform?.()) return;
   initialized = true;
 
+  // Guard: without google-services.json the default FirebaseApp is not
+  // initialized and PushNotifications.register() crashes the whole process
+  // on the plugin thread (uncatchable from JS). Skip push entirely then.
+  try {
+    const { isNativeFirebaseAvailable } = await import("@/lib/background-location");
+    if (!(await isNativeFirebaseAvailable())) {
+      console.warn(
+        "[push] Firebase not initialized in this build (missing google-services.json) — push notifications disabled.",
+      );
+      return;
+    }
+  } catch (err) {
+    console.warn("[push] Firebase availability check failed — push disabled", err);
+    return;
+  }
+
   const { PushNotifications } = await import("@capacitor/push-notifications");
 
-  const perm = await PushNotifications.checkPermissions();
-  let granted = perm.receive === "granted";
-  if (!granted) {
-    const req = await PushNotifications.requestPermissions();
-    granted = req.receive === "granted";
-  }
-  if (!granted) return;
+  try {
+    const perm = await PushNotifications.checkPermissions();
+    let granted = perm.receive === "granted";
+    if (!granted) {
+      const req = await PushNotifications.requestPermissions();
+      granted = req.receive === "granted";
+    }
+    if (!granted) return;
 
-  await PushNotifications.register();
+    await PushNotifications.register();
+  } catch (err) {
+    console.warn("[push] registration flow failed — push disabled", err);
+    return;
+  }
 
   const platform = Capacitor.getPlatform();
   currentPlatform = platform;
