@@ -56,7 +56,7 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "home.gps.openLocationSettings": "लोकेशन सुरू करा",
   "home.gps.enabled": "लोकेशन सुरू झाले — आता तुम्ही तयार आहात.",
   "home.location.settingsFailed":
-    "सेटिंग्ज आपोआप उघडता आली नाहीत. कृपया फोन सेटिंग्जमध्ये जाऊन badiyos Expert साठी लोकेशन सुरू करा.",
+    "सेटिंग्ज आपोआप उघडता आली नाहीत. Settings > Apps > badiyos Expert > Permissions > Location येथे जाऊन लोकेशन सुरू करा.",
   "home.toast.locationPermission": "तुमचे लोकेशन मिळाले नाही — परवानगी तपासा आणि पुन्हा प्रयत्न करा.",
   "home.toast.locationTimeout": "तुमचे लोकेशन मिळाले नाही — मोकळ्या जागी जाऊन पुन्हा प्रयत्न करा.",
   "home.toast.statusFailed": "तुमची स्थिती अपडेट करता आली नाही.",
