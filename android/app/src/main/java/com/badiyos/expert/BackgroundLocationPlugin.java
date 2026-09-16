@@ -75,6 +75,25 @@ public class BackgroundLocationPlugin extends Plugin {
         call.resolve(ret);
     }
 
+    /** True when a default FirebaseApp is initialized (i.e. google-services.json
+     * was present at build time). Uses reflection so the app still compiles and
+     * runs when Firebase is entirely absent; JS must check this BEFORE calling
+     * PushNotifications.register(), which crashes the process otherwise. */
+    @PluginMethod
+    public void isFirebaseAvailable(PluginCall call) {
+        boolean available = false;
+        try {
+            Class<?> firebaseApp = Class.forName("com.google.firebase.FirebaseApp");
+            Object apps = firebaseApp.getMethod("getApps", android.content.Context.class).invoke(null, getContext());
+            available = apps instanceof java.util.List && !((java.util.List<?>) apps).isEmpty();
+        } catch (Throwable t) {
+            available = false;
+        }
+        JSObject ret = new JSObject();
+        ret.put("available", available);
+        call.resolve(ret);
+    }
+
     /** Deep-links to the system Location settings page (not app settings). */
     @PluginMethod
     public void openLocationSettings(PluginCall call) {
