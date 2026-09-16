@@ -1,0 +1,20 @@
+// Badiyo Expert — native dependencies owned by the repo.
+//
+// This file is applied from android/app/build.gradle via:
+//   apply from: "badiyo-native.gradle"
+// which `bun run sync:android` inserts automatically.
+//
+// Keep ALL hand-required native dependencies here so a regenerated
+// android/ folder never silently loses them.
+
+dependencies {
+    // Required by BackgroundLocationPlugin.promptEnableLocation() — Google's
+    // in-app "Turn on location?" dialog (SettingsClient +
+    // ResolvableApiException.startResolutionForResult, requestCode 4711)
+    // and by BackgroundAvailabilityService (FusedLocationProviderClient).
+    implementation "com.google.android.gms:play-services-location:21.3.0"
+
+    // Push notifications (BadiyoMessagingService / full-screen ring alerts).
+    implementation platform("com.google.firebase:firebase-bom:33.7.0")
+    implementation "com.google.firebase:firebase-messaging"
+}
