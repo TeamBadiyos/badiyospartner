@@ -422,6 +422,22 @@ function HomeDashboard() {
     },
   });
 
+  // Shows Google's in-app "Turn on location?" dialog and, when the expert
+  // accepts, resumes the go-online flow automatically.
+  const retryOnlineRef = useRef<() => void>(() => {});
+  const autoPromptGps = useCallback(async () => {
+    const res = await promptEnableDeviceLocation();
+    if (res.enabled) {
+      setGpsOff(false);
+      toast.success(t("home.gps.enabled"));
+      retryOnlineRef.current();
+      return;
+    }
+    if (res.resolvable) return; // expert tapped "No thanks" — banner stays
+    const opened = await openDeviceLocationSettings();
+    if (!opened) toast.error(t("home.location.settingsFailed"));
+  }, [t]);
+
   const toggle = useMutation({
     mutationFn: async (next: boolean) => {
       try {
@@ -486,6 +502,7 @@ function HomeDashboard() {
       const msg = err.message || "";
       if ((err as Error & { code?: string }).code === "GPS_OFF") {
         setGpsOff(true);
+        void autoPromptGps();
         return;
       }
       if (isLocationBlockedError(err)) {
@@ -508,10 +525,12 @@ function HomeDashboard() {
   useEffect(() => {
     if (!online) return;
     let cancelled = false;
+    let prompted = false;
     const check = async () => {
       const enabled = await isDeviceLocationEnabled();
       if (cancelled) return;
       if (enabled) {
+        prompted = false;
         setGpsOff(false);
         return;
       }
@@ -520,6 +539,11 @@ function HomeDashboard() {
       const { error } = await supabase.rpc("expert_set_online", { _online: false });
       if (error) console.warn("[expert][gps-watchdog] set offline failed", error);
       qc.invalidateQueries({ queryKey: ["expert", userId] });
+      // Ask once per "location switched off" episode, not every 20s.
+      if (!prompted) {
+        prompted = true;
+        void autoPromptGps();
+      }
     };
     void check();
     const interval = window.setInterval(() => void check(), 20_000);
@@ -532,7 +556,7 @@ function HomeDashboard() {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [online, qc, userId]);
+  }, [online, qc, userId, autoPromptGps]);
 
 
   const acceptBroadcast = useMutation({
@@ -578,19 +602,14 @@ function HomeDashboard() {
 
   // GPS banner: try the in-app "Turn on location?" dialog first, then fall
   // back to deep-linking the phone's Location settings page.
+  retryOnlineRef.current = () => {
+    if (!online) toggle.mutate(true);
+  };
+
   const handleEnableLocation = useCallback(async () => {
     hapticImpact("light");
-    const res = await promptEnableDeviceLocation();
-    if (res.enabled) {
-      setGpsOff(false);
-      toast.success(t("home.gps.enabled"));
-      if (!online) toggle.mutate(true);
-      return;
-    }
-    if (res.resolvable) return; // user declined the dialog — leave the banner
-    const opened = await openDeviceLocationSettings();
-    if (!opened) toast.error(t("home.location.settingsFailed"));
-  }, [online, t, toggle]);
+    await autoPromptGps();
+  }, [autoPromptGps]);
 
   const handleOpenAppSettings = useCallback(async () => {
     hapticImpact("light");

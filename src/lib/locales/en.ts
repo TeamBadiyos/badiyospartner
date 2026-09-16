@@ -57,7 +57,7 @@ export const en = {
   "home.gps.openLocationSettings": "Turn on Location",
   "home.gps.enabled": "Location is on — you're all set.",
   "home.location.settingsFailed":
-    "Couldn't open settings automatically. Please open your phone Settings and allow Location for badiyos Expert.",
+    "Couldn't open settings automatically. Go to Settings > Apps > badiyos Expert > Permissions > Location and allow it.",
   "home.toast.locationPermission": "Couldn't get your location — check permissions and try again.",
   "home.toast.locationTimeout": "Couldn't get your location — move to an open area and try again.",
   "home.toast.statusFailed": "Could not update your status.",

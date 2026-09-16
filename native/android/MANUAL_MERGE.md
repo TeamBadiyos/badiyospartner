@@ -284,3 +284,19 @@ shows the logo and then dies. `bun run check:capacitor` enforces this.
 required in `android/app/build.gradle`. Without it the in-app "Turn on
 location?" dialog is simply skipped (the plugin probes for the classes first
 and falls back to opening the Location settings page) — it no longer crashes.
+
+---
+
+# MANUAL MERGE BLOCK — settings fallback plugin
+
+`capacitor-native-settings` is now a JS dependency and is used as a fallback
+when the custom `BackgroundLocation` plugin is missing from the build (its
+`openLocationSettings` / `openSettings` methods). Run `npx cap sync android`
+after pulling so the plugin is auto-registered in `capacitor.settings.gradle`
+and `MainActivity`'s plugin list — no manual Java edit is required.
+
+Still mandatory for the in-app "Turn on location?" popup:
+
+```gradle
+implementation "com.google.android.gms:play-services-location:21.3.0"
+```
