@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check:capacitor": "bun run scripts/check-capacitor-config.ts",
+    "sync:android": "npx cap sync android && bun run scripts/patch-android-gradle.ts",
     "build:capacitor": "bun run scripts/check-capacitor-config.ts && vite build"
   },
   "dependencies": {
