@@ -502,6 +502,7 @@ function HomeDashboard() {
       const msg = err.message || "";
       if ((err as Error & { code?: string }).code === "GPS_OFF") {
         setGpsOff(true);
+        void autoPromptGps();
         return;
       }
       if (isLocationBlockedError(err)) {
