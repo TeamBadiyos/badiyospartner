@@ -181,3 +181,59 @@ export async function stopBackgroundAvailabilityService(): Promise<void> {
     console.warn("[bg-location] stopBackgroundService failed", err);
   }
 }
+
+/**
+ * Asks the native layer to switch location cadence. "courier" = 15s +
+ * high accuracy while a delivery is active, "normal" = default cadence.
+ * Feature-detected: silently ignored on web and on older APKs that do not
+ * have setMode yet, so existing published builds keep working.
+ */
+export async function setNativeLocationMode(mode: "courier" | "normal"): Promise<boolean> {
+  if (!isAndroid()) return false;
+  try {
+    const fn = (Plugin as { setMode?: (o: { mode: string }) => Promise<unknown> }).setMode;
+    if (typeof fn !== "function") return false;
+    await fn.call(Plugin, { mode });
+    return true;
+  } catch (err) {
+    console.warn("[bg-location] setMode unavailable", err);
+    return false;
+  }
+}
+
+/** True when the native plugin can open battery / autostart settings pages. */
+export function hasNativeOemSettings(): boolean {
+  if (!isAndroid()) return false;
+  const p = Plugin as Record<string, unknown>;
+  return typeof p.openBatterySettings === "function" || typeof p.openAutostartSettings === "function";
+}
+
+/** Opens the OS battery-optimisation page. Falls back to the app details page. */
+export async function openBatterySettings(): Promise<boolean> {
+  if (!isAndroid()) return false;
+  try {
+    const fn = (Plugin as { openBatterySettings?: () => Promise<{ opened?: boolean }> }).openBatterySettings;
+    if (typeof fn === "function") {
+      const res = await fn.call(Plugin);
+      if (res?.opened !== false) return true;
+    }
+  } catch (err) {
+    console.warn("[bg-location] openBatterySettings failed", err);
+  }
+  return openViaNativeSettings("app");
+}
+
+/** Opens the OEM autostart manager when the native build supports it. */
+export async function openAutostartSettings(): Promise<boolean> {
+  if (!isAndroid()) return false;
+  try {
+    const fn = (Plugin as { openAutostartSettings?: () => Promise<{ opened?: boolean }> }).openAutostartSettings;
+    if (typeof fn === "function") {
+      const res = await fn.call(Plugin);
+      if (res?.opened !== false) return true;
+    }
+  } catch (err) {
+    console.warn("[bg-location] openAutostartSettings failed", err);
+  }
+  return openViaNativeSettings("app");
+}
