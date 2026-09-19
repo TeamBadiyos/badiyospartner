@@ -326,6 +326,7 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "courier.offer.away": "{km} किमी दूर",
   "courier.offer.earning": "तुमची कमाई",
   "courier.offer.expiresIn": "{sec} सेकंद शिल्लक",
+  "courier.offer.expired": "ऑफर संपली आहे",
   "courier.accept": "स्वीकारा",
   "courier.reject": "नाकारा",
   "courier.toast.accepted": "डिलिव्हरी स्वीकारली",
