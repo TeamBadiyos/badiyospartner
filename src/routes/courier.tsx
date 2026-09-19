@@ -126,14 +126,24 @@ function CourierScreen() {
           ) : (
             <ul className="mt-3 space-y-3">
               {offers.map((o) => {
-                const left = secondsLeft(o.expires_at);
-                return (
-                  <li key={o.offer_id} className="rounded-[18px] border border-border bg-card p-4 card-lift">
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-destructive)]/10 px-3 py-1 text-[12px] font-bold text-[color:var(--color-destructive)]">
-                        <Clock className="h-3.5 w-3.5" />
-                        {t("courier.offer.expiresIn", { sec: left })}
-                      </span>
+                 const left = secondsLeft(o.expires_at);
+                 const expired = left <= 0;
+                 return (
+                   <li
+                     key={o.offer_id}
+                     className={`rounded-[18px] border border-border bg-card p-4 card-lift${expired ? " opacity-60" : ""}`}
+                   >
+                     <div className="flex items-center justify-between">
+                       <span
+                         className={
+                           expired
+                             ? "inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-[12px] font-bold text-[color:var(--text-secondary)]"
+                             : "inline-flex items-center gap-1 rounded-full bg-[color:var(--color-destructive)]/10 px-3 py-1 text-[12px] font-bold text-[color:var(--color-destructive)]"
+                         }
+                       >
+                         <Clock className="h-3.5 w-3.5" />
+                         {expired ? t("courier.offer.expired") : t("courier.offer.expiresIn", { sec: left })}
+                       </span>
                       <span className="amount-strong text-[18px] text-foreground">{formatINR(o.earning ?? 0)}</span>
                     </div>
 
