@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronLeft, Loader2, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { ChevronLeft, Loader2, ArrowDownLeft, ArrowUpRight , Bike } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
@@ -48,7 +48,10 @@ function WalletScreen() {
 
   if (loading) return <div className="flex min-h-[100dvh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
-  const items = ledgerQ.data ?? [];
+  const all = ledgerQ.data ?? [];
+  // Courier trips are credited by courier_settle_order with reason "courier_order:<uuid>".
+  const courierItems = all.filter((tx) => (tx.reason ?? "").startsWith("courier_order:"));
+  const items = all.filter((tx) => !(tx.reason ?? "").startsWith("courier_order:"));
 
   return (
     <PullToRefresh className="relative" onRefresh={() => ledgerQ.refetch()}>
@@ -68,8 +71,28 @@ function WalletScreen() {
         </div>
       </section>
 
+      {courierItems.length > 0 && (
+        <section className="mt-6 px-6">
+          <SectionHeading>{t("wallet.courier.title")}</SectionHeading>
+          <ul className="mt-3 space-y-2">
+            {courierItems.map((tx) => (
+              <li key={tx.id} className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4 card-lift">
+                <div className="icon-tile flex h-10 w-10 items-center justify-center rounded-full text-primary">
+                  <Bike className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] font-semibold text-foreground">{t("wallet.courier.item")}</p>
+                  <p className="text-[12px] text-[color:var(--text-secondary)]">{new Date(tx.created_at).toLocaleString("en-IN")}</p>
+                </div>
+                <span className="amount-strong text-[16px] text-primary">+{formatINR(tx.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="mt-6 px-6">
-        <SectionHeading>{t("wallet.tx.title")}</SectionHeading>
+        <SectionHeading>{courierItems.length > 0 ? t("wallet.other.title") : t("wallet.tx.title")}</SectionHeading>
         {items.length === 0 ? (
           <p className="mt-4 text-[13px] text-[color:var(--text-secondary)]">{t("wallet.tx.empty")}</p>
         ) : (

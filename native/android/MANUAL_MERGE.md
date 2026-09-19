@@ -304,3 +304,70 @@ and `MainActivity`'s plugin list — no manual Java edit is required.
 Play Services location (mandatory for the in-app "Turn on location?" popup) is
 applied automatically from `android/app/badiyo-native.gradle` by the same
 command.
+
+---
+
+## MANUAL MERGE BLOCK — Courier (bike delivery), dormant
+
+These changes live only in `native/android/` and are NOT in the currently
+published APK. The web layer feature-detects every bridge below, so the
+published APK keeps working untouched.
+
+### (a) Courier location mode — DONE in this folder
+
+- `BackgroundAvailabilityService.java`: `COURIER_INTERVAL_MS = 15_000L`,
+  `setCourierMode(Context, boolean)`, `ACTION_RETUNE`, and
+  `Priority.PRIORITY_HIGH_ACCURACY` while courier mode is on.
+- `BackgroundLocationPlugin.java`: `setMode({ mode: "courier" | "normal" })`.
+- Web caller: `setNativeLocationMode()` in `src/lib/background-location.ts`,
+  used by `useCourierLocationPing()` in `src/lib/courier.ts` (15s foreground
+  ping while a delivery is active, reverts to "normal" when it ends).
+- No new permissions. Do NOT add `ACTIVITY_RECOGNITION`,
+  `SCHEDULE_EXACT_ALARM`, or `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
+
+### (b) Courier offer alerts — TODO at native build time
+
+`BadiyoMessagingService.java`, in the data-message branch:
+
+```java
+// data: type=courier_offer, offer_id, order_id, order_code, expires_at (ISO),
+//       earning, pickup_area, drop_area
+if ("courier_offer".equals(orEmpty(data.get("type")))) {
+    Intent ring = new Intent(this, BookingRingActivity.class);
+    ring.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+    ring.putExtra("alert_kind", "courier_offer");
+    ring.putExtra("offer_id", data.get("offer_id"));
+    ring.putExtra("order_id", data.get("order_id"));
+    ring.putExtra("expires_at", data.get("expires_at"));   // drives the countdown
+    ring.putExtra("title", data.get("order_code"));
+    ring.putExtra("body", data.get("pickup_area") + " -> " + data.get("drop_area"));
+    startFullScreenAlert(ring, "courier_offer_alerts");
+    return;
+}
+```
+
+`BookingRingActivity.java`:
+
+- When `alert_kind == "courier_offer"`, replace the fixed 60s auto-timeout with
+  a countdown to `expires_at` (parse ISO-8601, clamp to 0..120s); auto-dismiss
+  and stop the ringtone when it hits zero.
+- Accept button → `SupabaseRpc.call("courier_offer_respond",
+  {"_offer_id": offerId, "_accept": true})`; on `{"ok": true}` deep-link into
+  the app at `/courier/<order_id>`. On `{"ok": false}` show the returned
+  `reason` (`offer_expired`, `already_taken`, `already_on_a_job`) and finish.
+- Reject button → same RPC with `"_accept": false`, then finish.
+- Notification channel `courier_offer_alerts`, IMPORTANCE_HIGH,
+  `CATEGORY_CALL`, same full-screen-intent + `showWhenLocked` setup as
+  `new_booking_alerts`.
+
+### (c) Battery / OEM autostart intents — DONE in this folder
+
+`BackgroundLocationPlugin.java` adds `hasOemSettings()`, `openBatterySettings()`
+and `openAutostartSettings()` (Xiaomi/MIUI, Oppo/ColorOS, Vivo/iQOO, Samsung,
+Huawei component intents, each `resolveActivity`-checked with an app-info
+fallback). The battery page opens `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`
+— view only, no exemption is requested, so no permission is needed.
+
+Web screen: `/battery-guide` (`src/routes/battery-guide.tsx`). The buttons only
+render when `hasNativeOemSettings()` is true; otherwise riders see the written
+Xiaomi / Vivo / Oppo / Realme / Samsung steps only.

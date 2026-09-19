@@ -310,4 +310,87 @@ public class BackgroundLocationPlugin extends Plugin {
             getContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION
         ) == PackageManager.PERMISSION_GRANTED;
     }
+
+    // ---------------- Courier mode (dormant until next native build) -------
+
+    /** setMode({ mode: "courier" | "normal" }) — courier mode reports location
+     * every 15s at PRIORITY_HIGH_ACCURACY while a delivery is active. */
+    @PluginMethod
+    public void setMode(PluginCall call) {
+        String mode = call.getString("mode", "normal");
+        boolean courier = "courier".equals(mode);
+        try {
+            BackgroundAvailabilityService.setCourierMode(getContext(), courier);
+        } catch (Throwable t) {
+            // Service not running / not permitted — mode still applies on next start.
+        }
+        JSObject ret = new JSObject();
+        ret.put("mode", courier ? "courier" : "normal");
+        call.resolve(ret);
+    }
+
+    /** True when this build can open battery / OEM autostart pages. Web layer
+     * uses this to decide whether to show the buttons at all. */
+    @PluginMethod
+    public void hasOemSettings(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("available", true);
+        call.resolve(ret);
+    }
+
+    /** Opens the system battery-optimization list (no permission needed — we
+     * only VIEW the list, we never request the exemption programmatically). */
+    @PluginMethod
+    public void openBatterySettings(PluginCall call) {
+        boolean ok = startAny(new Intent[] {
+            new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+            new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.fromParts("package", getContext().getPackageName(), null))
+        });
+        JSObject ret = new JSObject();
+        ret.put("opened", ok);
+        call.resolve(ret);
+    }
+
+    /** Opens the OEM autostart / background-start manager. Each vendor uses a
+     * different activity, so we try them in order and fall back to app info. */
+    @PluginMethod
+    public void openAutostartSettings(PluginCall call) {
+        boolean ok = startAny(new Intent[] {
+            componentIntent("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),
+            componentIntent("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"),
+            componentIntent("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity"),
+            componentIntent("com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity"),
+            componentIntent("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"),
+            componentIntent("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity"),
+            componentIntent("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity"),
+            componentIntent("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
+            new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.fromParts("package", getContext().getPackageName(), null))
+        });
+        JSObject ret = new JSObject();
+        ret.put("opened", ok);
+        call.resolve(ret);
+    }
+
+    private Intent componentIntent(String pkg, String cls) {
+        Intent i = new Intent();
+        i.setClassName(pkg, cls);
+        return i;
+    }
+
+    private boolean startAny(Intent[] candidates) {
+        for (Intent intent : candidates) {
+            if (intent == null) continue;
+            try {
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (intent.resolveActivity(getContext().getPackageManager()) == null) continue;
+                getContext().startActivity(intent);
+                return true;
+            } catch (Throwable ignored) {
+            }
+        }
+        return false;
+    }
+
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { Inbox, MapPin, Loader2, Wallet, History, Award, LifeBuoy, Clock, X, AlertTriangle } from "lucide-react";
+import { Inbox, MapPin, Loader2, Wallet, History, Award, LifeBuoy, Clock, X, AlertTriangle, Bike } from "lucide-react";
 import badiyosBlue from "@/assets/badiyos-wordmark-blue.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, initials } from "@/lib/expert-client";
@@ -21,6 +21,7 @@ import {
   stopBackgroundAvailabilityService,
 } from "@/lib/background-location";
 import { initExpertPush } from "@/lib/push";
+import { useCourierSkill, useActiveCourierOrder } from "@/lib/courier";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -98,6 +99,10 @@ function HomeDashboard() {
     },
   });
   const needsSkillSetup = approvedSkills.data === 0;
+  // Courier tab only shows once the rider's courier skill is approved.
+  const courierSkill = useCourierSkill(expert?.id);
+  const courierEnabled = courierSkill.data === true;
+  const activeCourier = useActiveCourierOrder(courierEnabled ? expert?.id : null);
   const tracker = useExpertLocationTracking(online);
 
   const locationState = tracker.state;
@@ -665,6 +670,23 @@ function HomeDashboard() {
         </div>
       </header>
 
+      {activeCourier.data && (
+        <section className="px-6 pb-4">
+          <Link
+            to="/courier/$id"
+            params={{ id: activeCourier.data.id }}
+            className="flex items-center gap-3 rounded-[18px] bg-primary p-4 text-primary-foreground shadow-[var(--shadow-brand-md)]"
+          >
+            <Bike className="h-6 w-6" />
+            <div className="flex-1">
+              <p className="text-[15px] font-bold">{t("courier.active.banner")}</p>
+              <p className="text-[13px] opacity-85">{activeCourier.data.order_code ?? ""}</p>
+            </div>
+            <span className="text-[13px] font-bold underline">{t("courier.active.view")}</span>
+          </Link>
+        </section>
+      )}
+
       {gpsOff && (
         <section className="px-6 pb-4">
           <div className="rounded-[18px] border border-[color:var(--color-destructive)]/30 bg-[color:var(--color-destructive)]/5 p-4">
@@ -945,8 +967,13 @@ function HomeDashboard() {
       )}
 
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto grid w-full max-w-md grid-cols-4 gap-2 border-t border-border bg-background px-6 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+      <nav
+        className={`fixed inset-x-0 bottom-0 z-50 mx-auto grid w-full max-w-md gap-2 border-t border-border bg-background px-6 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] ${
+          courierEnabled ? "grid-cols-5" : "grid-cols-4"
+        }`}
+      >
         {[
+          ...(courierEnabled ? [{ to: "/courier" as const, label: t("courier.nav"), Icon: Bike }] : []),
           { to: "/history" as const, label: t("home.nav.history"), Icon: History },
           { to: "/wallet" as const, label: t("home.nav.wallet"), Icon: Wallet },
           { to: "/rewards" as const, label: t("home.nav.rewards"), Icon: Award },
@@ -954,10 +981,11 @@ function HomeDashboard() {
         ].map(({ to, label, Icon }) => (
           <Link key={to} to={to} className="flex flex-col items-center gap-1 rounded-[14px] border border-border bg-card py-3 text-center card-lift">
             <Icon className="h-5 w-5 text-primary" strokeWidth={2} />
-            <span className="text-[12px] font-semibold text-foreground">{label}</span>
+            <span className="text-[11px] font-semibold text-foreground">{label}</span>
           </Link>
         ))}
       </nav>
+
 
     </div>
     </PullToRefresh>
