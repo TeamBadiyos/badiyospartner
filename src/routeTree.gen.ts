@@ -23,6 +23,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DevicesRouteImport } from './routes/devices'
+import { Route as CourierRouteImport } from './routes/courier'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LegalSlugRouteImport } from './routes/legal.$slug'
 import { Route as BookingIdRouteImport } from './routes/booking.$id'
@@ -97,6 +98,11 @@ const DevicesRoute = DevicesRouteImport.update({
   path: '/devices',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CourierRoute = CourierRouteImport.update({
+  id: '/courier',
+  path: '/courier',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -115,6 +121,7 @@ const BookingIdRoute = BookingIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/courier': typeof CourierRoute
   '/devices': typeof DevicesRoute
   '/history': typeof HistoryRoute
   '/home': typeof HomeRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/courier': typeof CourierRoute
   '/devices': typeof DevicesRoute
   '/history': typeof HistoryRoute
   '/home': typeof HomeRoute
@@ -154,6 +162,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/courier': typeof CourierRoute
   '/devices': typeof DevicesRoute
   '/history': typeof HistoryRoute
   '/home': typeof HomeRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/courier'
     | '/devices'
     | '/history'
     | '/home'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/courier'
     | '/devices'
     | '/history'
     | '/home'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/courier'
     | '/devices'
     | '/history'
     | '/home'
@@ -233,6 +245,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CourierRoute: typeof CourierRoute
   DevicesRoute: typeof DevicesRoute
   HistoryRoute: typeof HistoryRoute
   HomeRoute: typeof HomeRoute
@@ -351,6 +364,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevicesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/courier': {
+      id: '/courier'
+      path: '/courier'
+      fullPath: '/courier'
+      preLoaderRoute: typeof CourierRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -377,6 +397,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CourierRoute: CourierRoute,
   DevicesRoute: DevicesRoute,
   HistoryRoute: HistoryRoute,
   HomeRoute: HomeRoute,
