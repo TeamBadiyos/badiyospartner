@@ -137,6 +137,25 @@ export async function initExpertPush(navigate: NavigateFn) {
   const platform = Capacitor.getPlatform();
   currentPlatform = platform;
 
+  // High-importance channel for courier delivery offers. Feature-detected:
+  // createChannel is Android-only and a no-op/throw elsewhere.
+  if (platform === "android") {
+    try {
+      await PushNotifications.createChannel?.({
+        id: "courier_offers",
+        name: "Courier delivery offers",
+        description: "New bike delivery offers near you",
+        importance: 5,
+        visibility: 1,
+        sound: "default",
+        vibration: true,
+        lights: true,
+      });
+    } catch (err) {
+      console.warn("[push] createChannel(courier_offers) failed", err);
+    }
+  }
+
   await PushNotifications.addListener("registration", (t) => {
     currentToken = t.value;
     void callRegister(t.value, platform);
