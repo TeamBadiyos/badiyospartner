@@ -29,9 +29,14 @@ interface BackgroundLocationPlugin {
   promptEnableLocation(): Promise<{ enabled: boolean; resolvable: boolean }>;
   startBackgroundService(): Promise<{ started: boolean; reason?: string }>;
   stopBackgroundService(): Promise<{ stopped: boolean }>;
+  /** Present only in newer native builds — always feature-detected. */
+  setMode?(options: { mode: "courier" | "normal" }): Promise<{ mode: string }>;
+  openBatterySettings?(): Promise<{ opened: boolean }>;
+  openAutostartSettings?(): Promise<{ opened: boolean }>;
 }
 
 const Plugin = registerPlugin<BackgroundLocationPlugin>("BackgroundLocation");
+
 
 function isAndroid(): boolean {
   try {
