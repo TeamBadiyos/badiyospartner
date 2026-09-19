@@ -87,13 +87,21 @@ Deno.serve(async (req) => {
     if (!okAuth) return json({ error: "Unauthorized" }, { status: 401 });
 
     const body = (await req.json().catch(() => ({}))) as {
+      /** "courier_offer" routes to the courier branch; anything else = booking push. */
+      type?: string;
       booking_id?: string;
+      offer_id?: string;
       expert_id?: string;
       /** "assigned" (manual/direct assignment) or "broadcast" (nearby offer). */
       alert_type?: "assigned" | "broadcast";
       title?: string;
       body?: string;
     };
+
+    if (body.type === "courier_offer") {
+      return await sendCourierOffer(body.offer_id ?? "", body.expert_id ?? "");
+    }
+
     if (!body.booking_id || !body.expert_id) {
       return json({ error: "booking_id and expert_id required" }, { status: 400 });
     }
