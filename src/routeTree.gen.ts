@@ -24,8 +24,10 @@ import { Route as HomeRouteImport } from './routes/home'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DevicesRouteImport } from './routes/devices'
 import { Route as CourierRouteImport } from './routes/courier'
+import { Route as BatteryGuideRouteImport } from './routes/battery-guide'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LegalSlugRouteImport } from './routes/legal.$slug'
+import { Route as CourierIdRouteImport } from './routes/courier.$id'
 import { Route as BookingIdRouteImport } from './routes/booking.$id'
 
 const WalletRoute = WalletRouteImport.update({
@@ -103,6 +105,11 @@ const CourierRoute = CourierRouteImport.update({
   path: '/courier',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BatteryGuideRoute = BatteryGuideRouteImport.update({
+  id: '/battery-guide',
+  path: '/battery-guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -113,6 +120,11 @@ const LegalSlugRoute = LegalSlugRouteImport.update({
   path: '/legal/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CourierIdRoute = CourierIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => CourierRoute,
+} as any)
 const BookingIdRoute = BookingIdRouteImport.update({
   id: '/booking/$id',
   path: '/booking/$id',
@@ -121,7 +133,8 @@ const BookingIdRoute = BookingIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/courier': typeof CourierRoute
+  '/battery-guide': typeof BatteryGuideRoute
+  '/courier': typeof CourierRouteWithChildren
   '/devices': typeof DevicesRoute
   '/history': typeof HistoryRoute
   '/home': typeof HomeRoute
@@ -137,11 +150,13 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/wallet': typeof WalletRoute
   '/booking/$id': typeof BookingIdRoute
+  '/courier/$id': typeof CourierIdRoute
   '/legal/$slug': typeof LegalSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/courier': typeof CourierRoute
+  '/battery-guide': typeof BatteryGuideRoute
+  '/courier': typeof CourierRouteWithChildren
   '/devices': typeof DevicesRoute
   '/history': typeof HistoryRoute
   '/home': typeof HomeRoute
@@ -157,12 +172,14 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/wallet': typeof WalletRoute
   '/booking/$id': typeof BookingIdRoute
+  '/courier/$id': typeof CourierIdRoute
   '/legal/$slug': typeof LegalSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/courier': typeof CourierRoute
+  '/battery-guide': typeof BatteryGuideRoute
+  '/courier': typeof CourierRouteWithChildren
   '/devices': typeof DevicesRoute
   '/history': typeof HistoryRoute
   '/home': typeof HomeRoute
@@ -178,12 +195,14 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/wallet': typeof WalletRoute
   '/booking/$id': typeof BookingIdRoute
+  '/courier/$id': typeof CourierIdRoute
   '/legal/$slug': typeof LegalSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/battery-guide'
     | '/courier'
     | '/devices'
     | '/history'
@@ -200,10 +219,12 @@ export interface FileRouteTypes {
     | '/support'
     | '/wallet'
     | '/booking/$id'
+    | '/courier/$id'
     | '/legal/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/battery-guide'
     | '/courier'
     | '/devices'
     | '/history'
@@ -220,10 +241,12 @@ export interface FileRouteTypes {
     | '/support'
     | '/wallet'
     | '/booking/$id'
+    | '/courier/$id'
     | '/legal/$slug'
   id:
     | '__root__'
     | '/'
+    | '/battery-guide'
     | '/courier'
     | '/devices'
     | '/history'
@@ -240,12 +263,14 @@ export interface FileRouteTypes {
     | '/support'
     | '/wallet'
     | '/booking/$id'
+    | '/courier/$id'
     | '/legal/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CourierRoute: typeof CourierRoute
+  BatteryGuideRoute: typeof BatteryGuideRoute
+  CourierRoute: typeof CourierRouteWithChildren
   DevicesRoute: typeof DevicesRoute
   HistoryRoute: typeof HistoryRoute
   HomeRoute: typeof HomeRoute
@@ -371,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CourierRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/battery-guide': {
+      id: '/battery-guide'
+      path: '/battery-guide'
+      fullPath: '/battery-guide'
+      preLoaderRoute: typeof BatteryGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -385,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/courier/$id': {
+      id: '/courier/$id'
+      path: '/$id'
+      fullPath: '/courier/$id'
+      preLoaderRoute: typeof CourierIdRouteImport
+      parentRoute: typeof CourierRoute
+    }
     '/booking/$id': {
       id: '/booking/$id'
       path: '/booking/$id'
@@ -395,9 +434,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface CourierRouteChildren {
+  CourierIdRoute: typeof CourierIdRoute
+}
+
+const CourierRouteChildren: CourierRouteChildren = {
+  CourierIdRoute: CourierIdRoute,
+}
+
+const CourierRouteWithChildren =
+  CourierRoute._addFileChildren(CourierRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CourierRoute: CourierRoute,
+  BatteryGuideRoute: BatteryGuideRoute,
+  CourierRoute: CourierRouteWithChildren,
   DevicesRoute: DevicesRoute,
   HistoryRoute: HistoryRoute,
   HomeRoute: HomeRoute,

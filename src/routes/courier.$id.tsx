@@ -89,8 +89,8 @@ function CourierJob() {
       const { data, error } = await supabase.rpc("courier_rider_advance", {
         _order_id: id,
         _to_status: "IN_TRANSIT",
-        _lat: fix?.lat ?? null,
-        _lng: fix?.lng ?? null,
+        _lat: fix?.lat ?? undefined,
+        _lng: fix?.lng ?? undefined,
       });
       if (error) throw error;
       return data as RpcResult;
@@ -105,7 +105,7 @@ function CourierJob() {
         _order_id: id,
         _purpose: purpose,
         _otp: otp,
-        _proof_url: purpose === "delivery" ? proofPath : null,
+        _proof_url: purpose === "delivery" ? (proofPath ?? undefined) : undefined,
       });
       if (error) throw error;
       return { res: data as RpcResult, purpose };
@@ -132,7 +132,7 @@ function CourierJob() {
       const { data, error } = await supabase.rpc("courier_report_incident", {
         _order_id: id,
         _code: incidentCode,
-        _notes: detail || null,
+        _notes: detail || "",
       });
       if (error) throw error;
       return data as RpcResult;
