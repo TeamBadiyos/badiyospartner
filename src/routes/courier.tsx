@@ -83,7 +83,11 @@ function CourierScreen() {
     );
   }
 
-  const offers = (offersQ.data ?? []).filter((o) => secondsLeft(o.expires_at) > 0);
+  // Expired offers stay visible (greyed out) so a rider who opens the app from
+  // a push that arrived late sees why there is nothing to accept.
+  const offers = [...(offersQ.data ?? [])].sort(
+    (a, b) => (secondsLeft(b.expires_at) > 0 ? 1 : 0) - (secondsLeft(a.expires_at) > 0 ? 1 : 0),
+  );
   const active = activeQ.data;
 
   return (
