@@ -50,6 +50,11 @@ function routeFromData(
     type?: string;
     alert_type?: string;
   };
+  // Courier delivery offers always land on the courier list, never on a booking.
+  if (d.type === "courier_offer") {
+    const route = typeof d.route === "string" && d.route.startsWith("/") ? d.route : "/courier";
+    return () => navigate({ to: route });
+  }
   // Informational alerts route to their own screen, never to a booking.
   const infoRoutes: Record<string, string> = {
     support_resolved: "/support",
