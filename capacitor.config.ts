@@ -15,7 +15,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 // app die right after the splash screen.
 const config: CapacitorConfig = {
   appId: "com.badiyos.expert",
-  appName: "badiyos Partner",
+  appName: "badiyos Expert",
   webDir: "dist",
   server: {
     url: "https://expert.badiyos.com",
