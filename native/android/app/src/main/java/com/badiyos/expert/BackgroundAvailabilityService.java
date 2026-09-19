@@ -58,6 +58,39 @@ public class BackgroundAvailabilityService extends Service {
     // Battery-conscious: background is a safety-net, not primary tracking.
     private static final long LOCATION_INTERVAL_MS = 60_000L;
 
+    // COURIER MODE (dormant until the next native build).
+    // While a rider is on an active courier delivery the web layer calls
+    // BackgroundLocation.setMode({ mode: "courier" }), which flips these.
+    private static final long COURIER_INTERVAL_MS = 15_000L;
+    private static volatile boolean courierMode = false;
+
+    /** Called from BackgroundLocationPlugin.setMode(). Restarts the cycle so
+     * the new interval takes effect immediately. */
+    static void setCourierMode(Context ctx, boolean enabled) {
+        courierMode = enabled;
+        Intent svc = new Intent(ctx, BackgroundAvailabilityService.class);
+        svc.setAction(ACTION_RETUNE);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(ctx, svc);
+            } else {
+                ctx.startService(svc);
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "setCourierMode: could not retune service", t);
+        }
+    }
+
+    static boolean isCourierMode() {
+        return courierMode;
+    }
+
+    public static final String ACTION_RETUNE = "com.badiyos.expert.action.RETUNE_AVAILABILITY";
+
+    private long currentIntervalMs() {
+        return courierMode ? COURIER_INTERVAL_MS : LOCATION_INTERVAL_MS;
+    }
+
     // Must match src/integrations/supabase/client.ts + Capacitor Preferences.
     // Capacitor Preferences on Android writes to SharedPreferences file
     // "CapacitorStorage" with the raw key as-is.
@@ -101,6 +134,11 @@ public class BackgroundAvailabilityService extends Service {
             return START_NOT_STICKY;
         }
 
+        if (ACTION_RETUNE.equals(action)) {
+            // Interval changed (courier mode on/off) — restart the cycle.
+            stopLocationCycle();
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !hasBackgroundLocation()) {
             Log.w(TAG, "background location permission missing — stopping self");
             stopSelfInternal();
@@ -130,10 +168,11 @@ public class BackgroundAvailabilityService extends Service {
             Log.d(TAG, "location cycle already running");
             return;
         }
-        Log.d(TAG, "starting location cycle every " + LOCATION_INTERVAL_MS + "ms");
+        long interval = currentIntervalMs();
+        Log.d(TAG, "starting location cycle every " + interval + "ms (courierMode=" + courierMode + ")");
         scheduler = Executors.newSingleThreadScheduledExecutor();
         cycleFuture = scheduler.scheduleWithFixedDelay(
-            this::runOneCycleSafe, 0L, LOCATION_INTERVAL_MS, TimeUnit.MILLISECONDS
+            this::runOneCycleSafe, 0L, interval, TimeUnit.MILLISECONDS
         );
     }
 
@@ -179,7 +218,7 @@ public class BackgroundAvailabilityService extends Service {
             "You're receiving nearby job alerts"
         );
         CancellationTokenSource cts = new CancellationTokenSource();
-        fused.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.getToken())
+        fused.getCurrentLocation(courierMode ? Priority.PRIORITY_HIGH_ACCURACY : Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.getToken())
             .addOnSuccessListener(loc -> {
                 if (loc == null) {
                     Log.w(TAG, "getCurrentLocation returned null");
