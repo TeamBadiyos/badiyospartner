@@ -178,24 +178,30 @@ function CourierScreen() {
                       )}
                     </div>
 
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        type="button"
-                        disabled={respond.isPending}
-                        onClick={() => { hapticImpact("light"); respond.mutate({ offer: o, accept: false }); }}
-                        className="h-[52px] flex-1 rounded-[14px] border border-border bg-card font-bold text-foreground disabled:opacity-60"
-                      >
-                        {t("courier.reject")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={respond.isPending}
-                        onClick={() => { hapticImpact("medium"); respond.mutate({ offer: o, accept: true }); }}
-                        className="h-[52px] flex-[1.4] rounded-[14px] bg-primary font-bold text-primary-foreground disabled:opacity-60"
-                      >
-                        {respond.isPending ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : t("courier.accept")}
-                      </button>
-                    </div>
+                    {expired ? (
+                      <p className="mt-4 text-[13px] font-semibold text-[color:var(--text-secondary)]">
+                        {t("courier.toast.expired")}
+                      </p>
+                    ) : (
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={respond.isPending}
+                          onClick={() => { hapticImpact("light"); respond.mutate({ offer: o, accept: false }); }}
+                          className="h-[52px] flex-1 rounded-[14px] border border-border bg-card font-bold text-foreground disabled:opacity-60"
+                        >
+                          {t("courier.reject")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={respond.isPending}
+                          onClick={() => { hapticImpact("medium"); respond.mutate({ offer: o, accept: true }); }}
+                          className="h-[52px] flex-[1.4] rounded-[14px] bg-primary font-bold text-primary-foreground disabled:opacity-60"
+                        >
+                          {respond.isPending ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : t("courier.accept")}
+                        </button>
+                      </div>
+                    )}
                   </li>
                 );
               })}
