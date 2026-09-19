@@ -204,7 +204,7 @@ export async function setNativeLocationMode(mode: "courier" | "normal"): Promise
 /** True when the native plugin can open battery / autostart settings pages. */
 export function hasNativeOemSettings(): boolean {
   if (!isAndroid()) return false;
-  const p = Plugin as Record<string, unknown>;
+  const p = Plugin as unknown as Record<string, unknown>;
   return typeof p.openBatterySettings === "function" || typeof p.openAutostartSettings === "function";
 }
 
