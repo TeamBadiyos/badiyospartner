@@ -325,6 +325,7 @@ export const en = {
   "courier.offer.away": "{km} km away",
   "courier.offer.earning": "You earn",
   "courier.offer.expiresIn": "{sec}s left",
+  "courier.offer.expired": "Offer expired",
   "courier.accept": "Accept",
   "courier.reject": "Reject",
   "courier.toast.accepted": "Delivery accepted",

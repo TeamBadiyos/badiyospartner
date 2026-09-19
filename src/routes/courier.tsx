@@ -83,7 +83,11 @@ function CourierScreen() {
     );
   }
 
-  const offers = (offersQ.data ?? []).filter((o) => secondsLeft(o.expires_at) > 0);
+  // Expired offers stay visible (greyed out) so a rider who opens the app from
+  // a push that arrived late sees why there is nothing to accept.
+  const offers = [...(offersQ.data ?? [])].sort(
+    (a, b) => (secondsLeft(b.expires_at) > 0 ? 1 : 0) - (secondsLeft(a.expires_at) > 0 ? 1 : 0),
+  );
   const active = activeQ.data;
 
   return (
@@ -122,14 +126,24 @@ function CourierScreen() {
           ) : (
             <ul className="mt-3 space-y-3">
               {offers.map((o) => {
-                const left = secondsLeft(o.expires_at);
-                return (
-                  <li key={o.offer_id} className="rounded-[18px] border border-border bg-card p-4 card-lift">
-                    <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-destructive)]/10 px-3 py-1 text-[12px] font-bold text-[color:var(--color-destructive)]">
-                        <Clock className="h-3.5 w-3.5" />
-                        {t("courier.offer.expiresIn", { sec: left })}
-                      </span>
+                 const left = secondsLeft(o.expires_at);
+                 const expired = left <= 0;
+                 return (
+                   <li
+                     key={o.offer_id}
+                     className={`rounded-[18px] border border-border bg-card p-4 card-lift${expired ? " opacity-60" : ""}`}
+                   >
+                     <div className="flex items-center justify-between">
+                       <span
+                         className={
+                           expired
+                             ? "inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-[12px] font-bold text-[color:var(--text-secondary)]"
+                             : "inline-flex items-center gap-1 rounded-full bg-[color:var(--color-destructive)]/10 px-3 py-1 text-[12px] font-bold text-[color:var(--color-destructive)]"
+                         }
+                       >
+                         <Clock className="h-3.5 w-3.5" />
+                         {expired ? t("courier.offer.expired") : t("courier.offer.expiresIn", { sec: left })}
+                       </span>
                       <span className="amount-strong text-[18px] text-foreground">{formatINR(o.earning ?? 0)}</span>
                     </div>
 
@@ -164,24 +178,30 @@ function CourierScreen() {
                       )}
                     </div>
 
-                    <div className="mt-4 flex gap-2">
-                      <button
-                        type="button"
-                        disabled={respond.isPending}
-                        onClick={() => { hapticImpact("light"); respond.mutate({ offer: o, accept: false }); }}
-                        className="h-[52px] flex-1 rounded-[14px] border border-border bg-card font-bold text-foreground disabled:opacity-60"
-                      >
-                        {t("courier.reject")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={respond.isPending}
-                        onClick={() => { hapticImpact("medium"); respond.mutate({ offer: o, accept: true }); }}
-                        className="h-[52px] flex-[1.4] rounded-[14px] bg-primary font-bold text-primary-foreground disabled:opacity-60"
-                      >
-                        {respond.isPending ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : t("courier.accept")}
-                      </button>
-                    </div>
+                    {expired ? (
+                      <p className="mt-4 text-[13px] font-semibold text-[color:var(--text-secondary)]">
+                        {t("courier.toast.expired")}
+                      </p>
+                    ) : (
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={respond.isPending}
+                          onClick={() => { hapticImpact("light"); respond.mutate({ offer: o, accept: false }); }}
+                          className="h-[52px] flex-1 rounded-[14px] border border-border bg-card font-bold text-foreground disabled:opacity-60"
+                        >
+                          {t("courier.reject")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={respond.isPending}
+                          onClick={() => { hapticImpact("medium"); respond.mutate({ offer: o, accept: true }); }}
+                          className="h-[52px] flex-[1.4] rounded-[14px] bg-primary font-bold text-primary-foreground disabled:opacity-60"
+                        >
+                          {respond.isPending ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : t("courier.accept")}
+                        </button>
+                      </div>
+                    )}
                   </li>
                 );
               })}
