@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { Inbox, MapPin, Loader2, Wallet, History, Award, LifeBuoy, Clock, X, AlertTriangle } from "lucide-react";
+import { Inbox, MapPin, Loader2, Wallet, History, Award, LifeBuoy, Clock, X, AlertTriangle, Bike } from "lucide-react";
 import badiyosBlue from "@/assets/badiyos-wordmark-blue.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, initials } from "@/lib/expert-client";
@@ -21,6 +21,7 @@ import {
   stopBackgroundAvailabilityService,
 } from "@/lib/background-location";
 import { initExpertPush } from "@/lib/push";
+import { useCourierSkill, useActiveCourierOrder } from "@/lib/courier";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -98,6 +99,10 @@ function HomeDashboard() {
     },
   });
   const needsSkillSetup = approvedSkills.data === 0;
+  // Courier tab only shows once the rider's courier skill is approved.
+  const courierSkill = useCourierSkill(expert?.id);
+  const courierEnabled = courierSkill.data === true;
+  const activeCourier = useActiveCourierOrder(courierEnabled ? expert?.id : null);
   const tracker = useExpertLocationTracking(online);
 
   const locationState = tracker.state;
@@ -664,6 +669,23 @@ function HomeDashboard() {
           </Link>
         </div>
       </header>
+
+      {activeCourier.data && (
+        <section className="px-6 pb-4">
+          <Link
+            to="/courier/$id"
+            params={{ id: activeCourier.data.id }}
+            className="flex items-center gap-3 rounded-[18px] bg-primary p-4 text-primary-foreground shadow-[var(--shadow-brand-md)]"
+          >
+            <Bike className="h-6 w-6" />
+            <div className="flex-1">
+              <p className="text-[15px] font-bold">{t("courier.active.banner")}</p>
+              <p className="text-[13px] opacity-85">{activeCourier.data.order_code ?? ""}</p>
+            </div>
+            <span className="text-[13px] font-bold underline">{t("courier.active.view")}</span>
+          </Link>
+        </section>
+      )}
 
       {gpsOff && (
         <section className="px-6 pb-4">
