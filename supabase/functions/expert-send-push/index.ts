@@ -193,7 +193,7 @@ async function sendCourierOffer(offerId: string, expertId: string): Promise<Resp
     drop_area: dropArea,
     trip_km: tripKm,
     earning: String(earning),
-    route: "/courier",
+    route: "/home",
   };
 
   const tokens = await tokensForExpert(admin, expertId);

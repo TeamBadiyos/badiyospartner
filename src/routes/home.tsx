@@ -133,25 +133,6 @@ function HomeDashboard() {
   );
   const courierOfferCount = courierOffers.length;
 
-  // Ring continuously while at least one delivery offer is pending.
-  const courierSoundRef = useRef<{ stop: () => void } | null>(null);
-  useEffect(() => {
-    if (courierOfferCount > 0 && !courierSoundRef.current) {
-      courierSoundRef.current = startNotificationLoop();
-      hapticNotification("warning");
-    } else if (courierOfferCount === 0 && courierSoundRef.current) {
-      courierSoundRef.current.stop();
-      courierSoundRef.current = null;
-    }
-  }, [courierOfferCount]);
-  useEffect(
-    () => () => {
-      courierSoundRef.current?.stop();
-      courierSoundRef.current = null;
-    },
-    [],
-  );
-
   // 1s tick so each offer's countdown stays live.
   const [offerTick, setOfferTick] = useState(0);
   useEffect(() => {
@@ -159,6 +140,31 @@ function HomeDashboard() {
     const id = window.setInterval(() => setOfferTick((n) => n + 1), 1_000);
     return () => window.clearInterval(id);
   }, [courierOfferCount]);
+
+  // Ring continuously while at least one delivery offer is still live (not expired).
+  const liveCourierOffers = useMemo(
+    () => courierOffers.filter((o) => new Date(o.expires_at).getTime() > Date.now()).length,
+    // offerTick keeps this in sync as offers count down to expiry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [courierOffers, offerTick],
+  );
+  const courierSoundRef = useRef<{ stop: () => void } | null>(null);
+  useEffect(() => {
+    if (liveCourierOffers > 0 && !courierSoundRef.current) {
+      courierSoundRef.current = startNotificationLoop();
+      hapticNotification("warning");
+    } else if (liveCourierOffers === 0 && courierSoundRef.current) {
+      courierSoundRef.current.stop();
+      courierSoundRef.current = null;
+    }
+  }, [liveCourierOffers]);
+  useEffect(
+    () => () => {
+      courierSoundRef.current?.stop();
+      courierSoundRef.current = null;
+    },
+    [],
+  );
 
   const respondCourier = useMutation({
     mutationFn: async ({ offer, accept }: { offer: CourierOffer; accept: boolean }) => {
