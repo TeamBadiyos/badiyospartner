@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import { useT } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/i18n";
+import { serviceTitle } from "@/lib/service-pricing";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 
 const STATUS_KEYS = new Set([
