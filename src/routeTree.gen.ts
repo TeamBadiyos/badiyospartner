@@ -14,6 +14,7 @@ import { Route as SupportRouteImport } from './routes/support'
 import { Route as SosRouteImport } from './routes/sos'
 import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as SetPinRouteImport } from './routes/set-pin'
+import { Route as ScheduleRouteImport } from './routes/schedule'
 import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PinRouteImport } from './routes/pin'
@@ -53,6 +54,11 @@ const SkillsRoute = SkillsRouteImport.update({
 const SetPinRoute = SetPinRouteImport.update({
   id: '/set-pin',
   path: '/set-pin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScheduleRoute = ScheduleRouteImport.update({
+  id: '/schedule',
+  path: '/schedule',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RewardsRoute = RewardsRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/pin': typeof PinRoute
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
+  '/schedule': typeof ScheduleRoute
   '/set-pin': typeof SetPinRoute
   '/skills': typeof SkillsRoute
   '/sos': typeof SosRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/pin': typeof PinRoute
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
+  '/schedule': typeof ScheduleRoute
   '/set-pin': typeof SetPinRoute
   '/skills': typeof SkillsRoute
   '/sos': typeof SosRoute
@@ -188,6 +196,7 @@ export interface FileRoutesById {
   '/pin': typeof PinRoute
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
+  '/schedule': typeof ScheduleRoute
   '/set-pin': typeof SetPinRoute
   '/skills': typeof SkillsRoute
   '/sos': typeof SosRoute
@@ -212,6 +221,7 @@ export interface FileRouteTypes {
     | '/pin'
     | '/profile'
     | '/rewards'
+    | '/schedule'
     | '/set-pin'
     | '/skills'
     | '/sos'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/pin'
     | '/profile'
     | '/rewards'
+    | '/schedule'
     | '/set-pin'
     | '/skills'
     | '/sos'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/pin'
     | '/profile'
     | '/rewards'
+    | '/schedule'
     | '/set-pin'
     | '/skills'
     | '/sos'
@@ -279,6 +291,7 @@ export interface RootRouteChildren {
   PinRoute: typeof PinRoute
   ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
+  ScheduleRoute: typeof ScheduleRoute
   SetPinRoute: typeof SetPinRoute
   SkillsRoute: typeof SkillsRoute
   SosRoute: typeof SosRoute
@@ -325,6 +338,13 @@ declare module '@tanstack/react-router' {
       path: '/set-pin'
       fullPath: '/set-pin'
       preLoaderRoute: typeof SetPinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/schedule': {
+      id: '/schedule'
+      path: '/schedule'
+      fullPath: '/schedule'
+      preLoaderRoute: typeof ScheduleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rewards': {
@@ -447,6 +467,7 @@ const rootRouteChildren: RootRouteChildren = {
   PinRoute: PinRoute,
   ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
+  ScheduleRoute: ScheduleRoute,
   SetPinRoute: SetPinRoute,
   SkillsRoute: SkillsRoute,
   SosRoute: SosRoute,
