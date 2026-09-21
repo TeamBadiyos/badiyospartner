@@ -414,13 +414,17 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, service_label, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id",
+          "id, status, service_duration_minutes, service_label, scheduled_time_slot, scheduled_date, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id",
         )
         .eq("status", "accepted")
         .is("assigned_expert_id", null)
         .is("deleted_at", null)
         .is("dispatch_exhausted_at", null)
-        .gte("created_at", new Date(Date.now() - BROADCAST_MAX_AGE_MS).toISOString())
+        // Fresh immediate bookings OR advance bookings whose slot is today or
+        // later. `evaluateBooking` applies the exact slot window afterwards.
+        .or(
+          `created_at.gte.${new Date(Date.now() - BROADCAST_MAX_AGE_MS).toISOString()},scheduled_date.gte.${new Date().toISOString().slice(0, 10)}`,
+        )
         .limit(50);
       if (cancelled) return;
       if (error) {
