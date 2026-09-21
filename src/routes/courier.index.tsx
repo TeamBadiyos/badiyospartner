@@ -11,7 +11,7 @@ import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SectionHeading } from "@/components/section-heading";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
-export const Route = createFileRoute("/courier")({
+export const Route = createFileRoute("/courier/")({
   head: () => ({
     meta: [
       { title: "Courier deliveries — badiyos Expert" },
