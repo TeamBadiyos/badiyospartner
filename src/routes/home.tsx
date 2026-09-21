@@ -124,6 +124,15 @@ function HomeDashboard() {
   const courierEnabled = courierSkill.data === true;
   const activeCourier = useActiveCourierOrder(courierEnabled ? expert?.id : null);
 
+  // Read-only service hours (owned by the Customer App). Used for the
+  // "closing soon / closed" banner and advance-booking queue window.
+  const cleanSchedule = useServiceSchedule("clean", !!expert?.id);
+  const courierSchedule = useServiceSchedule("courier", !!expert?.id && courierEnabled);
+  const leadHoursRef = useRef(2);
+  useEffect(() => {
+    leadHoursRef.current = Number(cleanSchedule.data?.advance_lead_hours ?? 2) || 2;
+  }, [cleanSchedule.data?.advance_lead_hours]);
+
   // Courier delivery offers show on Home exactly like normal booking requests:
   // live list, ringing alert and Accept / Reject.
   const courierOffersEnabled = courierEnabled && online && !activeCourier.data;
