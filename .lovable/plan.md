@@ -36,13 +36,26 @@ Sab kuch read-only: Customer App `service_flags` + `service_hours`/`service_holi
 
 - Expert subah online hota hai to broadcast dobara nahi chalta — `on_booking_broadcast_start` sirf booking ke `accepted` hone par ek baar chalta hai.
 - Expert ko ye bookings Home ki **catch-up list** se milti hain: online hote hi Home `accepted` + unassigned + approved-skill wali bookings query karta hai (radius aur 30-min max-age filter ke saath), aur wahi cards queue me dikhte hain.
-- Matlab raat ki bani booking tabhi dikhegi jab wo abhi bhi unassigned ho aur age filter ke andar ho — isliye section 4 wala expiry fix zaroori hai, aur catch-up ka max-age advance bookings ke liye scheduled_date-aware karna hoga.
+- **Catch-up ka max-age slot-aware hoga:** ab sirf "30 minute se nayi" nahi. Booking queue me dikhegi agar — (a) wo aaj/abhi ke liye hai aur 30 min ke andar bani hai, **ya** (b) advance booking hai, abhi bhi unassigned hai aur uska slot abhi guzra nahi — chahe wo raat ki bani ho. Advance booking slot se `advance_booking_expire_before_slot_hours` (Customer App setting, default 2) pehle se queue me aa jayegi, aur slot nikal jaane par hat jayegi. Yahi window Customer App ke expiry fix se match karegi.
 
 ### Duplicate service-flag check ka sawaal
 
 - Abhi `bookings_check_service_flag` trigger (BEFORE INSERT par) city + `service_key='clean'` dekh kar booking block karta hai.
 - Customer App plan me `bookings_before_insert` me bhi service/hours check aa raha hai — dono ek saath rahe to **duplicate** ho jayega (do jagah alag-alag error message, ek badle to doosra reh jaye).
-- Decision: **ek hi check rahega** — Customer App ke `bookings_before_insert` me consolidated check, aur `bookings_check_service_flag` trigger drop. Ye drop Customer App project ke migration me hoga, Expert App me nahi. Expert App ka koi code is trigger par depend nahi karta.
+- Decision: **ek hi check rahega** — Customer App ke `bookings_before_insert` me consolidated check, aur `bookings_check_service_flag` trigger + function ka DROP **Customer App ke us hi migration me** likha jayega (Expert App me bilkul nahi). Customer App plan me is drop ka zikr add karwana hai, taaki wahan se chhoot na jaye. Expert App ka koi code is trigger par depend nahi karta.
+
+### expert_set_online ka merge (ek hi version)
+
+- Do requirement ek hi function par aa rahi hain: Customer App plan (section 9a) ka subah re-broadcast hook, aur is plan ka service-closed guard + bypass.
+- **Maalikana: Customer App project.** `expert_set_online` shared DB me hai, isliye ek hi merged `CREATE OR REPLACE` Customer App ke migration me jayega. Expert App apna alag version replace nahi karega (warna jo baad me chalega wo doosre ko mita dega).
+- Merged function ka order:
+  1. Expert row + phone nikalo.
+  2. `_online = false` → seedha offline set karke return (guard sirf online karte waqt).
+  3. Bypass check: phone `service_hours_bypass_phones` me ho (key missing = khaali list) → guard skip.
+  4. `service_hours_enforce = 1` ho to `service_effective_state(service_key, city, now())` — band ho to exception `service_closed` (message me next open time).
+  5. `is_online = true` set + `offline_after_job = false` clear.
+  6. Re-broadcast hook (Customer App 9a): expert ke radius/skill se matching pending unassigned bookings ko dobara broadcast/queue karo.
+- Expert App ki taraf se sirf itna: UI me `service_closed` ka friendly message, aur is merged function par depend karna — koi apna overload nahi.
 
 ## 5. Test/reviewer accounts bypass
 
@@ -77,8 +90,8 @@ Sab kuch read-only: Customer App `service_flags` + `service_hours`/`service_holi
 ## Technical details
 
 - Migration 1 (grants): `service_hours`, `service_holidays` par SELECT to authenticated; `service_effective_state` par EXECUTE to authenticated (sirf agar Customer App ne na di ho — `IF EXISTS` guarded).
-- Migration 2 (expert app logic): `experts.offline_after_job boolean default false`; `ops_settings` inserts (enforce=0, buffer=30, bypass phones seed `9999900000`, `ON CONFLICT DO NOTHING`); `public.service_hours_autooffline()` SECURITY DEFINER — early-exit on enforce=0, `service_effective_state` per distinct (service_key, city) once into a temp map, per-expert exception blocks, `offline_after_job` set/clear, `notify_expert_alert('service_closed', ...)`; `expert_set_online` me band-service guard (bypass list `COALESCE(..., '')` se, missing key safe); `courier_eligible_riders` me cutoff check; pg_cron job `service-hours-autooffline` har 5 min; holiday notify cron 19:00/08:00 IST + dedupe marker.
-- `bookings_check_service_flag` trigger Expert App se nahi chhedega; uska drop Customer App ke consolidated `bookings_before_insert` check ke saath wahin hoga (duplicate se bachne ke liye).
-- Web: `src/lib/service-hours.ts` (`useServiceState()` hook — `service_effective_state` RPC + hours/holidays select), `src/routes/schedule.tsx`, `home.tsx` me closing-soon/cutoff banner + toggle ka friendly error, `profile.tsx` link, en/mr strings.
-- Files touched: `supabase/migrations/*` (2), `src/lib/service-hours.ts` (new), `src/routes/schedule.tsx` (new), `src/routes/home.tsx`, `src/routes/profile.tsx`, `src/lib/locales/en.ts`, `src/lib/locales/mr.ts`.
+- Migration 2 (expert app logic): `experts.offline_after_job boolean default false`; `ops_settings` inserts (enforce=0, buffer=30, bypass phones seed `9999900000`, `ON CONFLICT DO NOTHING`); `public.service_hours_autooffline()` SECURITY DEFINER — early-exit on enforce=0, `service_effective_state` per distinct (service_key, city) once into a temp map, per-expert exception blocks, `offline_after_job` set/clear, `notify_expert_alert('service_closed', ...)`; `courier_eligible_riders` me cutoff check; pg_cron job `service-hours-autooffline` har 5 min; holiday notify cron 19:00/08:00 IST + dedupe marker.
+- **Customer App project me (Expert App me nahi):** merged single `expert_set_online` (guard + bypass + 9a re-broadcast), `bookings_before_insert` consolidated check, `DROP TRIGGER`/`DROP FUNCTION bookings_check_service_flag`, `advance_booking_expire_before_slot_hours` (default 2) aur advance-booking expiry fix.
+- Web: `src/lib/service-hours.ts` (`useServiceState()` hook — `service_effective_state` RPC + hours/holidays select), `src/routes/schedule.tsx`, `home.tsx` me closing-soon/cutoff banner, slot-aware catch-up filter, aur toggle ka `service_closed` friendly error, `profile.tsx` link, en/mr strings.
+- Files touched (Expert App): `supabase/migrations/*` (2), `src/lib/service-hours.ts` (new), `src/routes/schedule.tsx` (new), `src/routes/home.tsx`, `src/routes/profile.tsx`, `src/lib/locales/en.ts`, `src/lib/locales/mr.ts`.
 - Verify: `bunx tsgo --noEmit`; SQL test — enforce=1, ek test expert online + service band → cron run → offline + notification; bypass phone wale expert online rahe; courier cutoff ke baad `courier_eligible_riders` khaali; advance-booking expire test (section 4).
