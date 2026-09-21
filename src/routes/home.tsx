@@ -36,6 +36,7 @@ import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 import { serviceTitle } from "@/lib/service-pricing";
+import { useServiceSchedule, isBookingQueueable, formatTime } from "@/lib/service-hours";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -54,6 +55,7 @@ type BroadcastBooking = {
   service_duration_minutes: number | null;
   service_label?: string | null;
   scheduled_time_slot: string | null;
+  scheduled_date?: string | null;
   slot_type: string | null;
   address_id: string | null;
   booking_lat: number | null;
