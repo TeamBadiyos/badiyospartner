@@ -29,11 +29,26 @@ Sab kuch read-only: Customer App `service_flags` + `service_hours`/`service_holi
 - `auto-expire-unassigned-bookings` cron (har minute, Customer App hook) unassigned bookings ko `no_expert_timeout_minutes` (default 30 min) ke baad cancel kar deta hai — `system_list_expired_unassigned_bookings` scheduled_date nahi dekhta.
 - **Risk:** 7 PM ke baad sab experts offline hon to raat me bani kal ki booking ~30 min me auto-cancel ho sakti hai. Ye behavior Customer App ke expire hook me hai.
 - **Test (build ke baad):** ek booking kal ki date ke saath banayein jab koi expert online na ho → 30+ min baad check karein ki booking cancel hui ya nahi. Agar cancel ho rahi hai, to Customer App hook me "future-scheduled bookings ko expire mat karo" ka fix alag se chahiye hoga (wo Customer App project ka kaam hai).
+- **Gate:** `service_hours_enforce` tab tak 0 hi rahega jab tak Customer App project me advance-booking expiry ka fix aur upar wala test pass na ho jaye. Enforce ON karna ek alag, baad ka step hai.
+
+### Subah online aane par pending advance bookings
+
+- Expert subah online hota hai to broadcast dobara nahi chalta — `on_booking_broadcast_start` sirf booking ke `accepted` hone par ek baar chalta hai.
+- Expert ko ye bookings Home ki **catch-up list** se milti hain: online hote hi Home `accepted` + unassigned + approved-skill wali bookings query karta hai (radius aur 30-min max-age filter ke saath), aur wahi cards queue me dikhte hain.
+- Matlab raat ki bani booking tabhi dikhegi jab wo abhi bhi unassigned ho aur age filter ke andar ho — isliye section 4 wala expiry fix zaroori hai, aur catch-up ka max-age advance bookings ke liye scheduled_date-aware karna hoga.
+
+### Duplicate service-flag check ka sawaal
+
+- Abhi `bookings_check_service_flag` trigger (BEFORE INSERT par) city + `service_key='clean'` dekh kar booking block karta hai.
+- Customer App plan me `bookings_before_insert` me bhi service/hours check aa raha hai — dono ek saath rahe to **duplicate** ho jayega (do jagah alag-alag error message, ek badle to doosra reh jaye).
+- Decision: **ek hi check rahega** — Customer App ke `bookings_before_insert` me consolidated check, aur `bookings_check_service_flag` trigger drop. Ye drop Customer App project ke migration me hoga, Expert App me nahi. Expert App ka koi code is trigger par depend nahi karta.
 
 ## 5. Test/reviewer accounts bypass
 
 - Auto-offline cron aur online-block dono me bypass list: reviewer (+919999900000) aur test accounts (jaise Gaurav/Nikhil/Rushi test experts).
 - Bypass `ops_settings` key `service_hours_bypass_phones` (comma-separated) se — hardcode nahi, admin badal sakta hai.
+- Reviewer ka number seed hoga; agar row kisi wajah se na ho to koi error nahi aayega — bas bypass lagu nahi hoga (missing key → khaali list, normal rules chalengi).
+
 
 ## 6. "Mere kaam ke ghante" screen (read-only)
 
