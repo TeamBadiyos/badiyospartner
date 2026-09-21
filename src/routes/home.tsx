@@ -187,6 +187,12 @@ function HomeDashboard() {
       };
       if (!online) return reject("offline");
       if (isBusy) return reject("isBusy");
+      // Skill gate: never offer an order from a category this expert is not
+      // approved for. Until skills are loaded, hold everything back.
+      if (!skillsLoaded) return reject("skills not loaded");
+      if (booking.service_category_id && !approvedSkillIds.has(booking.service_category_id)) {
+        return reject(`skill not approved (${booking.service_category_id})`);
+      }
       // NOTE: previously-dismissed bookings are still eligible — they simply
       // render at the bottom of the list (see `dismissed` flag below).
 
