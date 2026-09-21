@@ -29,6 +29,7 @@ import { useT } from "@/lib/i18n";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
+import { serviceTitle } from "@/lib/service-pricing";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
