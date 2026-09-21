@@ -1041,12 +1041,89 @@ function HomeDashboard() {
             </div>
           </button>
         </section>
-      ) : sortedCandidates.length > 0 ? (
-        <section className="mt-6 flex-1 px-6">
+      ) : sortedCandidates.length > 0 || courierOffers.length > 0 ? (
+        <section className="mt-6 flex-1 px-6" data-tick={offerTick}>
           <h2 className="mb-3 text-[16px] font-bold text-foreground">
-            {t("home.broadcast.listTitle")} ({sortedCandidates.length})
+            {t("home.broadcast.listTitle")} ({sortedCandidates.length + courierOffers.length})
           </h2>
           <ul className="flex flex-col gap-3 pb-4">
+            {/* Parcel delivery offers sit in the same queue, same card design. */}
+            {courierOffers.map((o) => {
+              const left = Math.max(
+                0,
+                Math.ceil((new Date(o.expires_at).getTime() - Date.now()) / 1000),
+              );
+              const expired = left <= 0;
+              const pending =
+                respondCourier.isPending && respondCourier.variables?.offer.offer_id === o.offer_id;
+              return (
+                <li key={o.offer_id}>
+                  <div
+                    className={`rounded-[18px] border border-border bg-card p-5 card-lift transition ${
+                      expired ? "opacity-60" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+                        <Bike className="h-3.5 w-3.5" /> {t("courier.job.title")}
+                      </span>
+                      <span className="text-[13px] font-bold text-primary">
+                        {expired
+                          ? t("courier.offer.expired")
+                          : t("courier.offer.expiresIn", { sec: String(left) })}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 text-[15px] font-bold text-foreground">
+                      <Clock className="h-4 w-4 text-primary" />
+                      {t("courier.offer.earning")} {formatINR(Number(o.earning ?? 0))}
+                    </div>
+                    <div className="mt-3 flex items-start gap-2 rounded-[14px] bg-[color:var(--divider)] p-3">
+                      <MapPin className="mt-0.5 h-4 w-4 text-primary" />
+                      <div className="text-[13px] leading-snug text-foreground">
+                        <p className="font-semibold">
+                          {t("courier.offer.pickup")}: {o.pickup_area ?? "—"}
+                        </p>
+                        <p className="text-[color:var(--text-secondary)]">
+                          {t("courier.offer.drop")}: {o.drop_area ?? "—"}
+                        </p>
+                        <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-secondary)]">
+                          {t("courier.offer.trip", { km: String(o.trip_km ?? 0) })}
+                          {o.distance_to_pickup_km != null
+                            ? ` · ${t("courier.offer.away", { km: Number(o.distance_to_pickup_km).toFixed(1) })}`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                    {!expired && (
+                      <div className="mt-4 flex gap-3">
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => {
+                            hapticImpact("light");
+                            respondCourier.mutate({ offer: o, accept: false });
+                          }}
+                          className="h-[52px] flex-1 rounded-[14px] border border-border bg-card text-[15px] font-bold text-foreground disabled:opacity-60"
+                        >
+                          {t("home.broadcast.dismiss")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => {
+                            hapticNotification("success");
+                            respondCourier.mutate({ offer: o, accept: true });
+                          }}
+                          className="h-[52px] flex-[1.4] rounded-[14px] bg-primary text-[15px] font-bold text-white disabled:opacity-60"
+                        >
+                          {pending ? t("home.broadcast.accepting") : t("home.broadcast.accept")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
             {sortedCandidates.map((c) => (
               <li key={c.booking.id}>
                 <SwipeToDismiss
