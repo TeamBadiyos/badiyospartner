@@ -36,13 +36,26 @@ Sab kuch read-only: Customer App `service_flags` + `service_hours`/`service_holi
 
 - Expert subah online hota hai to broadcast dobara nahi chalta — `on_booking_broadcast_start` sirf booking ke `accepted` hone par ek baar chalta hai.
 - Expert ko ye bookings Home ki **catch-up list** se milti hain: online hote hi Home `accepted` + unassigned + approved-skill wali bookings query karta hai (radius aur 30-min max-age filter ke saath), aur wahi cards queue me dikhte hain.
-- Matlab raat ki bani booking tabhi dikhegi jab wo abhi bhi unassigned ho aur age filter ke andar ho — isliye section 4 wala expiry fix zaroori hai, aur catch-up ka max-age advance bookings ke liye scheduled_date-aware karna hoga.
+- **Catch-up ka max-age slot-aware hoga:** ab sirf "30 minute se nayi" nahi. Booking queue me dikhegi agar — (a) wo aaj/abhi ke liye hai aur 30 min ke andar bani hai, **ya** (b) advance booking hai, abhi bhi unassigned hai aur uska slot abhi guzra nahi — chahe wo raat ki bani ho. Advance booking slot se `advance_booking_expire_before_slot_hours` (Customer App setting, default 2) pehle se queue me aa jayegi, aur slot nikal jaane par hat jayegi. Yahi window Customer App ke expiry fix se match karegi.
 
 ### Duplicate service-flag check ka sawaal
 
 - Abhi `bookings_check_service_flag` trigger (BEFORE INSERT par) city + `service_key='clean'` dekh kar booking block karta hai.
 - Customer App plan me `bookings_before_insert` me bhi service/hours check aa raha hai — dono ek saath rahe to **duplicate** ho jayega (do jagah alag-alag error message, ek badle to doosra reh jaye).
-- Decision: **ek hi check rahega** — Customer App ke `bookings_before_insert` me consolidated check, aur `bookings_check_service_flag` trigger drop. Ye drop Customer App project ke migration me hoga, Expert App me nahi. Expert App ka koi code is trigger par depend nahi karta.
+- Decision: **ek hi check rahega** — Customer App ke `bookings_before_insert` me consolidated check, aur `bookings_check_service_flag` trigger + function ka DROP **Customer App ke us hi migration me** likha jayega (Expert App me bilkul nahi). Customer App plan me is drop ka zikr add karwana hai, taaki wahan se chhoot na jaye. Expert App ka koi code is trigger par depend nahi karta.
+
+### expert_set_online ka merge (ek hi version)
+
+- Do requirement ek hi function par aa rahi hain: Customer App plan (section 9a) ka subah re-broadcast hook, aur is plan ka service-closed guard + bypass.
+- **Maalikana: Customer App project.** `expert_set_online` shared DB me hai, isliye ek hi merged `CREATE OR REPLACE` Customer App ke migration me jayega. Expert App apna alag version replace nahi karega (warna jo baad me chalega wo doosre ko mita dega).
+- Merged function ka order:
+  1. Expert row + phone nikalo.
+  2. `_online = false` → seedha offline set karke return (guard sirf online karte waqt).
+  3. Bypass check: phone `service_hours_bypass_phones` me ho (key missing = khaali list) → guard skip.
+  4. `service_hours_enforce = 1` ho to `service_effective_state(service_key, city, now())` — band ho to exception `service_closed` (message me next open time).
+  5. `is_online = true` set + `offline_after_job = false` clear.
+  6. Re-broadcast hook (Customer App 9a): expert ke radius/skill se matching pending unassigned bookings ko dobara broadcast/queue karo.
+- Expert App ki taraf se sirf itna: UI me `service_closed` ka friendly message, aur is merged function par depend karna — koi apna overload nahi.
 
 ## 5. Test/reviewer accounts bypass
 
