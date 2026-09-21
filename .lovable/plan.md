@@ -56,6 +56,18 @@ Sab kuch read-only: Customer App `service_flags` + `service_hours`/`service_holi
   5. `is_online = true` set + `offline_after_job = false` clear.
   6. Re-broadcast hook (Customer App 9a): expert ke radius/skill se matching pending unassigned bookings ko dobara broadcast/queue karo.
 - Expert App ki taraf se sirf itna: UI me `service_closed` ka friendly message, aur is merged function par depend karna — koi apna overload nahi.
+- **Confirm: build ke baad Expert App `expert_set_online` ko bilkul nahi chhuyega** — na replace, na overload, na naya wrapper. Sirf call karega aur uska error handle karega.
+
+### Double offer / double notification se bachav
+
+Subah expert online hote hi do cheezein chal sakti hain — merged function ka re-broadcast hook, aur Home ki catch-up list. Ye aapas me kaise milte hain:
+
+- **Card ek hi banega.** Home ki queue booking `id` se de-duplicate hoti hai (`Map`/`Set` key = booking id). Chahe wahi booking re-broadcast se realtime event ban kar aaye ya catch-up query se, dono ek hi card bante hain — do nahi.
+- **Awaaz ek hi bajegi.** Alert sound loop queue ke "kitne live cards hain" par chalta hai, per-event nahi. Do raste se aayi ek hi booking ek hi ring banati hai.
+- **Push ek hi jayega.** Re-broadcast hook hi push bhejta hai; catch-up list sirf padhti hai, koi notification nahi bhejti. Yani push ka ek hi malik hai.
+- **Pehle se dismiss/reject ki hui booking dobara ring nahi karegi.** Persisted dismissal aur reject record queue me respect hote hain, to re-broadcast usi booking ko dobara zabardasti nahi bajaega.
+- Yahi behavior test me verify hoga: ek pending advance booking ke saath expert ko offline se online karein → exactly ek card, ek ring, ek push.
+
 
 ## 5. Test/reviewer accounts bypass
 
