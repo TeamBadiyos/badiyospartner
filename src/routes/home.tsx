@@ -43,6 +43,7 @@ export const Route = createFileRoute("/home")({
 type BroadcastBooking = {
   id: string;
   status: string;
+  service_category_id?: string | null;
   service_duration_minutes: number | null;
   scheduled_time_slot: string | null;
   slot_type: string | null;
