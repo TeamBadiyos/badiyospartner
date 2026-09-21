@@ -312,7 +312,7 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at",
+          "id, status, service_duration_minutes, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id",
         )
         .eq("status", "accepted")
         .is("assigned_expert_id", null)
