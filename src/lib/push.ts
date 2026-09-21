@@ -50,9 +50,10 @@ function routeFromData(
     type?: string;
     alert_type?: string;
   };
-  // Courier delivery offers always land on the courier list, never on a booking.
+  // Courier delivery offers land on Home, where the offer card sits in the order queue.
   if (d.type === "courier_offer") {
-    const route = typeof d.route === "string" && d.route.startsWith("/") ? d.route : "/courier";
+    const raw = typeof d.route === "string" && d.route.startsWith("/") ? d.route : "/home";
+    const route = raw === "/courier" || raw === "/courier/" ? "/home" : raw;
     return () => navigate({ to: route });
   }
   // Informational alerts route to their own screen, never to a booking.
