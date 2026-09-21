@@ -244,7 +244,7 @@ function HomeDashboard() {
       });
 
     },
-    [online, isBusy, radiusKm],
+    [online, isBusy, radiusKm, skillsLoaded, approvedSkillIds],
   );
 
 
