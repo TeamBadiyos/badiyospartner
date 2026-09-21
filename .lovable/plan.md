@@ -15,6 +15,7 @@ Sab kuch read-only: Customer App `service_flags` + `service_hours`/`service_holi
   - **Koi job na ho** → `is_online = false` + soft notification "Service band ho gayi, aap offline kar diye gaye hain."
 - `offline_after_job` ka cleanup usi 5-minute cron me: flag wala expert ab active job-free ho to offline + flag clear. Completion functions (`credit_booking_completion`, `courier_settle_order`) ko haath nahi lagega.
 - Cron poora exception-wrapped aur early-exit: `service_hours_enforce` = 0 ho ya koi expert band service me na ho to turant return; har expert ka kaam alag BEGIN/EXCEPTION block me taaki ek failure baaki ko na roke.
+- **Efficiency:** `service_effective_state` har expert ke liye nahi — pehle sirf un (service_key, city) jodiyon ke liye ek-ek baar call hoga jinme koi online expert hai, uska result ek temp map me rakha jayega, phir experts ko usi map se match kiya jayega.
 - Online toggle: `expert_set_online(true)` band service par exception `service_closed` raise karega; UI friendly message dikhayega ("Service X baje shuru hoti hai").
 
 ## 3. Cutoff sirf courier offers par
@@ -65,9 +66,9 @@ Sab kuch read-only: Customer App `service_flags` + `service_hours`/`service_holi
 
 ## 8. Settings
 
-- `service_hours_enforce` — default **0** (off). 1 karne par auto-offline aur courier cutoff active honge.
+- `service_hours_enforce` — default **0** (off), aur 0 hi rahega jab tak Customer App ka advance-booking expiry fix + test pass na ho. 1 karne par auto-offline aur courier cutoff active honge.
 - `courier_last_order_buffer_minutes` — default 30.
-- `service_hours_bypass_phones` — test accounts.
+- `service_hours_bypass_phones` — reviewer (+919999900000) seed; key missing ho to error nahi, sirf bypass nahi lagega.
 
 ## 9. Naya APK chahiye?
 
@@ -76,7 +77,8 @@ Sab kuch read-only: Customer App `service_flags` + `service_hours`/`service_holi
 ## Technical details
 
 - Migration 1 (grants): `service_hours`, `service_holidays` par SELECT to authenticated; `service_effective_state` par EXECUTE to authenticated (sirf agar Customer App ne na di ho — `IF EXISTS` guarded).
-- Migration 2 (expert app logic): `experts.offline_after_job boolean default false`; `ops_settings` inserts (enforce=0, buffer=30, bypass phones); `public.service_hours_autooffline()` SECURITY DEFINER — early-exit on enforce=0, per-expert exception blocks, `service_effective_state` call, `offline_after_job` set/clear, `notify_expert_alert('service_closed', ...)`; `expert_set_online` me band-service guard (bypass list ke saath); `courier_eligible_riders` me cutoff check; pg_cron job `service-hours-autooffline` har 5 min; holiday notify cron 19:00/08:00 IST + dedupe marker table ya existing notification state reuse.
+- Migration 2 (expert app logic): `experts.offline_after_job boolean default false`; `ops_settings` inserts (enforce=0, buffer=30, bypass phones seed `9999900000`, `ON CONFLICT DO NOTHING`); `public.service_hours_autooffline()` SECURITY DEFINER — early-exit on enforce=0, `service_effective_state` per distinct (service_key, city) once into a temp map, per-expert exception blocks, `offline_after_job` set/clear, `notify_expert_alert('service_closed', ...)`; `expert_set_online` me band-service guard (bypass list `COALESCE(..., '')` se, missing key safe); `courier_eligible_riders` me cutoff check; pg_cron job `service-hours-autooffline` har 5 min; holiday notify cron 19:00/08:00 IST + dedupe marker.
+- `bookings_check_service_flag` trigger Expert App se nahi chhedega; uska drop Customer App ke consolidated `bookings_before_insert` check ke saath wahin hoga (duplicate se bachne ke liye).
 - Web: `src/lib/service-hours.ts` (`useServiceState()` hook — `service_effective_state` RPC + hours/holidays select), `src/routes/schedule.tsx`, `home.tsx` me closing-soon/cutoff banner + toggle ka friendly error, `profile.tsx` link, en/mr strings.
 - Files touched: `supabase/migrations/*` (2), `src/lib/service-hours.ts` (new), `src/routes/schedule.tsx` (new), `src/routes/home.tsx`, `src/routes/profile.tsx`, `src/lib/locales/en.ts`, `src/lib/locales/mr.ts`.
 - Verify: `bunx tsgo --noEmit`; SQL test — enforce=1, ek test expert online + service band → cron run → offline + notification; bypass phone wale expert online rahe; courier cutoff ke baad `courier_eligible_riders` khaali; advance-booking expire test (section 4).
