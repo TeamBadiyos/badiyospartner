@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Inbox, MapPin, Loader2, Wallet, History, Award, LifeBuoy, Clock, X, AlertTriangle, Bike } from "lucide-react";
 import badiyosBlue from "@/assets/badiyos-wordmark-blue.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
-import { useExpert, useExpertSession, initials } from "@/lib/expert-client";
+import { useExpert, useExpertSession, initials, formatINR } from "@/lib/expert-client";
 import {
   haversineKm,
   startNotificationLoop,
@@ -28,7 +28,6 @@ import {
   useCourierOfferRealtime,
   type CourierOffer,
 } from "@/lib/courier";
-import { formatINR } from "@/lib/expert-client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
