@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession } from "@/lib/expert-client";
 import { useState, useRef, useEffect } from "react";
 import { useT } from "@/lib/i18n";
+import { useDurationCategoryIds, isDurationBased, serviceTitle } from "@/lib/service-pricing";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 export const Route = createFileRoute("/booking/$id")({
@@ -21,6 +22,8 @@ type Booking = {
   id: string;
   status: string;
   service_duration_minutes: number;
+  service_label: string | null;
+  service_category_id: string | null;
   price: number | null;
   address_id: string | null;
   assigned_expert_id: string | null;
