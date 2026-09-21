@@ -56,7 +56,7 @@ function BookingScreen() {
     queryFn: async (): Promise<Booking | null> => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, status, service_duration_minutes, price, address_id, assigned_expert_id, started_at, service_end_at, user_id, created_at")
+        .select("id, status, service_duration_minutes, service_label, service_category_id, price, address_id, assigned_expert_id, started_at, service_end_at, user_id, created_at")
         .eq("id", id)
         .maybeSingle();
       if (error) throw error;
@@ -151,7 +151,7 @@ function BookingScreen() {
         <span className="rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
           {booking.status === "in_progress" ? t("job.badge.inProgress") : booking.status === "completed" ? t("job.badge.completed") : t("job.badge.new")}
         </span>
-        <h1 className="mt-2 text-[26px] font-bold leading-tight text-foreground">{t("job.title", { minutes: booking.service_duration_minutes })}</h1>
+        <h1 className="mt-2 text-[26px] font-bold leading-tight text-foreground">{serviceTitle(booking.service_label, booking.service_duration_minutes)}</h1>
       </div>
 
       <section className="mt-5 px-6">
@@ -207,6 +207,7 @@ function BookingScreen() {
         />
       )}
       {booking.status === "in_progress" && <InProgressPanel booking={booking} bookingId={id} />}
+
       {booking.status === "completed" && <CompletedPanel />}
     </div>
   );
