@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 /** Shape returned by the shared `service_effective_state` function. */
 export type ServiceState = {
-  status: string;
+  status?: string;
   visible?: boolean;
   can_order?: boolean;
   open?: boolean;
@@ -14,7 +14,6 @@ export type ServiceState = {
   close_time?: string | null;
   last_order_at?: string | null;
   next_open_at?: string | null;
-  resume_at?: string | null;
 };
 
 export type ServiceHourRow = {
@@ -32,80 +31,40 @@ export type ServiceHolidayRow = {
   reason_mr: string | null;
 };
 
-const DEFAULT_CITY = "Latur";
+export type ServiceSchedule = {
+  city: string;
+  advance_lead_hours: number;
+  courier_last_order_buffer_minutes: number;
+  state: ServiceState | null;
+  hours: ServiceHourRow[];
+  holidays: ServiceHolidayRow[];
+};
 
-/** City of the expert, resolved from their zone (falls back to Latur). */
-export function useExpertCity(zoneId: string | null | undefined) {
-  return useQuery({
-    queryKey: ["expert-city", zoneId ?? null],
-    staleTime: 30 * 60_000,
-    queryFn: async () => {
-      if (!zoneId) return DEFAULT_CITY;
-      const { data, error } = await supabase
-        .from("zones")
-        .select("city")
-        .eq("id", zoneId)
-        .maybeSingle();
-      if (error) throw error;
-      return data?.city ?? DEFAULT_CITY;
-    },
-  });
-}
+export type ServiceKey = "clean" | "courier" | "store";
 
-/** Live open/closed state for one service in one city. Read-only. */
-export function useServiceState(serviceKey: "clean" | "courier" | "store", city?: string | null) {
+const FALLBACK: ServiceSchedule = {
+  city: "Latur",
+  advance_lead_hours: 2,
+  courier_last_order_buffer_minutes: 30,
+  state: null,
+  hours: [],
+  holidays: [],
+};
+
+/** Read-only schedule + live open/closed state for one service. */
+export function useServiceSchedule(serviceKey: ServiceKey, enabled = true) {
   return useQuery({
-    queryKey: ["service-state", serviceKey, city ?? DEFAULT_CITY],
+    queryKey: ["service-schedule", serviceKey],
+    enabled,
+    staleTime: 5 * 60_000,
     refetchInterval: 5 * 60_000,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("service_effective_state", {
+    queryFn: async (): Promise<ServiceSchedule> => {
+      const { data, error } = await supabase.rpc("expert_service_schedule", {
         _service_key: serviceKey,
-        _city: city ?? DEFAULT_CITY,
       });
       if (error) throw error;
-      return (data ?? null) as ServiceState | null;
-    },
-  });
-}
-
-/** Weekly hours + upcoming holidays for the read-only schedule screen. */
-export function useServiceSchedule(serviceKey: "clean" | "courier" | "store", city?: string | null) {
-  return useQuery({
-    queryKey: ["service-schedule", serviceKey, city ?? DEFAULT_CITY],
-    staleTime: 30 * 60_000,
-    queryFn: async () => {
-      const { data: flag, error: flagErr } = await supabase
-        .from("service_flags")
-        .select("id, service_key, city, status, hours_enabled, last_order_buffer_minutes")
-        .eq("service_key", serviceKey)
-        .eq("city", city ?? DEFAULT_CITY)
-        .maybeSingle();
-      if (flagErr) throw flagErr;
-      if (!flag) return { flag: null, hours: [] as ServiceHourRow[], holidays: [] as ServiceHolidayRow[] };
-
-      const today = new Date().toISOString().slice(0, 10);
-      const [hoursRes, holsRes] = await Promise.all([
-        supabase
-          .from("service_hours")
-          .select("weekday, open_time, close_time, is_closed")
-          .eq("service_flag_id", flag.id)
-          .order("weekday"),
-        supabase
-          .from("service_holidays")
-          .select("id, start_date, end_date, reason, reason_mr")
-          .or(`service_flag_id.eq.${flag.id},service_flag_id.is.null`)
-          .gte("start_date", today)
-          .order("start_date")
-          .limit(20),
-      ]);
-      if (hoursRes.error) throw hoursRes.error;
-      if (holsRes.error) throw holsRes.error;
-      return {
-        flag,
-        hours: (hoursRes.data ?? []) as ServiceHourRow[],
-        holidays: (holsRes.data ?? []) as ServiceHolidayRow[],
-      };
+      const raw = (data ?? {}) as Partial<ServiceSchedule>;
+      return { ...FALLBACK, ...raw } as ServiceSchedule;
     },
   });
 }
@@ -130,16 +89,16 @@ export function bookingSlotStart(
   slot?: string | null,
 ): Date | null {
   if (!scheduledDate) return null;
-  const start = (slot ?? "").trim().split(/[-–to]/)[0]?.trim() ?? "";
-  const time = /^\d{1,2}:\d{2}/.test(start) ? start.slice(0, 5) : "00:00";
-  const parsed = new Date(`${scheduledDate}T${time.padStart(5, "0")}:00`);
+  const head = (slot ?? "").trim().split(/[-–]| to /)[0]?.trim() ?? "";
+  const time = /^\d{1,2}:\d{2}/.test(head) ? head.slice(0, 5) : "00:00";
+  const parsed = new Date(`${scheduledDate}T${time.length === 4 ? `0${time}` : time}:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 /**
  * Should this unassigned booking still show in the expert's queue?
  *
- * - Immediate bookings: only while they are fresh (default 30 minutes).
+ * - Immediate bookings: only while fresh (default 30 minutes).
  * - Advance bookings: from `leadHours` before the slot until the slot passes,
  *   even when the booking row itself is hours old.
  */
@@ -158,24 +117,6 @@ export function isBookingQueueable(
   const slotStart = bookingSlotStart(booking.scheduled_date, booking.scheduled_time_slot);
   if (!slotStart) return fresh;
   const startMs = slotStart.getTime();
-  if (now > startMs) return false; // slot already passed
+  if (now > startMs) return false;
   return fresh || now >= startMs - opts.leadHours * 3_600_000;
-}
-
-/** Lead time (hours) before an advance booking's slot, from shared settings. */
-export function useAdvanceLeadHours() {
-  return useQuery({
-    queryKey: ["advance-lead-hours"],
-    staleTime: 30 * 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ops_settings")
-        .select("value")
-        .eq("key", "advance_booking_expire_before_slot_hours")
-        .maybeSingle();
-      if (error) throw error;
-      const parsed = Number(data?.value);
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : 2;
-    },
-  });
 }
