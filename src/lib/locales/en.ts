@@ -95,6 +95,7 @@ export const en = {
   "job.startCode.title": "Ask the customer for the 4-digit code",
   "job.starting": "Starting…",
   "job.timeRemaining": "Time remaining",
+  "job.running.sub": "Enter the customer's end code when the work is done",
   "job.endCode.label": "Enter end code",
   "job.endCode.title": "Ask the customer for the completion code",
   "job.complete": "Complete service",

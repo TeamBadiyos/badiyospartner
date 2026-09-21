@@ -29,6 +29,7 @@ import { useT } from "@/lib/i18n";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
+import { serviceTitle } from "@/lib/service-pricing";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -45,6 +46,7 @@ type BroadcastBooking = {
   status: string;
   service_category_id?: string | null;
   service_duration_minutes: number | null;
+  service_label?: string | null;
   scheduled_time_slot: string | null;
   slot_type: string | null;
   address_id: string | null;
@@ -312,7 +314,7 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id",
+          "id, status, service_duration_minutes, service_label, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id",
         )
         .eq("status", "accepted")
         .is("assigned_expert_id", null)
@@ -432,7 +434,7 @@ function HomeDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, status, service_duration_minutes, price, address_id, created_at")
+        .select("id, status, service_duration_minutes, service_label, price, address_id, created_at")
         .eq("assigned_expert_id", expert!.id)
         .in("status", ["expert_assigned", "in_progress"])
         .order("created_at", { ascending: false })
@@ -882,7 +884,7 @@ function HomeDashboard() {
                 {assigned.status === "in_progress" ? t("home.badge.inProgress") : t("home.badge.newBooking")}
               </span>
             </div>
-            <p className="mt-3 text-[18px] font-bold text-foreground">{t("home.card.service", { minutes: assigned.service_duration_minutes ?? "—" })}</p>
+            <p className="mt-3 text-[18px] font-bold text-foreground">{serviceTitle(assigned.service_label, assigned.service_duration_minutes)}</p>
             <div className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--text-secondary)]">
               <MapPin className="h-4 w-4" /> {t("home.card.tapDetails")}
             </div>
@@ -919,7 +921,7 @@ function HomeDashboard() {
                   </div>
                   <div className="mt-3 flex items-center gap-2 text-[15px] font-bold text-foreground">
                     <Clock className="h-4 w-4 text-primary" />
-                    {t("home.card.service", { minutes: c.booking.service_duration_minutes ?? "—" })}
+                    {serviceTitle(c.booking.service_label, c.booking.service_duration_minutes)}
                     {c.booking.scheduled_time_slot ? ` · ${c.booking.scheduled_time_slot}` : ""}
                   </div>
                   <div className="mt-3 flex items-start gap-2 rounded-[14px] bg-[color:var(--divider)] p-3">

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession } from "@/lib/expert-client";
 import { useState, useRef, useEffect } from "react";
 import { useT } from "@/lib/i18n";
+import { useDurationCategoryIds, isDurationBased, serviceTitle } from "@/lib/service-pricing";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 export const Route = createFileRoute("/booking/$id")({
@@ -21,6 +22,8 @@ type Booking = {
   id: string;
   status: string;
   service_duration_minutes: number;
+  service_label: string | null;
+  service_category_id: string | null;
   price: number | null;
   address_id: string | null;
   assigned_expert_id: string | null;
@@ -53,7 +56,7 @@ function BookingScreen() {
     queryFn: async (): Promise<Booking | null> => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, status, service_duration_minutes, price, address_id, assigned_expert_id, started_at, service_end_at, user_id, created_at")
+        .select("id, status, service_duration_minutes, service_label, service_category_id, price, address_id, assigned_expert_id, started_at, service_end_at, user_id, created_at")
         .eq("id", id)
         .maybeSingle();
       if (error) throw error;
@@ -148,7 +151,7 @@ function BookingScreen() {
         <span className="rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
           {booking.status === "in_progress" ? t("job.badge.inProgress") : booking.status === "completed" ? t("job.badge.completed") : t("job.badge.new")}
         </span>
-        <h1 className="mt-2 text-[26px] font-bold leading-tight text-foreground">{t("job.title", { minutes: booking.service_duration_minutes })}</h1>
+        <h1 className="mt-2 text-[26px] font-bold leading-tight text-foreground">{serviceTitle(booking.service_label, booking.service_duration_minutes)}</h1>
       </div>
 
       <section className="mt-5 px-6">
@@ -204,6 +207,7 @@ function BookingScreen() {
         />
       )}
       {booking.status === "in_progress" && <InProgressPanel booking={booking} bookingId={id} />}
+
       {booking.status === "completed" && <CompletedPanel />}
     </div>
   );
@@ -335,6 +339,8 @@ function InProgressPanel({ booking, bookingId }: { booking: Booking; bookingId: 
   const [err, setErr] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const { data: durationCategoryIds } = useDurationCategoryIds();
+  const showTimer = isDurationBased(durationCategoryIds, booking.service_category_id) && !!booking.service_end_at;
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const remainingMs = booking.service_end_at ? new Date(booking.service_end_at).getTime() - now : 0;
   const totalSec = Math.max(0, Math.floor(remainingMs / 1000));
@@ -361,10 +367,22 @@ function InProgressPanel({ booking, bookingId }: { booking: Booking; bookingId: 
   return (
     <section className="mt-5 px-6">
       <div className="rounded-[18px] border-2 border-primary bg-[color:var(--color-accent)] p-5 text-center">
-        <p className="text-[12px] font-bold uppercase tracking-wider text-primary">{t("job.timeRemaining")}</p>
-        <p className="mt-1 font-mono text-[44px] font-bold leading-none text-primary">
-          {timeText}
-        </p>
+        {showTimer ? (
+          <>
+            <p className="text-[12px] font-bold uppercase tracking-wider text-primary">{t("job.timeRemaining")}</p>
+            <p className="mt-1 font-mono text-[44px] font-bold leading-none text-primary">
+              {timeText}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[12px] font-bold uppercase tracking-wider text-primary">{t("job.badge.inProgress")}</p>
+            <p className="mt-1 text-[20px] font-bold leading-tight text-primary">
+              {serviceTitle(booking.service_label, booking.service_duration_minutes)}
+            </p>
+            <p className="mt-1 text-[13px] font-semibold text-primary/80">{t("job.running.sub")}</p>
+          </>
+        )}
       </div>
 
       <form onSubmit={(e) => { hapticImpact("medium"); verifyEnd(e); }} className="mt-6">

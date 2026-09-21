@@ -94,6 +94,7 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "job.startCode.title": "ग्राहकाकडून 4 अंकी कोड विचारा",
   "job.starting": "सुरू करत आहे…",
   "job.timeRemaining": "उरलेला वेळ",
+  "job.running.sub": "काम पूर्ण झाल्यावर ग्राहकाचा एंड कोड टाका",
   "job.endCode.label": "शेवटचा कोड टाका",
   "job.endCode.title": "ग्राहकाकडून पूर्णत्वाचा कोड विचारा",
   "job.complete": "सेवा पूर्ण करा",
