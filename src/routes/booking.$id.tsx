@@ -367,10 +367,22 @@ function InProgressPanel({ booking, bookingId }: { booking: Booking; bookingId: 
   return (
     <section className="mt-5 px-6">
       <div className="rounded-[18px] border-2 border-primary bg-[color:var(--color-accent)] p-5 text-center">
-        <p className="text-[12px] font-bold uppercase tracking-wider text-primary">{t("job.timeRemaining")}</p>
-        <p className="mt-1 font-mono text-[44px] font-bold leading-none text-primary">
-          {timeText}
-        </p>
+        {showTimer ? (
+          <>
+            <p className="text-[12px] font-bold uppercase tracking-wider text-primary">{t("job.timeRemaining")}</p>
+            <p className="mt-1 font-mono text-[44px] font-bold leading-none text-primary">
+              {timeText}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[12px] font-bold uppercase tracking-wider text-primary">{t("job.badge.inProgress")}</p>
+            <p className="mt-1 text-[20px] font-bold leading-tight text-primary">
+              {serviceTitle(booking.service_label, booking.service_duration_minutes)}
+            </p>
+            <p className="mt-1 text-[13px] font-semibold text-primary/80">{t("job.running.sub")}</p>
+          </>
+        )}
       </div>
 
       <form onSubmit={(e) => { hapticImpact("medium"); verifyEnd(e); }} className="mt-6">
