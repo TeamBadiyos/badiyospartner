@@ -5445,6 +5445,7 @@ export type Database = {
       }
       expert_revoke_device: { Args: { _device_id: string }; Returns: undefined }
       expert_rewards_overview: { Args: never; Returns: Json }
+      expert_service_schedule: { Args: { _service_key: string }; Returns: Json }
       expert_set_language: { Args: { _lang: string }; Returns: undefined }
       expert_set_online: { Args: { _online: boolean }; Returns: undefined }
       expert_update_location: {
