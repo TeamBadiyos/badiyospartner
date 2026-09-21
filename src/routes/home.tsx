@@ -121,6 +121,77 @@ function HomeDashboard() {
   const courierSkill = useCourierSkill(expert?.id);
   const courierEnabled = courierSkill.data === true;
   const activeCourier = useActiveCourierOrder(courierEnabled ? expert?.id : null);
+
+  // Courier delivery offers show on Home exactly like normal booking requests:
+  // live list, ringing alert and Accept / Reject.
+  const courierOffersEnabled = courierEnabled && online && !activeCourier.data;
+  const courierOffersQ = useCourierOffers(courierOffersEnabled);
+  useCourierOfferRealtime(expert?.id, courierEnabled);
+  const courierOffers = useMemo(
+    () => (courierOffersEnabled ? (courierOffersQ.data ?? []) : []),
+    [courierOffersEnabled, courierOffersQ.data],
+  );
+  const courierOfferCount = courierOffers.length;
+
+  // Ring continuously while at least one delivery offer is pending.
+  const courierSoundRef = useRef<{ stop: () => void } | null>(null);
+  useEffect(() => {
+    if (courierOfferCount > 0 && !courierSoundRef.current) {
+      courierSoundRef.current = startNotificationLoop();
+      hapticNotification("warning");
+    } else if (courierOfferCount === 0 && courierSoundRef.current) {
+      courierSoundRef.current.stop();
+      courierSoundRef.current = null;
+    }
+  }, [courierOfferCount]);
+  useEffect(
+    () => () => {
+      courierSoundRef.current?.stop();
+      courierSoundRef.current = null;
+    },
+    [],
+  );
+
+  // 1s tick so each offer's countdown stays live.
+  const [offerTick, setOfferTick] = useState(0);
+  useEffect(() => {
+    if (courierOfferCount === 0) return;
+    const id = window.setInterval(() => setOfferTick((n) => n + 1), 1_000);
+    return () => window.clearInterval(id);
+  }, [courierOfferCount]);
+
+  const respondCourier = useMutation({
+    mutationFn: async ({ offer, accept }: { offer: CourierOffer; accept: boolean }) => {
+      const { data, error } = await supabase.rpc("courier_offer_respond", {
+        _offer_id: offer.offer_id,
+        _accept: accept,
+      });
+      if (error) throw error;
+      return { res: data as { ok?: boolean; reason?: string; order_id?: string }, accept };
+    },
+    onSuccess: ({ res, accept }) => {
+      courierSoundRef.current?.stop();
+      courierSoundRef.current = null;
+      void qc.invalidateQueries({ queryKey: ["courier-offers"] });
+      if (!res?.ok) {
+        const reason = res?.reason;
+        if (reason === "already_taken") toast.info(t("courier.toast.taken"));
+        else if (reason === "already_on_a_job") toast.error(t("courier.toast.busy"));
+        else toast.info(t("courier.toast.expired"));
+        return;
+      }
+      if (!accept) {
+        toast.success(t("courier.toast.rejected"));
+        return;
+      }
+      hapticNotification("success");
+      toast.success(t("courier.toast.accepted"));
+      void qc.invalidateQueries({ queryKey: ["courier-active", expert?.id] });
+      if (res.order_id) navigate({ to: "/courier/$id", params: { id: res.order_id } });
+    },
+    onError: (err: Error) => toast.error(err.message || t("courier.toast.failed")),
+  });
+
   const tracker = useExpertLocationTracking(online);
 
   const locationState = tracker.state;
