@@ -23,7 +23,7 @@ import {
 import { initExpertPush } from "@/lib/push";
 import { useCourierSkill, useActiveCourierOrder } from "@/lib/courier";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { PullToRefresh } from "@/components/pull-to-refresh";
@@ -43,6 +43,7 @@ export const Route = createFileRoute("/home")({
 type BroadcastBooking = {
   id: string;
   status: string;
+  service_category_id?: string | null;
   service_duration_minutes: number | null;
   scheduled_time_slot: string | null;
   slot_type: string | null;
@@ -85,20 +86,29 @@ function HomeDashboard() {
 
   const online = !!expert?.is_online;
   const isBusy = !!expert?.is_busy;
+  // Approved service categories for this expert. Orders from any other
+  // category must never be offered (no card, no alert sound).
   const approvedSkills = useQuery({
-    queryKey: ["approved-skills-count", expert?.id],
+    queryKey: ["approved-skill-categories", expert?.id],
     enabled: !!expert?.id,
     queryFn: async () => {
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from("partner_skills")
-        .select("id", { count: "exact", head: true })
+        .select("service_category_id")
         .eq("expert_id", expert!.id)
         .eq("status", "approved");
       if (error) throw error;
-      return count ?? 0;
+      return (data ?? [])
+        .map((r) => r.service_category_id)
+        .filter((id): id is string => !!id);
     },
   });
-  const needsSkillSetup = approvedSkills.data === 0;
+  const approvedSkillIds = useMemo(
+    () => new Set(approvedSkills.data ?? []),
+    [approvedSkills.data],
+  );
+  const skillsLoaded = approvedSkills.data !== undefined;
+  const needsSkillSetup = approvedSkills.data?.length === 0;
   // Courier tab only shows once the rider's courier skill is approved.
   const courierSkill = useCourierSkill(expert?.id);
   const courierEnabled = courierSkill.data === true;
@@ -177,6 +187,12 @@ function HomeDashboard() {
       };
       if (!online) return reject("offline");
       if (isBusy) return reject("isBusy");
+      // Skill gate: never offer an order from a category this expert is not
+      // approved for. Until skills are loaded, hold everything back.
+      if (!skillsLoaded) return reject("skills not loaded");
+      if (booking.service_category_id && !approvedSkillIds.has(booking.service_category_id)) {
+        return reject(`skill not approved (${booking.service_category_id})`);
+      }
       // NOTE: previously-dismissed bookings are still eligible — they simply
       // render at the bottom of the list (see `dismissed` flag below).
 
@@ -228,7 +244,7 @@ function HomeDashboard() {
       });
 
     },
-    [online, isBusy, radiusKm],
+    [online, isBusy, radiusKm, skillsLoaded, approvedSkillIds],
   );
 
 
@@ -296,7 +312,7 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at",
+          "id, status, service_duration_minutes, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id",
         )
         .eq("status", "accepted")
         .is("assigned_expert_id", null)
