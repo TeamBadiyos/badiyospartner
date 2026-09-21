@@ -664,7 +664,11 @@ function HomeDashboard() {
         setLocationBlocked(true);
         return;
       }
-      if (/permission/i.test(msg) || /denied/i.test(msg)) {
+      if (/service_closed/i.test(msg)) {
+        // Service hours guard (owned by the Customer App) — friendly message.
+        toast.error(msg.replace(/^.*service_closed[:\s]*/i, "") || t("home.toast.serviceClosed"));
+        void cleanSchedule.refetch();
+      } else if (/permission/i.test(msg) || /denied/i.test(msg)) {
         toast.error(t("home.toast.locationPermission"));
       } else if (/timed out/i.test(msg) || /timeout/i.test(msg)) {
         toast.error(t("home.toast.locationTimeout"));
