@@ -339,6 +339,8 @@ function InProgressPanel({ booking, bookingId }: { booking: Booking; bookingId: 
   const [err, setErr] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const { data: durationCategoryIds } = useDurationCategoryIds();
+  const showTimer = isDurationBased(durationCategoryIds, booking.service_category_id) && !!booking.service_end_at;
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const remainingMs = booking.service_end_at ? new Date(booking.service_end_at).getTime() - now : 0;
   const totalSec = Math.max(0, Math.floor(remainingMs / 1000));
