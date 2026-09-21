@@ -36,7 +36,7 @@ function HistoryScreen() {
       const [bookingsRes, ledgerRes] = await Promise.all([
         supabase
           .from("bookings")
-          .select("id, status, service_duration_minutes, created_at, updated_at")
+          .select("id, status, service_duration_minutes, service_label, created_at, updated_at")
           .eq("assigned_expert_id", expert!.id)
           .order("created_at", { ascending: false })
           .limit(100),
@@ -130,7 +130,7 @@ function HistoryScreen() {
                   )}
 
                 </div>
-                <p className="mt-2 text-[15px] font-semibold text-foreground">{t("history.service", { minutes: b.service_duration_minutes })}</p>
+                <p className="mt-2 text-[15px] font-semibold text-foreground">{serviceTitle(b.service_label, b.service_duration_minutes)}</p>
                 <p className="mt-1 text-[12px] text-[color:var(--text-secondary)]">{b.created_at ? new Date(b.created_at).toLocaleString("en-IN") : ""}</p>
               </li>
             ))}
