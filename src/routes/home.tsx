@@ -36,6 +36,7 @@ import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 import { serviceTitle } from "@/lib/service-pricing";
+import { useServiceSchedule, isBookingQueueable, formatTime } from "@/lib/service-hours";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -54,6 +55,7 @@ type BroadcastBooking = {
   service_duration_minutes: number | null;
   service_label?: string | null;
   scheduled_time_slot: string | null;
+  scheduled_date?: string | null;
   slot_type: string | null;
   address_id: string | null;
   booking_lat: number | null;
@@ -121,6 +123,43 @@ function HomeDashboard() {
   const courierSkill = useCourierSkill(expert?.id);
   const courierEnabled = courierSkill.data === true;
   const activeCourier = useActiveCourierOrder(courierEnabled ? expert?.id : null);
+
+  // Read-only service hours (owned by the Customer App). Used for the
+  // "closing soon / closed" banner and advance-booking queue window.
+  const cleanSchedule = useServiceSchedule("clean", !!expert?.id);
+  const courierSchedule = useServiceSchedule("courier", !!expert?.id && courierEnabled);
+  const leadHoursRef = useRef(2);
+  useEffect(() => {
+    leadHoursRef.current = Number(cleanSchedule.data?.advance_lead_hours ?? 2) || 2;
+  }, [cleanSchedule.data?.advance_lead_hours]);
+
+  // Friendly, read-only notice: service closed now, or courier past cutoff.
+  const serviceNotice = useMemo(() => {
+    const clean = cleanSchedule.data?.state;
+    const courier = courierSchedule.data?.state;
+    if (clean && clean.can_order === false) {
+      return {
+        title: t("home.hours.closedTitle"),
+        body:
+          clean.message_en ||
+          (clean.next_open_at
+            ? t("home.hours.reopens").replace("{time}", formatTime(clean.open_time))
+            : t("home.hours.closedBody")),
+      };
+    }
+    if (courierEnabled && courier && courier.can_order === false) {
+      return { title: t("home.hours.courierCutoffTitle"), body: t("home.hours.courierCutoffBody") };
+    }
+    if (clean?.close_time && clean.open) {
+      return {
+        title: t("home.hours.todayTitle"),
+        body: t("home.hours.todayBody")
+          .replace("{open}", formatTime(clean.open_time))
+          .replace("{close}", formatTime(clean.close_time)),
+      };
+    }
+    return null;
+  }, [cleanSchedule.data, courierSchedule.data, courierEnabled, t]);
 
   // Courier delivery offers show on Home exactly like normal booking requests:
   // live list, ringing alert and Accept / Reject.
@@ -286,9 +325,15 @@ function HomeDashboard() {
       if (booking.status !== "accepted") return reject(`status=${booking.status}`);
       if (booking.deleted_at) return reject("deleted");
       if (booking.dispatch_exhausted_at) return reject("dispatch exhausted");
-      if (booking.created_at) {
-        const ageMs = Date.now() - new Date(booking.created_at).getTime();
-        if (ageMs > BROADCAST_MAX_AGE_MS) return reject(`stale (${Math.round(ageMs / 60000)}min old)`);
+      // Immediate bookings age out after 30 minutes; advance bookings stay
+      // queueable from `leadHours` before their slot until the slot passes.
+      if (
+        !isBookingQueueable(booking, {
+          maxAgeMs: BROADCAST_MAX_AGE_MS,
+          leadHours: leadHoursRef.current,
+        })
+      ) {
+        return reject("stale / outside slot window");
       }
       const myCoords = coordsRef.current;
       if (!myCoords) return reject("no expert coords");
@@ -397,13 +442,17 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, service_label, scheduled_time_slot, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id",
+          "id, status, service_duration_minutes, service_label, scheduled_time_slot, scheduled_date, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id",
         )
         .eq("status", "accepted")
         .is("assigned_expert_id", null)
         .is("deleted_at", null)
         .is("dispatch_exhausted_at", null)
-        .gte("created_at", new Date(Date.now() - BROADCAST_MAX_AGE_MS).toISOString())
+        // Fresh immediate bookings OR advance bookings whose slot is today or
+        // later. `evaluateBooking` applies the exact slot window afterwards.
+        .or(
+          `created_at.gte.${new Date(Date.now() - BROADCAST_MAX_AGE_MS).toISOString()},scheduled_date.gte.${new Date().toISOString().slice(0, 10)}`,
+        )
         .limit(50);
       if (cancelled) return;
       if (error) {
@@ -615,7 +664,11 @@ function HomeDashboard() {
         setLocationBlocked(true);
         return;
       }
-      if (/permission/i.test(msg) || /denied/i.test(msg)) {
+      if (/service_closed/i.test(msg)) {
+        // Service hours guard (owned by the Customer App) — friendly message.
+        toast.error(msg.replace(/^.*service_closed[:\s]*/i, "") || t("home.toast.serviceClosed"));
+        void cleanSchedule.refetch();
+      } else if (/permission/i.test(msg) || /denied/i.test(msg)) {
         toast.error(t("home.toast.locationPermission"));
       } else if (/timed out/i.test(msg) || /timeout/i.test(msg)) {
         toast.error(t("home.toast.locationTimeout"));
@@ -784,6 +837,21 @@ function HomeDashboard() {
               <p className="text-[13px] opacity-85">{activeCourier.data.order_code ?? ""}</p>
             </div>
             <span className="text-[13px] font-bold underline">{t("courier.active.view")}</span>
+          </Link>
+        </section>
+      )}
+
+      {serviceNotice && (
+        <section className="px-6 pb-4">
+          <Link
+            to="/schedule"
+            className="flex items-start gap-3 rounded-[18px] border border-border bg-card p-4 card-lift"
+          >
+            <Clock className="mt-0.5 h-5 w-5 text-primary" />
+            <div className="flex-1">
+              <p className="text-[15px] font-bold text-foreground">{serviceNotice.title}</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">{serviceNotice.body}</p>
+            </div>
           </Link>
         </section>
       )}

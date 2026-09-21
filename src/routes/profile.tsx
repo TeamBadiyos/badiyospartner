@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, LogOut, Phone, MapPin, Award, ShieldCheck, Loader2, Camera, Radio, Wrench, Smartphone, Languages, Check, FileText , BatteryCharging } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Phone, MapPin, Award, ShieldCheck, Loader2, Camera, Radio, Wrench, Smartphone, Languages, Check, FileText , BatteryCharging, Clock } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -208,6 +208,16 @@ function ProfileScreen() {
           <div className="flex-1">
             <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">{t("profile.section.security")}</p>
             <p className="text-[15px] font-semibold text-foreground">{t("profile.row.devices")}</p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-[color:var(--text-secondary)]" />
+        </Link>
+        <Link to="/schedule" className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4 card-lift">
+          <div className="icon-tile flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+            <Clock className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[12px] font-bold uppercase tracking-[0.08em] text-[color:var(--text-secondary)]">{t("profile.schedule")}</p>
+            <p className="text-[15px] font-semibold text-foreground">{t("profile.schedule.sub")}</p>
           </div>
           <ChevronRight className="h-5 w-5 text-[color:var(--text-secondary)]" />
         </Link>
