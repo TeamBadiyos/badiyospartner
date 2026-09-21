@@ -2,7 +2,7 @@
 // All writes go through existing SECURITY DEFINER RPCs — no client-side
 // mutation of courier tables.
 import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { setNativeLocationMode } from "@/lib/background-location";
 
@@ -100,7 +100,9 @@ export function useCourierOffers(enabled: boolean) {
   return useQuery({
     queryKey: ["courier-offers"],
     enabled,
-    refetchInterval: enabled ? 10_000 : false,
+    // Offers expire in ~30s, so poll fast enough that a rider always sees them
+    // even when the realtime socket is unavailable.
+    refetchInterval: enabled ? 4_000 : false,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("courier_rider_offers");
       if (error) throw error;
@@ -109,6 +111,28 @@ export function useCourierOffers(enabled: boolean) {
       );
     },
   });
+}
+
+/** Instant refresh when a new offer row lands for this rider. */
+export function useCourierOfferRealtime(expertId: string | null | undefined, enabled: boolean) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!enabled || !expertId) return;
+    const ch = supabase
+      .channel(`courier-offers-${expertId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "courier_offers", filter: `expert_id=eq.${expertId}` },
+        () => {
+          void qc.invalidateQueries({ queryKey: ["courier-offers"] });
+          void qc.invalidateQueries({ queryKey: ["courier-active", expertId] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [expertId, enabled, qc]);
 }
 
 /** The rider's current in-progress courier order, if any. */

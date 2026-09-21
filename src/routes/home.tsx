@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Inbox, MapPin, Loader2, Wallet, History, Award, LifeBuoy, Clock, X, AlertTriangle, Bike } from "lucide-react";
 import badiyosBlue from "@/assets/badiyos-wordmark-blue.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
-import { useExpert, useExpertSession, initials } from "@/lib/expert-client";
+import { useExpert, useExpertSession, initials, formatINR } from "@/lib/expert-client";
 import {
   haversineKm,
   startNotificationLoop,
@@ -21,7 +21,13 @@ import {
   stopBackgroundAvailabilityService,
 } from "@/lib/background-location";
 import { initExpertPush } from "@/lib/push";
-import { useCourierSkill, useActiveCourierOrder } from "@/lib/courier";
+import {
+  useCourierSkill,
+  useActiveCourierOrder,
+  useCourierOffers,
+  useCourierOfferRealtime,
+  type CourierOffer,
+} from "@/lib/courier";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -115,6 +121,77 @@ function HomeDashboard() {
   const courierSkill = useCourierSkill(expert?.id);
   const courierEnabled = courierSkill.data === true;
   const activeCourier = useActiveCourierOrder(courierEnabled ? expert?.id : null);
+
+  // Courier delivery offers show on Home exactly like normal booking requests:
+  // live list, ringing alert and Accept / Reject.
+  const courierOffersEnabled = courierEnabled && online && !activeCourier.data;
+  const courierOffersQ = useCourierOffers(courierOffersEnabled);
+  useCourierOfferRealtime(expert?.id, courierEnabled);
+  const courierOffers = useMemo(
+    () => (courierOffersEnabled ? (courierOffersQ.data ?? []) : []),
+    [courierOffersEnabled, courierOffersQ.data],
+  );
+  const courierOfferCount = courierOffers.length;
+
+  // Ring continuously while at least one delivery offer is pending.
+  const courierSoundRef = useRef<{ stop: () => void } | null>(null);
+  useEffect(() => {
+    if (courierOfferCount > 0 && !courierSoundRef.current) {
+      courierSoundRef.current = startNotificationLoop();
+      hapticNotification("warning");
+    } else if (courierOfferCount === 0 && courierSoundRef.current) {
+      courierSoundRef.current.stop();
+      courierSoundRef.current = null;
+    }
+  }, [courierOfferCount]);
+  useEffect(
+    () => () => {
+      courierSoundRef.current?.stop();
+      courierSoundRef.current = null;
+    },
+    [],
+  );
+
+  // 1s tick so each offer's countdown stays live.
+  const [offerTick, setOfferTick] = useState(0);
+  useEffect(() => {
+    if (courierOfferCount === 0) return;
+    const id = window.setInterval(() => setOfferTick((n) => n + 1), 1_000);
+    return () => window.clearInterval(id);
+  }, [courierOfferCount]);
+
+  const respondCourier = useMutation({
+    mutationFn: async ({ offer, accept }: { offer: CourierOffer; accept: boolean }) => {
+      const { data, error } = await supabase.rpc("courier_offer_respond", {
+        _offer_id: offer.offer_id,
+        _accept: accept,
+      });
+      if (error) throw error;
+      return { res: data as { ok?: boolean; reason?: string; order_id?: string }, accept };
+    },
+    onSuccess: ({ res, accept }) => {
+      courierSoundRef.current?.stop();
+      courierSoundRef.current = null;
+      void qc.invalidateQueries({ queryKey: ["courier-offers"] });
+      if (!res?.ok) {
+        const reason = res?.reason;
+        if (reason === "already_taken") toast.info(t("courier.toast.taken"));
+        else if (reason === "already_on_a_job") toast.error(t("courier.toast.busy"));
+        else toast.info(t("courier.toast.expired"));
+        return;
+      }
+      if (!accept) {
+        toast.success(t("courier.toast.rejected"));
+        return;
+      }
+      hapticNotification("success");
+      toast.success(t("courier.toast.accepted"));
+      void qc.invalidateQueries({ queryKey: ["courier-active", expert?.id] });
+      if (res.order_id) navigate({ to: "/courier/$id", params: { id: res.order_id } });
+    },
+    onError: (err: Error) => toast.error(err.message || t("courier.toast.failed")),
+  });
+
   const tracker = useExpertLocationTracking(online);
 
   const locationState = tracker.state;
@@ -702,6 +779,80 @@ function HomeDashboard() {
             </div>
             <span className="text-[13px] font-bold underline">{t("courier.active.view")}</span>
           </Link>
+        </section>
+      )}
+
+      {courierOffers.length > 0 && (
+        <section className="px-6 pb-4" data-tick={offerTick}>
+          <h2 className="mb-3 text-[16px] font-bold text-foreground">
+            {t("courier.offers.title")} ({courierOffers.length})
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {courierOffers.map((o) => {
+              const left = Math.max(0, Math.ceil((new Date(o.expires_at).getTime() - Date.now()) / 1000));
+              const expired = left <= 0;
+              const pending = respondCourier.isPending && respondCourier.variables?.offer.offer_id === o.offer_id;
+              return (
+                <li key={o.offer_id}>
+                  <div
+                    className={`rounded-[18px] border border-primary/40 bg-card p-5 card-lift ${expired ? "opacity-60" : ""}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
+                        <Bike className="h-3.5 w-3.5" /> {t("courier.job.title")}
+                      </span>
+                      <span className="text-[13px] font-bold text-primary">
+                        {expired ? t("courier.offer.expired") : t("courier.offer.expiresIn", { sec: String(left) })}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex items-start gap-2 rounded-[14px] bg-[color:var(--divider)] p-3 text-[13px] leading-snug">
+                      <MapPin className="mt-0.5 h-4 w-4 text-primary" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground">
+                          {t("courier.offer.pickup")}: {o.pickup_area ?? "—"}
+                        </p>
+                        <p className="text-[color:var(--text-secondary)]">
+                          {t("courier.offer.drop")}: {o.drop_area ?? "—"}
+                        </p>
+                        <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-secondary)]">
+                          {t("courier.offer.trip", { km: String(o.trip_km ?? 0) })}
+                          {o.distance_to_pickup_km != null
+                            ? ` · ${t("courier.offer.away", { km: Number(o.distance_to_pickup_km).toFixed(1) })}`
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-[15px] font-bold text-foreground">
+                      {t("courier.offer.earning")} {formatINR(Number(o.earning ?? 0))}
+                    </p>
+                    {!expired && (
+                      <div className="mt-4 flex gap-3">
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => {
+                            hapticImpact("light");
+                            respondCourier.mutate({ offer: o, accept: false });
+                          }}
+                          className="h-[52px] flex-1 rounded-[14px] border border-border bg-card text-[15px] font-bold text-foreground disabled:opacity-60"
+                        >
+                          {t("courier.reject")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => respondCourier.mutate({ offer: o, accept: true })}
+                          className="h-[52px] flex-[1.4] rounded-[14px] bg-primary text-[15px] font-bold text-primary-foreground disabled:opacity-60"
+                        >
+                          {t("courier.accept")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         </section>
       )}
 
