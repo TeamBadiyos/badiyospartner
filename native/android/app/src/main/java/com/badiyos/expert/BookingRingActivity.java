@@ -22,6 +22,14 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+import java.util.TimeZone;
+
 
 /**
  * Full-screen "incoming job" screen, launched by the full-screen intent from
@@ -42,6 +50,7 @@ public class BookingRingActivity extends Activity {
 
     public static final String EXTRA_BOOKING_ID = "booking_id";
     public static final String EXTRA_ALERT_TYPE = "alert_type";
+    public static final String EXTRA_ALERT_KIND = "alert_kind";
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_BODY = "body";
     public static final String EXTRA_ADDRESS = "address";
@@ -51,11 +60,23 @@ public class BookingRingActivity extends Activity {
     public static final String EXTRA_EXTENSION_ID = "extension_id";
     public static final String EXTRA_EXTRA_MINUTES = "extra_minutes";
     public static final String EXTRA_EXTRA_PRICE = "extra_price";
+    public static final String EXTRA_OFFER_ID = "offer_id";
+    public static final String EXTRA_ORDER_ID = "order_id";
+    public static final String EXTRA_EXPIRES_AT = "expires_at";
+    public static final String EXTRA_EARNING = "earning";
+
+    /** Hard cap for a courier offer countdown, in seconds. */
+    static final int COURIER_MAX_SECONDS = 120;
 
     private static final String ACTION_DISMISS = "com.badiyos.expert.action.RING_DISMISS";
 
     private String bookingId = "";
     private String alertType = "";
+    private String alertKind = "";
+    private boolean courier = false;
+    private String offerId = "";
+    private String orderId = "";
+
     private MediaPlayer player;
     private Vibrator vibrator;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -64,6 +85,7 @@ public class BookingRingActivity extends Activity {
     private long endsAtMs;
     private TextView countdownView;
     private BroadcastReceiver dismissReceiver;
+
 
     /** Asks a showing ring screen (for this booking, or any) to close itself. */
     static void dismissIfShowing(Context appCtx, String bookingId) {
@@ -107,19 +129,36 @@ public class BookingRingActivity extends Activity {
         if (intent == null) return;
         bookingId = str(intent.getStringExtra(EXTRA_BOOKING_ID));
         alertType = str(intent.getStringExtra(EXTRA_ALERT_TYPE));
+        alertKind = str(intent.getStringExtra(EXTRA_ALERT_KIND));
         String soundUrl = str(intent.getStringExtra(EXTRA_SOUND_URL));
         String extensionId = str(intent.getStringExtra(EXTRA_EXTENSION_ID));
         String extraMinutes = str(intent.getStringExtra(EXTRA_EXTRA_MINUTES));
         String extraPrice = str(intent.getStringExtra(EXTRA_EXTRA_PRICE));
-        boolean info = BadiyoMessagingService.isInfoAlert(alertType);
-        boolean extension = "extension_request".equals(alertType);
+        courier = "courier_offer".equals(alertKind);
+        offerId = str(intent.getStringExtra(EXTRA_OFFER_ID));
+        orderId = str(intent.getStringExtra(EXTRA_ORDER_ID));
+        String expiresAt = str(intent.getStringExtra(EXTRA_EXPIRES_AT));
+        String earning = str(intent.getStringExtra(EXTRA_EARNING));
+        boolean info = !courier && BadiyoMessagingService.isInfoAlert(alertType);
+        boolean extension = !courier && "extension_request".equals(alertType);
         String title = str(intent.getStringExtra(EXTRA_TITLE));
         String body = str(intent.getStringExtra(EXTRA_BODY));
         String address = str(intent.getStringExtra(EXTRA_ADDRESS));
         String duration = str(intent.getStringExtra(EXTRA_DURATION));
         int defTimeout = info ? 20 : 60;
         int timeout = intent.getIntExtra(EXTRA_TIMEOUT, defTimeout);
+        if (courier) {
+            // Courier offers expire on the backend clock — always recompute.
+            timeout = secondsUntil(expiresAt);
+            if (timeout <= 0) {
+                Log.d(TAG, "courier offer already expired offer=" + offerId);
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                finishRing();
+                return;
+            }
+        }
         if (timeout <= 0) timeout = defTimeout;
+
 
         TextView titleView = findViewById(R.id.ring_title);
         TextView subtitleView = findViewById(R.id.ring_subtitle);
@@ -131,10 +170,44 @@ public class BookingRingActivity extends Activity {
         Button reject = findViewById(R.id.ring_reject);
         Button ok = findViewById(R.id.ring_ok);
 
-        titleView.setText(title.isEmpty() ? defaultTitle(alertType) : title);
+        titleView.setText(title.isEmpty()
+            ? (courier ? "New parcel delivery" : defaultTitle(alertType))
+            : title);
         detailView.setVisibility(View.GONE);
 
-        if (extension) {
+        if (courier) {
+            subtitleView.setVisibility(View.VISIBLE);
+            subtitleView.setText(body.isEmpty() ? "Parcel pickup nearby" : body);
+            addressView.setText(address);
+            addressView.setVisibility(address.isEmpty() ? View.GONE : View.VISIBLE);
+
+            String detail = courierDetail(earning, duration);
+            if (!detail.isEmpty()) {
+                detailView.setText(detail);
+                detailView.setVisibility(View.VISIBLE);
+            }
+
+            accept.setVisibility(View.VISIBLE);
+            reject.setVisibility(View.VISIBLE);
+            ok.setVisibility(View.GONE);
+            accept.setText("Accept");
+            reject.setText("Reject");
+            accept.setOnClickListener(v -> {
+                accept.setEnabled(false);
+                reject.setEnabled(false);
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                respondToOffer(true);
+            });
+            reject.setOnClickListener(v -> {
+                accept.setEnabled(false);
+                reject.setEnabled(false);
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                respondToOffer(false);
+            });
+        } else if (extension) {
+
             subtitleView.setText(body.isEmpty() ? "Customer requested more time" : body);
             String detail = extensionDetail(extraMinutes, extraPrice);
             if (!detail.isEmpty()) {
@@ -252,6 +325,132 @@ public class BookingRingActivity extends Activity {
         return sb.toString();
     }
 
+    // ---------------- courier (parcel) offers ----------------
+
+    private static String courierDetail(String earning, String tripKm) {
+        StringBuilder sb = new StringBuilder();
+        if (earning != null && !earning.isEmpty()) sb.append("₹").append(earning);
+        if (tripKm != null && !tripKm.isEmpty()) {
+            if (sb.length() > 0) sb.append("  ·  ");
+            sb.append(tripKm);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Seconds left until an ISO-8601 timestamp, clamped to 0..120.
+     * Returns 0 when the value is missing, unparseable or already past.
+     */
+    static int secondsUntil(String iso) {
+        long at = parseIso(iso);
+        if (at <= 0) return 0;
+        long left = (at - System.currentTimeMillis()) / 1000L;
+        if (left <= 0) return 0;
+        return (int) Math.min(left, COURIER_MAX_SECONDS);
+    }
+
+    /** Epoch millis for an ISO-8601 timestamp, or 0 when it cannot be read. */
+    private static long parseIso(String iso) {
+        if (iso == null || iso.isEmpty()) return 0L;
+        String s = iso.trim();
+        // Strip fractional seconds ("...:05.123456+00:00" -> "...:05+00:00").
+        int dot = s.indexOf('.');
+        if (dot > 0) {
+            int end = dot + 1;
+            while (end < s.length() && Character.isDigit(s.charAt(end))) end++;
+            s = s.substring(0, dot) + s.substring(end);
+        }
+        boolean hasZone = s.endsWith("Z") || s.endsWith("z")
+            || s.matches(".*[+-]\\d{2}:?\\d{2}$");
+        if (s.endsWith("Z") || s.endsWith("z")) {
+            s = s.substring(0, s.length() - 1) + "+0000";
+        } else if (s.matches(".*[+-]\\d{2}:\\d{2}$")) {
+            s = s.substring(0, s.length() - 3) + s.substring(s.length() - 2);
+        }
+        s = s.replace(' ', 'T');
+        String pattern = hasZone ? "yyyy-MM-dd'T'HH:mm:ssZ" : "yyyy-MM-dd'T'HH:mm:ss";
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat(pattern, Locale.US);
+            if (!hasZone) fmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+            fmt.setLenient(false);
+            return fmt.parse(s).getTime();
+        } catch (Throwable t) {
+            Log.w(TAG, "could not parse expires_at=" + iso);
+            return 0L;
+        }
+    }
+
+    /** Accept / reject the courier offer off the main thread, then close. */
+    private void respondToOffer(boolean accept) {
+        final Context appCtx = getApplicationContext();
+        final String offer = offerId;
+        final String order = orderId;
+        if (offer.isEmpty()) {
+            finishRing();
+            return;
+        }
+        if (!accept) {
+            // Fire and forget — nothing on this screen depends on the result.
+            new Thread(() -> {
+                try {
+                    JSONObject params = new JSONObject();
+                    params.put("_offer_id", offer);
+                    params.put("_accept", false);
+                    SupabaseRpc.call(appCtx, "courier_offer_respond", params);
+                } catch (Throwable t) {
+                    Log.e(TAG, "courier reject failed", t);
+                }
+            }).start();
+            finishRing();
+            return;
+        }
+
+        new Thread(() -> {
+            String message = null;
+            boolean ok = false;
+            try {
+                JSONObject params = new JSONObject();
+                params.put("_offer_id", offer);
+                params.put("_accept", true);
+                SupabaseRpc.Result res = SupabaseRpc.call(appCtx, "courier_offer_respond", params);
+                if (!res.ok) {
+                    message = "Could not accept — open the app";
+                } else {
+                    JSONObject body = new JSONObject(res.body == null ? "{}" : res.body);
+                    ok = body.optBoolean("ok", false);
+                    if (!ok) message = reasonText(body.optString("reason", ""));
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "courier accept failed", t);
+                message = "Could not accept — open the app";
+            }
+            final boolean accepted = ok;
+            final String toast = message;
+            handler.post(() -> {
+                if (accepted) {
+                    BookingAlertActions.openApp(appCtx,
+                        order.isEmpty() ? "/home" : "/courier/" + order);
+                } else if (toast != null) {
+                    try {
+                        Toast.makeText(appCtx, toast, Toast.LENGTH_LONG).show();
+                    } catch (Throwable ignored) {}
+                }
+                finishRing();
+            });
+        }).start();
+    }
+
+    private static String reasonText(String reason) {
+        if (reason == null) return "Offer no longer available";
+        switch (reason) {
+            case "offer_expired":     return "Offer expired";
+            case "already_taken":     return "Another rider took this order";
+            case "already_on_a_job":  return "You already have an active delivery";
+            default:                  return "Offer no longer available";
+        }
+    }
+
+
     private void startRinging(String soundUrl) {
         if (player != null) return;
         // Remote (signed URL) sound first; fall back to the bundled raw
@@ -368,9 +567,10 @@ public class BookingRingActivity extends Activity {
                 long left = Math.max(0, (endsAtMs - System.currentTimeMillis()) / 1000L);
                 if (countdownView != null) {
                     countdownView.setText(
-                        BadiyoMessagingService.isInfoAlert(alertType)
+                        (!courier && BadiyoMessagingService.isInfoAlert(alertType))
                             ? "Closing in " + left + "s"
                             : "Expires in " + left + "s");
+
                 }
                 if (left > 0) handler.postDelayed(this, 1000L);
             }
