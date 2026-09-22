@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { getAuthStorage } from './storage-adapter';
+import { SUPABASE_API_URL, SUPABASE_AUTH_STORAGE_KEY } from './api-url';
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
