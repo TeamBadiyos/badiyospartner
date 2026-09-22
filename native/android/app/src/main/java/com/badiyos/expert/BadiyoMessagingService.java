@@ -256,6 +256,11 @@ public class BadiyoMessagingService extends MessagingService {
     private void startFullScreenAlert(Intent ring, String channelId, int requestKey,
                                       String title, String text, int timeoutSeconds,
                                       NotificationCompat.Action... actions) {
+        // The push can arrive before MainActivity has ever run (app killed /
+        // fresh boot), so make sure the channel exists before notifying —
+        // otherwise Android O+ silently drops the notification.
+        ensureChannel(channelId);
+
         PendingIntent fullScreen = PendingIntent.getActivity(
             this, requestKey, ring, piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
         );
@@ -298,6 +303,52 @@ public class BadiyoMessagingService extends MessagingService {
             } catch (Throwable t) {
                 Log.w(TAG, "direct startActivity blocked; relying on full-screen intent", t);
             }
+        }
+    }
+
+    /**
+     * Safety net for cold starts: MainActivity creates both channels on launch,
+     * but a push can land before the app has ever been opened. Creating an
+     * existing channel is a no-op, so this is cheap and idempotent.
+     */
+    private void ensureChannel(String channelId) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null || nm.getNotificationChannel(channelId) != null) return;
+
+        boolean courier = COURIER_CHANNEL_ID.equals(channelId);
+        android.app.NotificationChannel channel = new android.app.NotificationChannel(
+            channelId,
+            courier ? "Parcel Delivery Offers" : "New Booking Alerts",
+            NotificationManager.IMPORTANCE_HIGH
+        );
+        channel.setDescription(courier
+            ? "Loud alerts when a parcel delivery offer arrives nearby."
+            : "Loud alerts when a new booking is available nearby.");
+        channel.enableVibration(true);
+        channel.setVibrationPattern(new long[] { 0, 400, 200, 400 });
+
+        android.net.Uri soundUri = android.media.RingtoneManager.getDefaultUri(
+            courier
+                ? android.media.RingtoneManager.TYPE_RINGTONE
+                : android.media.RingtoneManager.TYPE_NOTIFICATION
+        );
+        if (soundUri == null) {
+            soundUri = android.media.RingtoneManager.getDefaultUri(
+                android.media.RingtoneManager.TYPE_NOTIFICATION
+            );
+        }
+        channel.setSound(soundUri, new android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build());
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        channel.enableLights(true);
+
+        try {
+            nm.createNotificationChannel(channel);
+        } catch (Throwable t) {
+            Log.w(TAG, "could not create channel " + channelId, t);
         }
     }
 
