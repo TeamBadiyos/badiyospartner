@@ -42,6 +42,7 @@ public class BookingRingActivity extends Activity {
 
     public static final String EXTRA_BOOKING_ID = "booking_id";
     public static final String EXTRA_ALERT_TYPE = "alert_type";
+    public static final String EXTRA_ALERT_KIND = "alert_kind";
     public static final String EXTRA_TITLE = "title";
     public static final String EXTRA_BODY = "body";
     public static final String EXTRA_ADDRESS = "address";
@@ -51,6 +52,13 @@ public class BookingRingActivity extends Activity {
     public static final String EXTRA_EXTENSION_ID = "extension_id";
     public static final String EXTRA_EXTRA_MINUTES = "extra_minutes";
     public static final String EXTRA_EXTRA_PRICE = "extra_price";
+    public static final String EXTRA_OFFER_ID = "offer_id";
+    public static final String EXTRA_ORDER_ID = "order_id";
+    public static final String EXTRA_EXPIRES_AT = "expires_at";
+    public static final String EXTRA_EARNING = "earning";
+
+    /** Hard cap for a courier offer countdown, in seconds. */
+    static final int COURIER_MAX_SECONDS = 120;
 
     private static final String ACTION_DISMISS = "com.badiyos.expert.action.RING_DISMISS";
 
@@ -64,6 +72,7 @@ public class BookingRingActivity extends Activity {
     private long endsAtMs;
     private TextView countdownView;
     private BroadcastReceiver dismissReceiver;
+
 
     /** Asks a showing ring screen (for this booking, or any) to close itself. */
     static void dismissIfShowing(Context appCtx, String bookingId) {
