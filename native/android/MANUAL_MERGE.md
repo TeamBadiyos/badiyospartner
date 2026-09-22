@@ -327,40 +327,40 @@ published APK keeps working untouched.
 - No new permissions. Do NOT add `ACTIVITY_RECOGNITION`,
   `SCHEDULE_EXACT_ALARM`, or `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.
 
-### (b) Courier offer alerts — TODO at native build time
+### (b) Courier offer alerts — DONE in this folder
 
-`BadiyoMessagingService.java`, in the data-message branch:
+Implemented across three files; just copy them into `android/` at build time.
 
-```java
-// data: type=courier_offer, offer_id, order_id, order_code, expires_at (ISO),
-//       earning, pickup_area, drop_area
-if ("courier_offer".equals(orEmpty(data.get("type")))) {
-    Intent ring = new Intent(this, BookingRingActivity.class);
-    ring.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-    ring.putExtra("alert_kind", "courier_offer");
-    ring.putExtra("offer_id", data.get("offer_id"));
-    ring.putExtra("order_id", data.get("order_id"));
-    ring.putExtra("expires_at", data.get("expires_at"));   // drives the countdown
-    ring.putExtra("title", data.get("order_code"));
-    ring.putExtra("body", data.get("pickup_area") + " -> " + data.get("drop_area"));
-    startFullScreenAlert(ring, "courier_offer_alerts");
-    return;
-}
-```
+`BadiyoMessagingService.java`
+- Handles `data.type == "courier_offer"` before the `alert_type` ring
+  whitelist: builds the ring intent with `alert_kind="courier_offer"`,
+  `offer_id`, `order_id`, `expires_at`, `earning`, `trip_km`, title from
+  `order_code` and body `pickup_area -> drop_area`.
+- Skipped (delegated to the webview) while the app is in the foreground, and
+  skipped entirely when `expires_at` has already passed.
+- Notification building is now shared via `startFullScreenAlert(...)`:
+  CATEGORY_CALL, PRIORITY_MAX, ongoing, INSISTENT, full-screen intent, timeout
+  equal to the seconds left. Booking alerts use `new_booking_alerts`, courier
+  offers use `courier_offer_alerts`.
 
-`BookingRingActivity.java`:
+`BookingRingActivity.java`
+- New extras `alert_kind`, `offer_id`, `order_id`, `expires_at`, `earning`.
+- `secondsUntil(expires_at)` parses ISO-8601 (with or without offset,
+  fractional seconds stripped) and clamps to 0..120s; 0 closes the screen.
+- Accept → `courier_offer_respond {_offer_id, _accept:true}` on a background
+  thread; `ok:true` deep-links to `/courier/<order_id>`, `ok:false` toasts the
+  mapped reason (`offer_expired`, `already_taken`, `already_on_a_job`,
+  `offer_unavailable`) and finishes.
+- Reject → same RPC with `_accept:false`, fire-and-forget, finishes at once.
+- Booking / extension / info branches and their 60s / 20s timeouts unchanged.
 
-- When `alert_kind == "courier_offer"`, replace the fixed 60s auto-timeout with
-  a countdown to `expires_at` (parse ISO-8601, clamp to 0..120s); auto-dismiss
-  and stop the ringtone when it hits zero.
-- Accept button → `SupabaseRpc.call("courier_offer_respond",
-  {"_offer_id": offerId, "_accept": true})`; on `{"ok": true}` deep-link into
-  the app at `/courier/<order_id>`. On `{"ok": false}` show the returned
-  `reason` (`offer_expired`, `already_taken`, `already_on_a_job`) and finish.
-- Reject button → same RPC with `"_accept": false`, then finish.
-- Notification channel `courier_offer_alerts`, IMPORTANCE_HIGH,
-  `CATEGORY_CALL`, same full-screen-intent + `showWhenLocked` setup as
-  `new_booking_alerts`.
+`MainActivity.java`
+- Creates the `courier_offer_alerts` channel (IMPORTANCE_HIGH, ringtone audio
+  attributes, vibration, lockscreen-public) alongside `new_booking_alerts`.
+
+Note: the courier payload deliberately carries no `alert_type`, so
+`isRingAlert()` stays false and older APKs ignore courier pushes.
+
 
 ### (c) Battery / OEM autostart intents — DONE in this folder
 
