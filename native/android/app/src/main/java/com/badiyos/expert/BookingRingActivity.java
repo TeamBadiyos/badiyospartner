@@ -157,10 +157,44 @@ public class BookingRingActivity extends Activity {
         Button reject = findViewById(R.id.ring_reject);
         Button ok = findViewById(R.id.ring_ok);
 
-        titleView.setText(title.isEmpty() ? defaultTitle(alertType) : title);
+        titleView.setText(title.isEmpty()
+            ? (courier ? "New parcel delivery" : defaultTitle(alertType))
+            : title);
         detailView.setVisibility(View.GONE);
 
-        if (extension) {
+        if (courier) {
+            subtitleView.setVisibility(View.VISIBLE);
+            subtitleView.setText(body.isEmpty() ? "Parcel pickup nearby" : body);
+            addressView.setText(address);
+            addressView.setVisibility(address.isEmpty() ? View.GONE : View.VISIBLE);
+
+            String detail = courierDetail(earning, duration);
+            if (!detail.isEmpty()) {
+                detailView.setText(detail);
+                detailView.setVisibility(View.VISIBLE);
+            }
+
+            accept.setVisibility(View.VISIBLE);
+            reject.setVisibility(View.VISIBLE);
+            ok.setVisibility(View.GONE);
+            accept.setText("Accept");
+            reject.setText("Reject");
+            accept.setOnClickListener(v -> {
+                accept.setEnabled(false);
+                reject.setEnabled(false);
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                respondToOffer(true);
+            });
+            reject.setOnClickListener(v -> {
+                accept.setEnabled(false);
+                reject.setEnabled(false);
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                respondToOffer(false);
+            });
+        } else if (extension) {
+
             subtitleView.setText(body.isEmpty() ? "Customer requested more time" : body);
             String detail = extensionDetail(extraMinutes, extraPrice);
             if (!detail.isEmpty()) {
