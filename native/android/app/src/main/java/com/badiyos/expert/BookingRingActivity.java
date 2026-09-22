@@ -325,6 +325,132 @@ public class BookingRingActivity extends Activity {
         return sb.toString();
     }
 
+    // ---------------- courier (parcel) offers ----------------
+
+    private static String courierDetail(String earning, String tripKm) {
+        StringBuilder sb = new StringBuilder();
+        if (earning != null && !earning.isEmpty()) sb.append("₹").append(earning);
+        if (tripKm != null && !tripKm.isEmpty()) {
+            if (sb.length() > 0) sb.append("  ·  ");
+            sb.append(tripKm);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Seconds left until an ISO-8601 timestamp, clamped to 0..120.
+     * Returns 0 when the value is missing, unparseable or already past.
+     */
+    static int secondsUntil(String iso) {
+        long at = parseIso(iso);
+        if (at <= 0) return 0;
+        long left = (at - System.currentTimeMillis()) / 1000L;
+        if (left <= 0) return 0;
+        return (int) Math.min(left, COURIER_MAX_SECONDS);
+    }
+
+    /** Epoch millis for an ISO-8601 timestamp, or 0 when it cannot be read. */
+    private static long parseIso(String iso) {
+        if (iso == null || iso.isEmpty()) return 0L;
+        String s = iso.trim();
+        // Strip fractional seconds ("...:05.123456+00:00" -> "...:05+00:00").
+        int dot = s.indexOf('.');
+        if (dot > 0) {
+            int end = dot + 1;
+            while (end < s.length() && Character.isDigit(s.charAt(end))) end++;
+            s = s.substring(0, dot) + s.substring(end);
+        }
+        boolean hasZone = s.endsWith("Z") || s.endsWith("z")
+            || s.matches(".*[+-]\\d{2}:?\\d{2}$");
+        if (s.endsWith("Z") || s.endsWith("z")) {
+            s = s.substring(0, s.length() - 1) + "+0000";
+        } else if (s.matches(".*[+-]\\d{2}:\\d{2}$")) {
+            s = s.substring(0, s.length() - 3) + s.substring(s.length() - 2);
+        }
+        s = s.replace(' ', 'T');
+        String pattern = hasZone ? "yyyy-MM-dd'T'HH:mm:ssZ" : "yyyy-MM-dd'T'HH:mm:ss";
+        try {
+            SimpleDateFormat fmt = new SimpleDateFormat(pattern, Locale.US);
+            if (!hasZone) fmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+            fmt.setLenient(false);
+            return fmt.parse(s).getTime();
+        } catch (Throwable t) {
+            Log.w(TAG, "could not parse expires_at=" + iso);
+            return 0L;
+        }
+    }
+
+    /** Accept / reject the courier offer off the main thread, then close. */
+    private void respondToOffer(boolean accept) {
+        final Context appCtx = getApplicationContext();
+        final String offer = offerId;
+        final String order = orderId;
+        if (offer.isEmpty()) {
+            finishRing();
+            return;
+        }
+        if (!accept) {
+            // Fire and forget — nothing on this screen depends on the result.
+            new Thread(() -> {
+                try {
+                    JSONObject params = new JSONObject();
+                    params.put("_offer_id", offer);
+                    params.put("_accept", false);
+                    SupabaseRpc.call(appCtx, "courier_offer_respond", params);
+                } catch (Throwable t) {
+                    Log.e(TAG, "courier reject failed", t);
+                }
+            }).start();
+            finishRing();
+            return;
+        }
+
+        new Thread(() -> {
+            String message = null;
+            boolean ok = false;
+            try {
+                JSONObject params = new JSONObject();
+                params.put("_offer_id", offer);
+                params.put("_accept", true);
+                SupabaseRpc.Result res = SupabaseRpc.call(appCtx, "courier_offer_respond", params);
+                if (!res.ok) {
+                    message = "Could not accept — open the app";
+                } else {
+                    JSONObject body = new JSONObject(res.body == null ? "{}" : res.body);
+                    ok = body.optBoolean("ok", false);
+                    if (!ok) message = reasonText(body.optString("reason", ""));
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "courier accept failed", t);
+                message = "Could not accept — open the app";
+            }
+            final boolean accepted = ok;
+            final String toast = message;
+            handler.post(() -> {
+                if (accepted) {
+                    BookingAlertActions.openApp(appCtx,
+                        order.isEmpty() ? "/home" : "/courier/" + order);
+                } else if (toast != null) {
+                    try {
+                        Toast.makeText(appCtx, toast, Toast.LENGTH_LONG).show();
+                    } catch (Throwable ignored) {}
+                }
+                finishRing();
+            });
+        }).start();
+    }
+
+    private static String reasonText(String reason) {
+        if (reason == null) return "Offer no longer available";
+        switch (reason) {
+            case "offer_expired":     return "Offer expired";
+            case "already_taken":     return "Another rider took this order";
+            case "already_on_a_job":  return "You already have an active delivery";
+            default:                  return "Offer no longer available";
+        }
+    }
+
+
     private void startRinging(String soundUrl) {
         if (player != null) return;
         // Remote (signed URL) sound first; fall back to the bundled raw
