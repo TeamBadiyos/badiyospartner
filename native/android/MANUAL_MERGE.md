@@ -157,7 +157,9 @@ Both channels are created in code (`MainActivity.ensureChannels()` and
 | Channel id             | Importance | Purpose                                             |
 | ---------------------- | ---------- | --------------------------------------------------- |
 | `new_booking_alerts`   | HIGH       | Ringing full-screen job alerts (sound + vibration)   |
+| `courier_offer_alerts` | HIGH       | Ringing full-screen parcel (courier) offer alerts    |
 | `expert_online_status` | LOW        | Silent ongoing "You're online" foreground-service ux |
+
 
 ---
 
