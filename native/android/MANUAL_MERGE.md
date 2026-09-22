@@ -160,6 +160,14 @@ Both channels are created in code (`MainActivity.ensureChannels()` and
 | `courier_offer_alerts` | HIGH       | Ringing full-screen parcel (courier) offer alerts    |
 | `expert_online_status` | LOW        | Silent ongoing "You're online" foreground-service ux |
 
+`MainActivity.onCreate()` creates both ring channels
+(`createNewBookingNotificationChannel()` +
+`createCourierOfferNotificationChannel()`). Because a push can arrive before
+MainActivity has ever run (app killed / after reboot),
+`BadiyoMessagingService.startFullScreenAlert()` also calls `ensureChannel()`
+first — without an existing channel Android O+ silently drops the
+notification.
+
 
 ---
 
