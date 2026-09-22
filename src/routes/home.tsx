@@ -137,7 +137,10 @@ function HomeDashboard() {
   const serviceNotice = useMemo(() => {
     const clean = cleanSchedule.data?.state;
     const courier = courierSchedule.data?.state;
-    if (clean && clean.can_order === false) {
+    // A rider whose parcel service is live keeps working even if the
+    // home-service side is paused / coming soon — no "closed" banner then.
+    const courierLive = courierEnabled && courier?.can_order === true;
+    if (clean && clean.can_order === false && !courierLive) {
       return {
         title: t("home.hours.closedTitle"),
         body:
@@ -150,6 +153,7 @@ function HomeDashboard() {
     if (courierEnabled && courier && courier.can_order === false) {
       return { title: t("home.hours.courierCutoffTitle"), body: t("home.hours.courierCutoffBody") };
     }
+
     if (clean?.close_time && clean.open) {
       return {
         title: t("home.hours.todayTitle"),
