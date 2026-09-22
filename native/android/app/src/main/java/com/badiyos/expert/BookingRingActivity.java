@@ -567,9 +567,10 @@ public class BookingRingActivity extends Activity {
                 long left = Math.max(0, (endsAtMs - System.currentTimeMillis()) / 1000L);
                 if (countdownView != null) {
                     countdownView.setText(
-                        BadiyoMessagingService.isInfoAlert(alertType)
+                        (!courier && BadiyoMessagingService.isInfoAlert(alertType))
                             ? "Closing in " + left + "s"
                             : "Expires in " + left + "s");
+
                 }
                 if (left > 0) handler.postDelayed(this, 1000L);
             }
