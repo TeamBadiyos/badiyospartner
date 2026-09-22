@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { getAuthStorage } from './storage-adapter';
+import { SUPABASE_API_URL, SUPABASE_AUTH_STORAGE_KEY } from './api-url';
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
@@ -31,7 +32,8 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 function createSupabaseClient() {
   // Use import.meta.env for client-side (Vite build-time replacement)
   // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  // Custom domain first (see api-url.ts); env vars stay as a fallback.
+  const SUPABASE_URL = SUPABASE_API_URL || import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
@@ -49,6 +51,9 @@ function createSupabaseClient() {
       fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
     },
     auth: {
+      // Pinned so switching to the custom domain does not log everyone out and
+      // keeps the native Android services reading the same session key.
+      storageKey: SUPABASE_AUTH_STORAGE_KEY,
       storage: getAuthStorage(),
       persistSession: true,
       autoRefreshToken: true,

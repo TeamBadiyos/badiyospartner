@@ -23,7 +23,7 @@ const config: CapacitorConfig = {
     androidScheme: "https",
     iosScheme: "https",
     errorPath: "offline.html",
-    allowNavigation: ["expert.badiyos.com", "badiyosexpert.lovable.app"],
+    allowNavigation: ["expert.badiyos.com", "badiyosexpert.lovable.app", "api.badiyos.com"],
   },
   android: {
     backgroundColor: "#0074E4",

@@ -28,7 +28,7 @@ final class SupabaseRpc {
 
     private static final String PREFS_NAME = "CapacitorStorage";
     private static final String SESSION_KEY = "sb-dkneclwmmjlqswovtqno-auth-token";
-    private static final String SUPABASE_URL = "https://dkneclwmmjlqswovtqno.supabase.co";
+    private static final String SUPABASE_URL = "https://api.badiyos.com";
     private static final String SUPABASE_ANON_KEY =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrbmVjbHdtbWpscXN3b3Z0cW5vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4OTExMjMsImV4cCI6MjEwMDQ2NzEyM30.5wHGl9oFmY2AJysu9KlTpUwb-HQGtZZ6q-SHi1ced1Q";
 

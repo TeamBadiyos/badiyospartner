@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
-const FN_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+import { SUPABASE_API_URL } from "@/integrations/supabase/api-url";
+
+const FN_BASE = `${SUPABASE_API_URL}/functions/v1`;
 
 async function callFn<T>(name: string, body: unknown, opts: { auth?: boolean } = {}): Promise<T> {
   const headers: Record<string, string> = {
