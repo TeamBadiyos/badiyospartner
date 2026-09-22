@@ -306,6 +306,52 @@ public class BadiyoMessagingService extends MessagingService {
         }
     }
 
+    /**
+     * Safety net for cold starts: MainActivity creates both channels on launch,
+     * but a push can land before the app has ever been opened. Creating an
+     * existing channel is a no-op, so this is cheap and idempotent.
+     */
+    private void ensureChannel(String channelId) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null || nm.getNotificationChannel(channelId) != null) return;
+
+        boolean courier = COURIER_CHANNEL_ID.equals(channelId);
+        android.app.NotificationChannel channel = new android.app.NotificationChannel(
+            channelId,
+            courier ? "Parcel Delivery Offers" : "New Booking Alerts",
+            NotificationManager.IMPORTANCE_HIGH
+        );
+        channel.setDescription(courier
+            ? "Loud alerts when a parcel delivery offer arrives nearby."
+            : "Loud alerts when a new booking is available nearby.");
+        channel.enableVibration(true);
+        channel.setVibrationPattern(new long[] { 0, 400, 200, 400 });
+
+        android.net.Uri soundUri = android.media.RingtoneManager.getDefaultUri(
+            courier
+                ? android.media.RingtoneManager.TYPE_RINGTONE
+                : android.media.RingtoneManager.TYPE_NOTIFICATION
+        );
+        if (soundUri == null) {
+            soundUri = android.media.RingtoneManager.getDefaultUri(
+                android.media.RingtoneManager.TYPE_NOTIFICATION
+            );
+        }
+        channel.setSound(soundUri, new android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build());
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        channel.enableLights(true);
+
+        try {
+            nm.createNotificationChannel(channel);
+        } catch (Throwable t) {
+            Log.w(TAG, "could not create channel " + channelId, t);
+        }
+    }
+
     static int piFlags(int base) {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
             ? base | PendingIntent.FLAG_IMMUTABLE
