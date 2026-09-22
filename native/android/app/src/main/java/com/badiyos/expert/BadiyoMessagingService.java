@@ -256,6 +256,11 @@ public class BadiyoMessagingService extends MessagingService {
     private void startFullScreenAlert(Intent ring, String channelId, int requestKey,
                                       String title, String text, int timeoutSeconds,
                                       NotificationCompat.Action... actions) {
+        // The push can arrive before MainActivity has ever run (app killed /
+        // fresh boot), so make sure the channel exists before notifying —
+        // otherwise Android O+ silently drops the notification.
+        ensureChannel(channelId);
+
         PendingIntent fullScreen = PendingIntent.getActivity(
             this, requestKey, ring, piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
         );
