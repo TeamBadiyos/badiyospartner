@@ -89,9 +89,18 @@ export function bookingSlotStart(
   slot?: string | null,
 ): Date | null {
   if (!scheduledDate) return null;
-  const head = (slot ?? "").trim().split(/[-–]| to /)[0]?.trim() ?? "";
-  const time = /^\d{1,2}:\d{2}/.test(head) ? head.slice(0, 5) : "00:00";
-  const parsed = new Date(`${scheduledDate}T${time.length === 4 ? `0${time}` : time}:00`);
+  const head = (slot ?? "").trim().split(/\s[-–]\s|[-–]| to /)[0]?.trim() ?? "";
+  const match = head.match(/^(\d{1,2})(?::(\d{2}))?\s*([APap][Mm])?/);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const minute = match[2] ?? "00";
+  const meridiem = match[3]?.toLowerCase();
+  if (meridiem === "pm" && hour < 12) hour += 12;
+  if (meridiem === "am" && hour === 12) hour = 0;
+  if (Number.isNaN(hour) || hour > 23) return null;
+  const parsed = new Date(
+    `${scheduledDate}T${String(hour).padStart(2, "0")}:${minute}:00`,
+  );
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -100,7 +109,8 @@ export function bookingSlotStart(
  *
  * - Immediate bookings: only while fresh (default 30 minutes).
  * - Advance bookings: from `leadHours` before the slot until the slot passes,
- *   even when the booking row itself is hours old.
+ *   even when the booking row itself is hours old. A brand-new booking stays
+ *   visible even if its slot start has just passed.
  */
 export function isBookingQueueable(
   booking: {
@@ -117,6 +127,7 @@ export function isBookingQueueable(
   const slotStart = bookingSlotStart(booking.scheduled_date, booking.scheduled_time_slot);
   if (!slotStart) return fresh;
   const startMs = slotStart.getTime();
-  if (now > startMs) return false;
+  if (now > startMs) return fresh;
   return fresh || now >= startMs - opts.leadHours * 3_600_000;
 }
+
