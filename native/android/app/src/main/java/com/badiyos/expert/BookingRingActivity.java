@@ -116,19 +116,36 @@ public class BookingRingActivity extends Activity {
         if (intent == null) return;
         bookingId = str(intent.getStringExtra(EXTRA_BOOKING_ID));
         alertType = str(intent.getStringExtra(EXTRA_ALERT_TYPE));
+        alertKind = str(intent.getStringExtra(EXTRA_ALERT_KIND));
         String soundUrl = str(intent.getStringExtra(EXTRA_SOUND_URL));
         String extensionId = str(intent.getStringExtra(EXTRA_EXTENSION_ID));
         String extraMinutes = str(intent.getStringExtra(EXTRA_EXTRA_MINUTES));
         String extraPrice = str(intent.getStringExtra(EXTRA_EXTRA_PRICE));
-        boolean info = BadiyoMessagingService.isInfoAlert(alertType);
-        boolean extension = "extension_request".equals(alertType);
+        courier = "courier_offer".equals(alertKind);
+        offerId = str(intent.getStringExtra(EXTRA_OFFER_ID));
+        orderId = str(intent.getStringExtra(EXTRA_ORDER_ID));
+        String expiresAt = str(intent.getStringExtra(EXTRA_EXPIRES_AT));
+        String earning = str(intent.getStringExtra(EXTRA_EARNING));
+        boolean info = !courier && BadiyoMessagingService.isInfoAlert(alertType);
+        boolean extension = !courier && "extension_request".equals(alertType);
         String title = str(intent.getStringExtra(EXTRA_TITLE));
         String body = str(intent.getStringExtra(EXTRA_BODY));
         String address = str(intent.getStringExtra(EXTRA_ADDRESS));
         String duration = str(intent.getStringExtra(EXTRA_DURATION));
         int defTimeout = info ? 20 : 60;
         int timeout = intent.getIntExtra(EXTRA_TIMEOUT, defTimeout);
+        if (courier) {
+            // Courier offers expire on the backend clock — always recompute.
+            timeout = secondsUntil(expiresAt);
+            if (timeout <= 0) {
+                Log.d(TAG, "courier offer already expired offer=" + offerId);
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                finishRing();
+                return;
+            }
+        }
         if (timeout <= 0) timeout = defTimeout;
+
 
         TextView titleView = findViewById(R.id.ring_title);
         TextView subtitleView = findViewById(R.id.ring_subtitle);
