@@ -72,6 +72,11 @@ public class BookingRingActivity extends Activity {
 
     private String bookingId = "";
     private String alertType = "";
+    private String alertKind = "";
+    private boolean courier = false;
+    private String offerId = "";
+    private String orderId = "";
+
     private MediaPlayer player;
     private Vibrator vibrator;
     private final Handler handler = new Handler(Looper.getMainLooper());
