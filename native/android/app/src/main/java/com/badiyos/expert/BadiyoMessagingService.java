@@ -18,7 +18,8 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.util.Map;
 
 /**
- * Full-screen "ringing" alert for new booking pushes.
+ * Full-screen "ringing" alert for new booking pushes and courier (parcel)
+ * offers.
  *
  * Extends the Capacitor push plugin's MessagingService (instead of
  * FirebaseMessagingService directly) so token registration and the JS
@@ -30,6 +31,9 @@ import java.util.Map;
  *     NOT in the foreground  -> build a CATEGORY_CALL, ongoing, full-screen
  *     intent notification on the existing "new_booking_alerts" channel and
  *     launch {@link BookingRingActivity} (rings + wakes/unlocks the screen).
+ *   - Data-only message with type = "courier_offer" AND the app NOT in the
+ *     foreground -> same treatment on the "courier_offer_alerts" channel, with
+ *     the countdown driven by the offer's expires_at.
  *   - Anything else (app open, or any non-alert push) -> delegate to super,
  *     which forwards to the webview. The existing in-app looping alert on the
  *     Home screen is therefore untouched.
@@ -39,12 +43,30 @@ public class BadiyoMessagingService extends MessagingService {
     private static final String TAG = "BadiyoFCM";
 
     static final String CHANNEL_ID = "new_booking_alerts";
+    static final String COURIER_CHANNEL_ID = "courier_offer_alerts";
     static final int RING_NOTIFICATION_ID = 5120;
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         Map<String, String> data = remoteMessage.getData();
         String alertType = data.get("alert_type");
+
+        // data: type=courier_offer, offer_id, order_id, order_code, expires_at
+        //       (ISO), earning, pickup_area, drop_area, trip_km
+        if ("courier_offer".equals(orEmpty(data.get("type")))) {
+            if (MainActivity.isAppInForeground()) {
+                Log.d(TAG, "courier offer while foreground — delegating to webview");
+                super.onMessageReceived(remoteMessage);
+                return;
+            }
+            try {
+                showCourierOffer(data);
+            } catch (Throwable t) {
+                Log.e(TAG, "showCourierOffer failed — falling back", t);
+                super.onMessageReceived(remoteMessage);
+            }
+            return;
+        }
 
         boolean isBookingAlert = isRingAlert(alertType);
 
@@ -93,6 +115,53 @@ public class BadiyoMessagingService extends MessagingService {
             || "reminder_10min".equals(alertType);
     }
 
+    // ---------------- courier (parcel) offers ----------------
+
+    private void showCourierOffer(Map<String, String> data) {
+        String offerId = orEmpty(data.get("offer_id"));
+        String orderId = orEmpty(data.get("order_id"));
+        String expiresAt = orEmpty(data.get("expires_at"));
+        String pickup = orEmpty(data.get("pickup_area"));
+        String drop = orEmpty(data.get("drop_area"));
+        String earning = orEmpty(data.get("earning"));
+        String tripKm = orEmpty(data.get("trip_km"));
+        String title = fallback(data.get("order_code"), "New parcel delivery");
+        String body = (pickup.isEmpty() && drop.isEmpty())
+            ? "Tap to view the delivery"
+            : pickup + " -> " + drop;
+
+        int seconds = BookingRingActivity.secondsUntil(expiresAt);
+        if (seconds <= 0) {
+            Log.d(TAG, "courier offer already expired offer=" + offerId);
+            return;
+        }
+
+        Log.d(TAG, "courier offer=" + offerId + " order=" + orderId
+            + " expires_in=" + seconds + "s");
+
+        Intent ring = new Intent(this, BookingRingActivity.class);
+        ring.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_NO_USER_ACTION
+        );
+        ring.putExtra(BookingRingActivity.EXTRA_ALERT_KIND, "courier_offer");
+        ring.putExtra(BookingRingActivity.EXTRA_OFFER_ID, offerId);
+        ring.putExtra(BookingRingActivity.EXTRA_ORDER_ID, orderId);
+        ring.putExtra(BookingRingActivity.EXTRA_EXPIRES_AT, expiresAt);
+        ring.putExtra(BookingRingActivity.EXTRA_EARNING, earning);
+        ring.putExtra(BookingRingActivity.EXTRA_DURATION, tripKm.isEmpty() ? "" : tripKm + " km");
+        ring.putExtra(BookingRingActivity.EXTRA_TITLE, title);
+        ring.putExtra(BookingRingActivity.EXTRA_BODY, body);
+        ring.putExtra(BookingRingActivity.EXTRA_ADDRESS, body);
+        ring.putExtra(BookingRingActivity.EXTRA_TIMEOUT, seconds);
+
+        startFullScreenAlert(ring, COURIER_CHANNEL_ID, offerId.hashCode(),
+            title, body, seconds);
+    }
+
+    // ---------------- home-service booking alerts ----------------
+
     private void showRingingNotification(Map<String, String> data) {
         String bookingId = orEmpty(data.get("booking_id"));
         String alertType = orEmpty(data.get("alert_type"));
@@ -129,13 +198,69 @@ public class BadiyoMessagingService extends MessagingService {
         ring.putExtra(BookingRingActivity.EXTRA_EXTRA_MINUTES, extraMinutes);
         ring.putExtra(BookingRingActivity.EXTRA_EXTRA_PRICE, extraPrice);
 
-        PendingIntent fullScreen = PendingIntent.getActivity(
-            this, bookingId.hashCode(), ring, piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-        );
-
         String text = address.isEmpty() ? body : (duration.isEmpty() ? address : duration + " · " + address);
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Action[] actions;
+        if (info) {
+            PendingIntent okPi = PendingIntent.getBroadcast(
+                this,
+                ("ok:" + bookingId + alertType).hashCode(),
+                BookingAlertActions.dismissIntent(this, bookingId),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            actions = new NotificationCompat.Action[] {
+                new NotificationCompat.Action(0, "OK", okPi)
+            };
+        } else if (extension) {
+            PendingIntent acceptPi = PendingIntent.getBroadcast(
+                this,
+                ("ext-accept:" + extensionId).hashCode(),
+                BookingAlertActions.extensionIntent(this, bookingId, extensionId, true),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            PendingIntent declinePi = PendingIntent.getBroadcast(
+                this,
+                ("ext-decline:" + extensionId).hashCode(),
+                BookingAlertActions.extensionIntent(this, bookingId, extensionId, false),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            actions = new NotificationCompat.Action[] {
+                new NotificationCompat.Action(0, "Accept", acceptPi),
+                new NotificationCompat.Action(0, "Decline", declinePi)
+            };
+        } else {
+            PendingIntent acceptPi = PendingIntent.getBroadcast(
+                this,
+                ("accept:" + bookingId).hashCode(),
+                BookingAlertActions.acceptIntent(this, bookingId),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            PendingIntent rejectPi = PendingIntent.getBroadcast(
+                this,
+                ("reject:" + bookingId).hashCode(),
+                BookingAlertActions.rejectIntent(this, bookingId),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            actions = new NotificationCompat.Action[] {
+                new NotificationCompat.Action(0, "Accept", acceptPi),
+                new NotificationCompat.Action(0, "Reject", rejectPi)
+            };
+        }
+
+        startFullScreenAlert(ring, CHANNEL_ID, bookingId.hashCode(),
+            title, text, timeoutSeconds, actions);
+    }
+
+    // ---------------- shared full-screen alert plumbing ----------------
+
+    private void startFullScreenAlert(Intent ring, String channelId, int requestKey,
+                                      String title, String text, int timeoutSeconds,
+                                      NotificationCompat.Action... actions) {
+        PendingIntent fullScreen = PendingIntent.getActivity(
+            this, requestKey, ring, piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(title)
             .setContentText(text)
@@ -150,42 +275,10 @@ public class BadiyoMessagingService extends MessagingService {
             .setFullScreenIntent(fullScreen, true)
             .setContentIntent(fullScreen);
 
-        if (info) {
-            PendingIntent okPi = PendingIntent.getBroadcast(
-                this,
-                ("ok:" + bookingId + alertType).hashCode(),
-                BookingAlertActions.dismissIntent(this, bookingId),
-                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-            );
-            builder.addAction(0, "OK", okPi);
-        } else if (extension) {
-            PendingIntent acceptPi = PendingIntent.getBroadcast(
-                this,
-                ("ext-accept:" + extensionId).hashCode(),
-                BookingAlertActions.extensionIntent(this, bookingId, extensionId, true),
-                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-            );
-            PendingIntent declinePi = PendingIntent.getBroadcast(
-                this,
-                ("ext-decline:" + extensionId).hashCode(),
-                BookingAlertActions.extensionIntent(this, bookingId, extensionId, false),
-                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-            );
-            builder.addAction(0, "Accept", acceptPi).addAction(0, "Decline", declinePi);
-        } else {
-            PendingIntent acceptPi = PendingIntent.getBroadcast(
-                this,
-                ("accept:" + bookingId).hashCode(),
-                BookingAlertActions.acceptIntent(this, bookingId),
-                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-            );
-            PendingIntent rejectPi = PendingIntent.getBroadcast(
-                this,
-                ("reject:" + bookingId).hashCode(),
-                BookingAlertActions.rejectIntent(this, bookingId),
-                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-            );
-            builder.addAction(0, "Accept", acceptPi).addAction(0, "Reject", rejectPi);
+        if (actions != null) {
+            for (NotificationCompat.Action action : actions) {
+                if (action != null) builder.addAction(action);
+            }
         }
 
         NotificationManager nm = getSystemService(NotificationManager.class);
