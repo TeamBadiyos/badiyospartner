@@ -28,6 +28,8 @@ import com.getcapacitor.BridgeWebChromeClient;
 public class MainActivity extends BridgeActivity {
 
     private static final String NEW_BOOKING_CHANNEL_ID = "new_booking_alerts";
+    private static final String COURIER_OFFER_CHANNEL_ID = "courier_offer_alerts";
+
 
     /** Extra used by the full-screen booking alert to deep-link after Accept. */
     public static final String EXTRA_ROUTE = "badiyo_route";
@@ -62,6 +64,8 @@ public class MainActivity extends BridgeActivity {
         });
 
         createNewBookingNotificationChannel();
+        createCourierOfferNotificationChannel();
+
         handleRouteExtra(getIntent());
     }
 
