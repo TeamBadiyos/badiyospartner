@@ -40,7 +40,7 @@ function WalletScreen() {
         .eq("owner_type", "expert")
         .eq("owner_id", expert!.id)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(500);
       if (error) throw error;
       return data ?? [];
     },
@@ -48,10 +48,11 @@ function WalletScreen() {
 
   if (loading) return <div className="flex min-h-[100dvh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
-  const all = ledgerQ.data ?? [];
-  // Courier trips are credited by courier_settle_order with reason "courier_order:<uuid>".
-  const courierItems = all.filter((tx) => (tx.reason ?? "").startsWith("courier_order:"));
-  const items = all.filter((tx) => !(tx.reason ?? "").startsWith("courier_order:"));
+  const items = ledgerQ.data ?? [];
+  const isCourier = (tx: { reason: string | null }) => (tx.reason ?? "").startsWith("courier_order:") || (tx.reason ?? "").startsWith("courier_cancel_fee:");
+  // Single source of truth: the wallet balance is the sum of every ledger
+  // entry (home service + courier + adjustments), so courier trips always count.
+  const balance = items.reduce((sum, tx) => sum + (tx.type === "credit" ? Number(tx.amount) : -Number(tx.amount)), 0);
 
   return (
     <PullToRefresh className="relative" onRefresh={() => ledgerQ.refetch()}>
@@ -66,54 +67,40 @@ function WalletScreen() {
       <section className="px-6">
         <div className="rounded-[18px] bg-primary p-6 text-primary-foreground shadow-[var(--shadow-brand-md)] card-lift">
           <p className="text-[12px] font-bold uppercase tracking-[0.08em] opacity-85">{t("wallet.balance.label")}</p>
-          <p className="amount-strong mt-2 text-[40px] leading-none">{formatINR(expert?.wallet_balance ?? 0)}</p>
+          <p className="amount-strong mt-2 text-[40px] leading-none">{formatINR(balance)}</p>
           <p className="mt-2 text-[13px] opacity-85">{t("wallet.balance.note")}</p>
         </div>
       </section>
 
-      {courierItems.length > 0 && (
-        <section className="mt-6 px-6">
-          <SectionHeading>{t("wallet.courier.title")}</SectionHeading>
-          <ul className="mt-3 space-y-2">
-            {courierItems.map((tx) => (
-              <li key={tx.id} className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4 card-lift">
-                <div className="icon-tile flex h-10 w-10 items-center justify-center rounded-full text-primary">
-                  <Bike className="h-5 w-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-[14px] font-semibold text-foreground">{t("wallet.courier.item")}</p>
-                  <p className="text-[12px] text-[color:var(--text-secondary)]">{new Date(tx.created_at).toLocaleString("en-IN")}</p>
-                </div>
-                <span className="amount-strong text-[16px] text-primary">+{formatINR(tx.amount)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section className="mt-6 px-6">
-        <SectionHeading>{courierItems.length > 0 ? t("wallet.other.title") : t("wallet.tx.title")}</SectionHeading>
+        <SectionHeading>{t("wallet.tx.title")}</SectionHeading>
         {items.length === 0 ? (
           <p className="mt-4 text-[13px] text-[color:var(--text-secondary)]">{t("wallet.tx.empty")}</p>
         ) : (
           <ul className="mt-3 space-y-2">
-            {items.map((tx) => (
+            {items.map((tx) => {
+              const courier = isCourier(tx);
+              return (
               <li key={tx.id} className="flex items-center gap-3 rounded-[14px] border border-border bg-card p-4 card-lift">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-full ${tx.type === "credit" ? "icon-tile text-primary" : "bg-red-50 text-red-600"}`}>
-                  {tx.type === "credit" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
+                  {courier ? <Bike className="h-5 w-5" /> : tx.type === "credit" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
                 </div>
                 <div className="flex-1">
-                  <p className="text-[14px] font-semibold text-foreground">{formatReason(tx.reason, tx.type, { credit: t("wallet.credit"), debit: t("wallet.debit") })}</p>
+                  <p className="text-[14px] font-semibold text-foreground">
+                    {courier ? t("wallet.courier.item") : formatReason(tx.reason, tx.type, { credit: t("wallet.credit"), debit: t("wallet.debit") })}
+                  </p>
                   <p className="text-[12px] text-[color:var(--text-secondary)]">{new Date(tx.created_at).toLocaleString("en-IN")}</p>
                 </div>
                 <span className={`amount-strong text-[16px] ${tx.type === "credit" ? "text-primary" : "text-red-600"}`}>
                   {tx.type === "credit" ? "+" : "−"}{formatINR(tx.amount)}
                 </span>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>
+
     </div>
     </PullToRefresh>
   );
