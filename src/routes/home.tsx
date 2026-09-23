@@ -645,11 +645,15 @@ function HomeDashboard() {
           try {
             const bg = await checkBackgroundLocation();
             console.log("[expert][toggle] bg check before start", bg);
-            if (bg.background) {
+            // A location-typed foreground service keeps reporting with only
+            // foreground ("while using the app") permission, so start it
+            // whenever foreground location is granted. "Allow all the time"
+            // only makes it more resilient, it is not a prerequisite.
+            if (bg.foreground || bg.background) {
               const started = await startBackgroundAvailabilityService();
               console.log("[expert][toggle] bg service start result", started);
             } else {
-              console.log("[expert][toggle] bg service NOT started — background permission not granted");
+              console.log("[expert][toggle] bg service NOT started — no location permission");
             }
           } catch (e) {
             console.warn("[expert][toggle] bg service start skipped", e);

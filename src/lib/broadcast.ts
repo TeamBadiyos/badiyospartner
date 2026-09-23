@@ -300,8 +300,9 @@ export function useExpertLocationTracking(enabled: boolean): LocationTracker {
       setLastPushedAt(null);
       return;
     }
-    // Pause tracking while the tab is hidden — keep last-known state intact.
-    if (isHidden) return;
+    // NOTE: tracking intentionally continues while the app is backgrounded or
+    // the screen is locked — a rider on a bike must keep reporting location.
+    // Errors while hidden are still suppressed (see applyError).
 
     let cancelled = false;
     let clearWatch: (() => void) | null = null;
@@ -349,7 +350,7 @@ export function useExpertLocationTracking(enabled: boolean): LocationTracker {
       if (clearWatch) clearWatch();
       if (interval !== null) window.clearInterval(interval);
     };
-  }, [enabled, isHidden, applyPosition, applyError]);
+  }, [enabled, applyPosition, applyError]);
 
   return { state, lastPushedAt, isHidden, ensureFix };
 }
