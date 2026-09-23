@@ -36,7 +36,7 @@ import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 import { serviceTitle } from "@/lib/service-pricing";
-import { useServiceSchedule, isBookingQueueable, formatTime } from "@/lib/service-hours";
+import { useServiceSchedule, isBookingQueueable } from "@/lib/service-hours";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -133,37 +133,9 @@ function HomeDashboard() {
     leadHoursRef.current = Number(cleanSchedule.data?.advance_lead_hours ?? 2) || 2;
   }, [cleanSchedule.data?.advance_lead_hours]);
 
-  // Friendly, read-only notice: service closed now, or courier past cutoff.
-  const serviceNotice = useMemo(() => {
-    const clean = cleanSchedule.data?.state;
-    const courier = courierSchedule.data?.state;
-    // A rider whose parcel service is live keeps working even if the
-    // home-service side is paused / coming soon — no "closed" banner then.
-    const courierLive = courierEnabled && courier?.can_order === true;
-    if (clean && clean.can_order === false && !courierLive) {
-      return {
-        title: t("home.hours.closedTitle"),
-        body:
-          clean.message_en ||
-          (clean.next_open_at
-            ? t("home.hours.reopens").replace("{time}", formatTime(clean.open_time))
-            : t("home.hours.closedBody")),
-      };
-    }
-    if (courierEnabled && courier && courier.can_order === false) {
-      return { title: t("home.hours.courierCutoffTitle"), body: t("home.hours.courierCutoffBody") };
-    }
-
-    if (clean?.close_time && clean.open) {
-      return {
-        title: t("home.hours.todayTitle"),
-        body: t("home.hours.todayBody")
-          .replace("{open}", formatTime(clean.open_time))
-          .replace("{close}", formatTime(clean.close_time)),
-      };
-    }
-    return null;
-  }, [cleanSchedule.data, courierSchedule.data, courierEnabled, t]);
+  // Working hours live on the Schedule screen (Profile → My working hours).
+  // The Home dashboard deliberately shows no timing card above the toggle.
+  void courierSchedule;
 
   // Courier delivery offers show on Home exactly like normal booking requests:
   // live list, ringing alert and Accept / Reject.
@@ -244,15 +216,30 @@ function HomeDashboard() {
   const tracker = useExpertLocationTracking(online);
 
   const locationState = tracker.state;
+  // Last location the server already knows about. After a cold start (app was
+  // closed / killed) the in-memory tracker has nothing yet, but the backend
+  // still holds a recent fix — use it so orders keep flowing immediately.
+  const serverCoords: Coords | null = useMemo(() => {
+    const lat = Number(expert?.current_lat);
+    const lng = Number(expert?.current_lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
+    return { lat, lng };
+  }, [expert?.current_lat, expert?.current_lng]);
+  const serverFixAt = useMemo(() => {
+    const raw = expert?.location_updated_at;
+    if (!raw) return null;
+    const ms = new Date(raw).getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }, [expert?.location_updated_at]);
+
   const coordsRef = useRef<Coords | null>(null);
   useEffect(() => {
-    coordsRef.current = locationState.status === "ok" ? locationState.coords : null;
-  }, [locationState]);
+    coordsRef.current =
+      locationState.status === "ok" ? locationState.coords : (serverCoords ?? null);
+  }, [locationState, serverCoords]);
 
-  // "Fresh" = we successfully persisted a fix within the last 15 minutes.
-  // This gives tolerance for the app being briefly minimized (home button,
-  // WhatsApp/call switch) — location only actually updates while foregrounded,
-  // but we keep trusting the last real fix for up to 15 min.
+  // "Fresh" = a fix was persisted within the last 15 minutes, either by this
+  // session or (after a restart) by the background service / previous session.
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => {
     if (!online) return;
@@ -260,9 +247,9 @@ function HomeDashboard() {
     return () => window.clearInterval(t);
   }, [online]);
   const LOCATION_FRESH_MS = 15 * 60_000;
+  const lastFixAt = Math.max(tracker.lastPushedAt ?? 0, serverFixAt ?? 0) || null;
   const locationFresh =
-    tracker.lastPushedAt != null &&
-    (tracker.isHidden || nowTick - tracker.lastPushedAt < LOCATION_FRESH_MS);
+    lastFixAt != null && (tracker.isHidden || nowTick - lastFixAt < LOCATION_FRESH_MS);
 
 
   // Broadcast radius (fetched once)
@@ -430,8 +417,10 @@ function HomeDashboard() {
   // already broadcasting, back-fill it here so the card still shows.
   useEffect(() => {
     if (!online || !expert?.id || isBusy) return;
-    if (locationState.status !== "ok") return;
-    const myCoords = locationState.coords;
+    // Don't wait for a brand-new GPS fix after the app reopens: fall back to
+    // the last location the server already knows for this expert.
+    const myCoords = locationState.status === "ok" ? locationState.coords : serverCoords;
+    if (!myCoords) return;
     console.log("[broadcast][catchup] running", {
       expertId: expert.id,
       online,
@@ -482,7 +471,36 @@ function HomeDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [online, expert?.id, isBusy, locationState, tracker.lastPushedAt, radiusKm, evaluateBooking]);
+  }, [
+    online,
+    expert?.id,
+    isBusy,
+    locationState,
+    serverCoords,
+    tracker.lastPushedAt,
+    radiusKm,
+    evaluateBooking,
+  ]);
+
+  // App came back to the foreground (minimise → reopen, notification tap):
+  // immediately re-check the backend for expert state, live offers and any
+  // booking that started broadcasting while we were away.
+  useEffect(() => {
+    if (!expert?.id) return;
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      void qc.invalidateQueries({ queryKey: ["expert"] });
+      void qc.invalidateQueries({ queryKey: ["courier-offers"] });
+      void qc.invalidateQueries({ queryKey: ["courier-active", expert.id] });
+      setNowTick(Date.now());
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [expert?.id, qc]);
 
 
   // Cleanup all sounds when going offline / unmounting
@@ -845,20 +863,6 @@ function HomeDashboard() {
         </section>
       )}
 
-      {serviceNotice && (
-        <section className="px-6 pb-4">
-          <Link
-            to="/schedule"
-            className="flex items-start gap-3 rounded-[18px] border border-border bg-card p-4 card-lift"
-          >
-            <Clock className="mt-0.5 h-5 w-5 text-primary" />
-            <div className="flex-1">
-              <p className="text-[15px] font-bold text-foreground">{serviceNotice.title}</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">{serviceNotice.body}</p>
-            </div>
-          </Link>
-        </section>
-      )}
 
 
       {gpsOff && (
@@ -975,7 +979,13 @@ function HomeDashboard() {
           </button>
         </div>
 
-        {online && !tracker.isHidden && (
+        {online &&
+          !tracker.isHidden &&
+          // While a fresh fix is still being acquired (app just reopened) we
+          // stay quiet instead of flashing a scary warning line.
+          (locationFresh ||
+            locationState.status === "denied" ||
+            locationState.status === "unavailable") && (
           <div
             className={`mt-3 flex items-start gap-2 rounded-[14px] border p-3 ${
               locationFresh
