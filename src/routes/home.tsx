@@ -36,7 +36,7 @@ import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 import { serviceTitle } from "@/lib/service-pricing";
-import { useServiceSchedule, isBookingQueueable, formatTime } from "@/lib/service-hours";
+import { useServiceSchedule, isBookingQueueable } from "@/lib/service-hours";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
