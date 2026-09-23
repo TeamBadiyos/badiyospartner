@@ -262,9 +262,11 @@ public class BackgroundLocationPlugin extends Plugin {
     @PluginMethod
     public void startBackgroundService(PluginCall call) {
         JSObject ret = new JSObject();
-        if (!hasBackgroundLocation()) {
+        // Foreground ("while using the app") location is enough for a
+        // location-typed foreground service; "Allow all the time" is optional.
+        if (!hasForegroundLocation()) {
             ret.put("started", false);
-            ret.put("reason", "background_not_granted");
+            ret.put("reason", "foreground_not_granted");
             call.resolve(ret);
             return;
         }
