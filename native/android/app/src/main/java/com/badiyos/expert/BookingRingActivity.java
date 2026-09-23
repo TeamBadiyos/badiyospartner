@@ -65,8 +65,12 @@ public class BookingRingActivity extends Activity {
     public static final String EXTRA_EXPIRES_AT = "expires_at";
     public static final String EXTRA_EARNING = "earning";
 
-    /** Hard cap for a courier offer countdown, in seconds. */
-    static final int COURIER_MAX_SECONDS = 120;
+    /**
+     * Hard cap for a courier offer countdown, in seconds. Must not be shorter
+     * than the server-side offer lifetime (courier_offer_timeout_seconds = 180),
+     * otherwise the ring screen closes while the offer is still acceptable.
+     */
+    static final int COURIER_MAX_SECONDS = 180;
 
     private static final String ACTION_DISMISS = "com.badiyos.expert.action.RING_DISMISS";
 
