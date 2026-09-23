@@ -92,14 +92,13 @@ async function tokensForExpert(
     .maybeSingle();
   const authUserId = expertRow.data?.auth_user_id ?? null;
 
+  // device_tokens.user_id holds the expert row id for tokens registered via
+  // register_device_token(), but older rows store the auth user id — match both,
+  // otherwise background pushes (ringing alerts) silently find no device.
+  const ids = Array.from(new Set([expertId, authUserId].filter(Boolean) as string[]));
+
   const [dtRes, eptRes] = await Promise.all([
-    authUserId
-      ? admin
-          .from("device_tokens")
-          .select("fcm_token")
-          .eq("user_type", "expert")
-          .eq("user_id", authUserId)
-      : Promise.resolve({ data: [] as { fcm_token: string }[], error: null }),
+    admin.from("device_tokens").select("fcm_token").eq("user_type", "expert").in("user_id", ids),
     admin.from("expert_push_tokens").select("fcm_token").eq("expert_id", expertId),
   ]);
   if (dtRes.error) console.error("expert-send-push device_tokens error", dtRes.error);
