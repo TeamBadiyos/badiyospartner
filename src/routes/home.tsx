@@ -417,8 +417,10 @@ function HomeDashboard() {
   // already broadcasting, back-fill it here so the card still shows.
   useEffect(() => {
     if (!online || !expert?.id || isBusy) return;
-    if (locationState.status !== "ok") return;
-    const myCoords = locationState.coords;
+    // Don't wait for a brand-new GPS fix after the app reopens: fall back to
+    // the last location the server already knows for this expert.
+    const myCoords = locationState.status === "ok" ? locationState.coords : serverCoords;
+    if (!myCoords) return;
     console.log("[broadcast][catchup] running", {
       expertId: expert.id,
       online,
