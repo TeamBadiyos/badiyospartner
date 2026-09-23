@@ -101,8 +101,13 @@ public class BackgroundAvailabilityService extends Service {
             return START_NOT_STICKY;
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !hasBackgroundLocation()) {
-            Log.w(TAG, "background location permission missing — stopping self");
+        // A location-typed foreground service may collect location with only
+        // ACCESS_FINE/COARSE_LOCATION ("While using the app"). Requiring
+        // ACCESS_BACKGROUND_LOCATION here killed tracking for most riders the
+        // moment the screen locked. Only stop when even foreground location
+        // is missing.
+        if (!hasForegroundLocation()) {
+            Log.w(TAG, "foreground location permission missing — stopping self");
             stopSelfInternal();
             return START_NOT_STICKY;
         }
