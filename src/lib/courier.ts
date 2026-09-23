@@ -206,7 +206,9 @@ export function useCourierLocationPing(active: boolean) {
     if (!active) return;
     void setNativeLocationMode("courier");
     const tick = () => {
-      if (busy.current || (typeof document !== "undefined" && document.hidden)) return;
+      // Keep pinging even when backgrounded / screen locked — the rider is on a
+      // bike with the phone in a pocket or Google Maps in front.
+      if (busy.current) return;
       busy.current = true;
       pushFix()
         .catch((err) => console.warn("[courier] location ping failed", err))
