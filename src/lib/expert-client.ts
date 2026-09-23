@@ -103,7 +103,7 @@ export function useExpert(authUserId: string | null) {
       const { data, error } = await supabase
         .from("experts")
         .select(
-          "id, name, phone, photo_url, level, wallet_balance, is_online, is_busy, kyc_status, address, zone_id",
+          "id, name, phone, photo_url, level, wallet_balance, is_online, is_busy, kyc_status, address, zone_id, current_lat, current_lng, location_updated_at",
         )
         .eq("auth_user_id", authUserId!)
         .maybeSingle();
