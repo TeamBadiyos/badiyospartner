@@ -216,15 +216,30 @@ function HomeDashboard() {
   const tracker = useExpertLocationTracking(online);
 
   const locationState = tracker.state;
+  // Last location the server already knows about. After a cold start (app was
+  // closed / killed) the in-memory tracker has nothing yet, but the backend
+  // still holds a recent fix — use it so orders keep flowing immediately.
+  const serverCoords: Coords | null = useMemo(() => {
+    const lat = Number(expert?.current_lat);
+    const lng = Number(expert?.current_lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return null;
+    return { lat, lng };
+  }, [expert?.current_lat, expert?.current_lng]);
+  const serverFixAt = useMemo(() => {
+    const raw = expert?.location_updated_at;
+    if (!raw) return null;
+    const ms = new Date(raw).getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }, [expert?.location_updated_at]);
+
   const coordsRef = useRef<Coords | null>(null);
   useEffect(() => {
-    coordsRef.current = locationState.status === "ok" ? locationState.coords : null;
-  }, [locationState]);
+    coordsRef.current =
+      locationState.status === "ok" ? locationState.coords : (serverCoords ?? null);
+  }, [locationState, serverCoords]);
 
-  // "Fresh" = we successfully persisted a fix within the last 15 minutes.
-  // This gives tolerance for the app being briefly minimized (home button,
-  // WhatsApp/call switch) — location only actually updates while foregrounded,
-  // but we keep trusting the last real fix for up to 15 min.
+  // "Fresh" = a fix was persisted within the last 15 minutes, either by this
+  // session or (after a restart) by the background service / previous session.
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => {
     if (!online) return;
@@ -232,9 +247,9 @@ function HomeDashboard() {
     return () => window.clearInterval(t);
   }, [online]);
   const LOCATION_FRESH_MS = 15 * 60_000;
+  const lastFixAt = Math.max(tracker.lastPushedAt ?? 0, serverFixAt ?? 0) || null;
   const locationFresh =
-    tracker.lastPushedAt != null &&
-    (tracker.isHidden || nowTick - tracker.lastPushedAt < LOCATION_FRESH_MS);
+    lastFixAt != null && (tracker.isHidden || nowTick - lastFixAt < LOCATION_FRESH_MS);
 
 
   // Broadcast radius (fetched once)
