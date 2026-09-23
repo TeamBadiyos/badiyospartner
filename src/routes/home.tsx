@@ -817,20 +817,6 @@ function HomeDashboard() {
         </section>
       )}
 
-      {serviceNotice && (
-        <section className="px-6 pb-4">
-          <Link
-            to="/schedule"
-            className="flex items-start gap-3 rounded-[18px] border border-border bg-card p-4 card-lift"
-          >
-            <Clock className="mt-0.5 h-5 w-5 text-primary" />
-            <div className="flex-1">
-              <p className="text-[15px] font-bold text-foreground">{serviceNotice.title}</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">{serviceNotice.body}</p>
-            </div>
-          </Link>
-        </section>
-      )}
 
 
       {gpsOff && (
