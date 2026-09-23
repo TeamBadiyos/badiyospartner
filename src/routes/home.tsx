@@ -948,7 +948,13 @@ function HomeDashboard() {
           </button>
         </div>
 
-        {online && !tracker.isHidden && (
+        {online &&
+          !tracker.isHidden &&
+          // While a fresh fix is still being acquired (app just reopened) we
+          // stay quiet instead of flashing a scary warning line.
+          (locationFresh ||
+            locationState.status === "denied" ||
+            locationState.status === "unavailable") && (
           <div
             className={`mt-3 flex items-start gap-2 rounded-[14px] border p-3 ${
               locationFresh
