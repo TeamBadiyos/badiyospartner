@@ -350,7 +350,7 @@ export function useExpertLocationTracking(enabled: boolean): LocationTracker {
       if (clearWatch) clearWatch();
       if (interval !== null) window.clearInterval(interval);
     };
-  }, [enabled, isHidden, applyPosition, applyError]);
+  }, [enabled, applyPosition, applyError]);
 
   return { state, lastPushedAt, isHidden, ensureFix };
 }
