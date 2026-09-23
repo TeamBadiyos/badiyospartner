@@ -40,7 +40,7 @@ function WalletScreen() {
         .eq("owner_type", "expert")
         .eq("owner_id", expert!.id)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(500);
       if (error) throw error;
       return data ?? [];
     },
