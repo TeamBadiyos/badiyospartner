@@ -471,7 +471,36 @@ function HomeDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [online, expert?.id, isBusy, locationState, tracker.lastPushedAt, radiusKm, evaluateBooking]);
+  }, [
+    online,
+    expert?.id,
+    isBusy,
+    locationState,
+    serverCoords,
+    tracker.lastPushedAt,
+    radiusKm,
+    evaluateBooking,
+  ]);
+
+  // App came back to the foreground (minimise → reopen, notification tap):
+  // immediately re-check the backend for expert state, live offers and any
+  // booking that started broadcasting while we were away.
+  useEffect(() => {
+    if (!expert?.id) return;
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      void qc.invalidateQueries({ queryKey: ["expert"] });
+      void qc.invalidateQueries({ queryKey: ["courier-offers"] });
+      void qc.invalidateQueries({ queryKey: ["courier-active", expert.id] });
+      setNowTick(Date.now());
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [expert?.id, qc]);
 
 
   // Cleanup all sounds when going offline / unmounting
