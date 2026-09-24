@@ -65,7 +65,7 @@ function CourierJob() {
 
   const active = !!order && (COURIER_ACTIVE_STATUSES as readonly string[]).includes(order.status);
   useCourierLocationPing(active);
-  const isStore = order?.source === "store";
+  const isStore = !!order?.store_order_id || order?.source === "store";
   const storeQ = useCourierStoreInfo(id, isStore);
 
   const [otp, setOtp] = useState("");
