@@ -135,10 +135,12 @@ export type CourierOrder = {
   proof_photo_url: string | null;
   source?: string | null;
   store_order_id?: string | null;
+  needs_ops_attention?: boolean | null;
+  cancel_reason_code?: string | null;
 };
 
 const ORDER_COLUMNS =
-  "id, order_code, status, pickup_address, pickup_lat, pickup_lng, pickup_contact_name, pickup_contact_phone, drop_address, drop_lat, drop_lng, drop_contact_name, drop_contact_phone, package_description, weight_kg, distance_km, base_amount, extra_fee, commission_pct, incident_code, incident_notes, proof_photo_url, source, store_order_id";
+  "id, order_code, status, pickup_address, pickup_lat, pickup_lng, pickup_contact_name, pickup_contact_phone, drop_address, drop_lat, drop_lng, drop_contact_name, drop_contact_phone, package_description, weight_kg, distance_km, base_amount, extra_fee, commission_pct, incident_code, incident_notes, proof_photo_url, source, store_order_id, needs_ops_attention, cancel_reason_code";
 
 export function riderEarning(o: Pick<CourierOrder, "base_amount" | "extra_fee" | "commission_pct">): number {
   const gross = Number(o.base_amount ?? 0) + Number(o.extra_fee ?? 0);
