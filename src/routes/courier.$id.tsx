@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import {
   useCourierOrder,
+  useCourierStoreInfo,
   useCourierLocationPing,
   riderEarning,
   mapsUrl,
@@ -64,6 +65,8 @@ function CourierJob() {
 
   const active = !!order && (COURIER_ACTIVE_STATUSES as readonly string[]).includes(order.status);
   useCourierLocationPing(active);
+  const isStore = order?.source === "store";
+  const storeQ = useCourierStoreInfo(id, isStore);
 
   const [otp, setOtp] = useState("");
   const [showIncident, setShowIncident] = useState(false);
@@ -272,13 +275,30 @@ function CourierJob() {
 
         <Stepper step={step} labels={[t("courier.step.pickup"), t("courier.step.transit"), t("courier.step.delivered")]} />
 
-        <div className="mt-3 flex items-center gap-2 rounded-[12px] bg-muted/60 px-3 py-2">
-          <Package className="h-4 w-4 text-primary" />
-          <p className="flex-1 truncate text-[12px] font-semibold text-foreground">
-            {order.package_description || t("courier.job.parcel")}
-            {order.weight_kg != null ? ` · ${t("courier.job.weight", { kg: order.weight_kg })}` : ""}
-          </p>
-        </div>
+        {isStore ? (
+          <div className="mt-3 rounded-[12px] bg-muted/60 px-3 py-2">
+            <p className="flex items-center gap-2 text-[12px] font-bold text-foreground">
+              <Package className="h-4 w-4 text-primary" />
+              {t("courier.store.label")}
+              {storeQ.data?.store_name ? ` · ${storeQ.data.store_name}` : ""}
+            </p>
+            <p className="mt-0.5 pl-6 text-[12px] font-semibold text-[color:var(--text-secondary)]">
+              {t("courier.store.order", { no: storeQ.data?.order_number ?? order.order_code ?? "" })}
+              {storeQ.data?.item_count != null ? ` · ${t("courier.store.items", { n: String(storeQ.data.item_count) })}` : ""}
+            </p>
+            {step === 1 && order.status === "ARRIVED_PICKUP" && (
+              <p className="mt-1 pl-6 text-[11px] font-semibold text-primary">{t("courier.store.pickupOtpHint")}</p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center gap-2 rounded-[12px] bg-muted/60 px-3 py-2">
+            <Package className="h-4 w-4 text-primary" />
+            <p className="flex-1 truncate text-[12px] font-semibold text-foreground">
+              {order.package_description || t("courier.job.parcel")}
+              {order.weight_kg != null ? ` · ${t("courier.job.weight", { kg: order.weight_kg })}` : ""}
+            </p>
+          </div>
+        )}
       </header>
 
       <main className="flex-1 space-y-3 px-5 pb-40 pt-1">
@@ -363,7 +383,18 @@ function CourierJob() {
             {t("courier.job.cancel")}
           </button>
         ) : (
-          <p className="pt-1 text-center text-[12px] text-[color:var(--text-secondary)]">{t("courier.job.noCancel")}</p>
+          <>
+            <p className="pt-1 text-center text-[12px] text-[color:var(--text-secondary)]">{t("courier.job.noCancel")}</p>
+            {active && (
+              <Link
+                to="/sos"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-[14px] border border-destructive/40 text-[13px] font-semibold text-destructive"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                {t("courier.store.emergency")}
+              </Link>
+            )}
+          </>
         )}
       </main>
 

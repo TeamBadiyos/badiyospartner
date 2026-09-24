@@ -1084,7 +1084,12 @@ function HomeDashboard() {
                   >
                     <div className="flex items-start justify-between">
                       <span className="inline-flex items-center gap-1 rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
-                        <Bike className="h-3.5 w-3.5" /> {t("courier.job.title")}
+                        <Bike className="h-3.5 w-3.5" />{" "}
+                        {o.source === "store"
+                          ? `${t("courier.store.label")}${o.store_name ? ` · ${o.store_name}` : ""}${
+                              o.item_count ? ` · ${t("courier.store.items", { n: String(o.item_count) })}` : ""
+                            }`
+                          : t("courier.job.title")}
                       </span>
                       <span className="text-[13px] font-bold text-primary">
                         {expired
