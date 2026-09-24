@@ -85,8 +85,10 @@ function BookingScreen() {
     queryKey: ["customer", booking?.user_id],
     enabled: !!booking?.user_id && !!isMine,
     queryFn: async () => {
-      const { data } = await supabase.from("users").select("full_name, phone").eq("id", booking!.user_id).maybeSingle();
-      return data;
+      const { data, error } = await (supabase.rpc as any)("expert_get_booking_customer", { _booking_id: id });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      return (row ?? null) as { full_name: string | null; phone: string | null } | null;
     },
   });
 
