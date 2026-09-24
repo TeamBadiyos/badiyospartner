@@ -1,0 +1,1 @@
+ALTER TABLE public.courier_orders DISABLE TRIGGER courier_mirror_store_status;
