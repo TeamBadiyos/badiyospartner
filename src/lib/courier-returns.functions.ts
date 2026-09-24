@@ -50,12 +50,8 @@ export const computeReturnDistances = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ order_id: z.string().uuid(), failing_stop_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as { from: (t: string) => any; rpc: (f: string, a?: object) => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
-    const { data: expertId } = await sb.rpc("get_expert_id_for_auth", { _auth_user_id: context.userId }).catch(() => ({ data: null }));
     const { data: order } = await sb.from("courier_orders").select("id, assigned_expert_id").eq("id", data.order_id).maybeSingle();
-    if (!order || (expertId && order.assigned_expert_id !== expertId) || (!expertId && !order.assigned_expert_id)) {
-      throw new Error("Forbidden");
-    }
-    // RLS lets only the assigned rider read the order; double-check via experts row.
+    if (!order) throw new Error("Forbidden");
     const { data: me } = await sb.from("experts").select("id").eq("auth_user_id", context.userId).maybeSingle();
     if (!me || me.id !== order.assigned_expert_id) throw new Error("Forbidden");
 
