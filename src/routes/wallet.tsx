@@ -50,9 +50,11 @@ function WalletScreen() {
 
   const items = ledgerQ.data ?? [];
   const isCourier = (tx: { reason: string | null }) => (tx.reason ?? "").startsWith("courier_order:") || (tx.reason ?? "").startsWith("courier_cancel_fee:");
-  // Single source of truth: the wallet balance is the sum of every ledger
-  // entry (home service + courier + adjustments), so courier trips always count.
-  const balance = items.reduce((sum, tx) => sum + (tx.type === "credit" ? Number(tx.amount) : -Number(tx.amount)), 0);
+  // Authoritative balance comes from experts.wallet_balance (maintained
+  // server-side). The 500-row ledger window is only for the transaction list
+  // below and as a fallback while the expert row is still loading.
+  const ledgerSum = items.reduce((sum, tx) => sum + (tx.type === "credit" ? Number(tx.amount) : -Number(tx.amount)), 0);
+  const balance = expert ? Number(expert.wallet_balance ?? 0) : ledgerSum;
 
   return (
     <PullToRefresh className="relative" onRefresh={() => ledgerQ.refetch()}>
