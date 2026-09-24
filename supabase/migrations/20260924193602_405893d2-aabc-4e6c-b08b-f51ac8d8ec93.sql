@@ -1,0 +1,10 @@
+REVOKE EXECUTE ON FUNCTION public.bookings_after_complete_payout() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.bookings_after_complete_payout() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.bookings_finalize_amounts() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.bookings_finalize_amounts() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.bookings_refund_wake() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.bookings_refund_wake() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.bookings_snapshot_commission() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.bookings_snapshot_commission() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.support_ticket_message_after_insert() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.support_ticket_message_after_insert() FROM anon;
