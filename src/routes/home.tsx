@@ -1101,6 +1101,11 @@ function HomeDashboard() {
                       <Clock className="h-4 w-4 text-primary" />
                       {t("courier.offer.earning")} {formatINR(Number(o.earning ?? 0))}
                     </div>
+                    {(Number(o.pickup_count ?? 1) > 1 || Number(o.drop_count ?? 1) > 1) && (
+                      <p className="mt-1 text-[13px] font-semibold text-primary">
+                        {t("courier.offer.multi", { p: String(o.pickup_count ?? 1), d: String(o.drop_count ?? 1) })}
+                      </p>
+                    )}
                     <div className="mt-3 flex items-start gap-2 rounded-[14px] bg-[color:var(--divider)] p-3">
                       <MapPin className="mt-0.5 h-4 w-4 text-primary" />
                       <div className="text-[13px] leading-snug text-foreground">
