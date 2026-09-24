@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.courier_mirror_store_status() FROM public, anon, authenticated;

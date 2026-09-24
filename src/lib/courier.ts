@@ -30,7 +30,26 @@ export type CourierOffer = {
   trip_km: number | null;
   earning: number | null;
   parcel: string | null;
+  source?: string | null;
+  store_name?: string | null;
+  item_count?: number | null;
 };
+
+export type CourierStoreInfo = { store_name: string | null; order_number: string | null; item_count: number | null };
+
+/** Store name / order no / item count for the rider's assigned store job. */
+export function useCourierStoreInfo(orderId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["courier-store-info", orderId],
+    enabled,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("courier_store_info" as never, { _order_id: orderId } as never);
+      if (error) throw error;
+      return (data as unknown as CourierStoreInfo | null) ?? null;
+    },
+  });
+}
 
 export type CourierOrder = {
   id: string;
@@ -55,10 +74,11 @@ export type CourierOrder = {
   incident_code: string | null;
   incident_notes: string | null;
   proof_photo_url: string | null;
+  source?: string | null;
 };
 
 const ORDER_COLUMNS =
-  "id, order_code, status, pickup_address, pickup_lat, pickup_lng, pickup_contact_name, pickup_contact_phone, drop_address, drop_lat, drop_lng, drop_contact_name, drop_contact_phone, package_description, weight_kg, distance_km, base_amount, extra_fee, commission_pct, incident_code, incident_notes, proof_photo_url";
+  "id, order_code, status, pickup_address, pickup_lat, pickup_lng, pickup_contact_name, pickup_contact_phone, drop_address, drop_lat, drop_lng, drop_contact_name, drop_contact_phone, package_description, weight_kg, distance_km, base_amount, extra_fee, commission_pct, incident_code, incident_notes, proof_photo_url, source";
 
 export function riderEarning(o: Pick<CourierOrder, "base_amount" | "extra_fee" | "commission_pct">): number {
   const gross = Number(o.base_amount ?? 0) + Number(o.extra_fee ?? 0);
