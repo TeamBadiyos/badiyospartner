@@ -2316,6 +2316,24 @@ export type Database = {
         }
         Relationships: []
       }
+      internal_testers: {
+        Row: {
+          created_at: string
+          note: string | null
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          note?: string | null
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          note?: string | null
+          phone?: string
+        }
+        Relationships: []
+      }
       item_task_types: {
         Row: {
           created_at: string
@@ -2497,6 +2515,13 @@ export type Database = {
             referencedRelation: "merchants"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "merchant_documents_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       merchant_fee_tiers: {
@@ -2560,37 +2585,95 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "merchant_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "public_products"
+            referencedColumns: ["id"]
+          },
         ]
       }
       merchant_orders: {
         Row: {
+          address_id: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
           commission_amount: number | null
           created_at: string
+          customer_name: string | null
+          customer_note: string | null
+          customer_phone: string | null
+          delivery_address: string | null
+          delivery_fee: number
+          delivery_lat: number | null
+          delivery_lng: number | null
           id: string
+          items_total: number
           merchant_id: string
           order_number: string
+          paid_at: string | null
+          payment_mode: string
+          payment_status: string
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          source: string
           status: string
           total_amount: number
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          address_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
           commission_amount?: number | null
           created_at?: string
+          customer_name?: string | null
+          customer_note?: string | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number
+          delivery_lat?: number | null
+          delivery_lng?: number | null
           id?: string
+          items_total?: number
           merchant_id: string
           order_number: string
+          paid_at?: string | null
+          payment_mode?: string
+          payment_status?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          source?: string
           status?: string
           total_amount?: number
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          address_id?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
           commission_amount?: number | null
           created_at?: string
+          customer_name?: string | null
+          customer_note?: string | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number
+          delivery_lat?: number | null
+          delivery_lng?: number | null
           id?: string
+          items_total?: number
           merchant_id?: string
           order_number?: string
+          paid_at?: string | null
+          payment_mode?: string
+          payment_status?: string
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          source?: string
           status?: string
           total_amount?: number
           updated_at?: string
@@ -2598,10 +2681,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "merchant_orders_address_id_fkey"
+            columns: ["address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "merchant_orders_merchant_id_fkey"
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_orders_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
             referencedColumns: ["id"]
           },
           {
@@ -2646,6 +2743,13 @@ export type Database = {
             referencedRelation: "merchants"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "merchant_roles_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
         ]
       }
       merchant_schedule_overrides: {
@@ -2676,6 +2780,13 @@ export type Database = {
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_schedule_overrides_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
             referencedColumns: ["id"]
           },
         ]
@@ -2720,6 +2831,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "merchant_staff_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "merchant_staff_role_id_fkey"
             columns: ["role_id"]
             isOneToOne: false
@@ -2759,6 +2877,13 @@ export type Database = {
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_store_hours_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
             referencedColumns: ["id"]
           },
         ]
@@ -2807,6 +2932,13 @@ export type Database = {
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_subscription_invoices_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
             referencedColumns: ["id"]
           },
         ]
@@ -3050,6 +3182,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "offline_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "public_products"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "offline_sale_items_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -3113,6 +3252,13 @@ export type Database = {
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_sales_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
             referencedColumns: ["id"]
           },
           {
@@ -3449,6 +3595,8 @@ export type Database = {
       }
       products: {
         Row: {
+          admin_hidden: boolean
+          admin_hidden_reason: string | null
           category_label: string | null
           created_at: string
           description: string | null
@@ -3465,6 +3613,8 @@ export type Database = {
           unit: string | null
         }
         Insert: {
+          admin_hidden?: boolean
+          admin_hidden_reason?: string | null
           category_label?: string | null
           created_at?: string
           description?: string | null
@@ -3481,6 +3631,8 @@ export type Database = {
           unit?: string | null
         }
         Update: {
+          admin_hidden?: boolean
+          admin_hidden_reason?: string | null
           category_label?: string | null
           created_at?: string
           description?: string | null
@@ -3502,6 +3654,13 @@ export type Database = {
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
             referencedColumns: ["id"]
           },
         ]
@@ -4477,6 +4636,7 @@ export type Database = {
       }
       store_categories: {
         Row: {
+          icon: string | null
           icon_url: string | null
           id: string
           is_active: boolean
@@ -4484,8 +4644,11 @@ export type Database = {
           rank: number
           segment_id: string
           slug: string
+          sort_order: number
+          updated_at: string
         }
         Insert: {
+          icon?: string | null
           icon_url?: string | null
           id?: string
           is_active?: boolean
@@ -4493,8 +4656,11 @@ export type Database = {
           rank?: number
           segment_id: string
           slug: string
+          sort_order?: number
+          updated_at?: string
         }
         Update: {
+          icon?: string | null
           icon_url?: string | null
           id?: string
           is_active?: boolean
@@ -4502,6 +4668,8 @@ export type Database = {
           rank?: number
           segment_id?: string
           slug?: string
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: [
           {
@@ -4984,7 +5152,69 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_products: {
+        Row: {
+          description: string | null
+          id: string | null
+          in_stock: boolean | null
+          merchant_id: string | null
+          mrp: number | null
+          name: string | null
+          photo_url: string | null
+          price: number | null
+          product_category: string | null
+          unit: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "public_stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_stores: {
+        Row: {
+          category_name: string | null
+          category_slug: string | null
+          id: string | null
+          is_accepting_orders: boolean | null
+          is_open_now: boolean | null
+          lat: number | null
+          lng: number | null
+          photo_url: string | null
+          rating: number | null
+          short_address: string | null
+          store_category_id: string | null
+          store_name: string | null
+          zone_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchants_store_category_id_fkey"
+            columns: ["store_category_id"]
+            isOneToOne: false
+            referencedRelation: "store_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchants_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_alert_claim_batch: {
@@ -5553,6 +5783,7 @@ export type Database = {
         Args: { _roles: string[]; _uid: string }
         Returns: boolean
       }
+      is_internal_tester: { Args: never; Returns: boolean }
       is_public_product_image: {
         Args: { _object_name: string }
         Returns: boolean
@@ -6476,6 +6707,36 @@ export type Database = {
       }
       staff_zone_ids: { Args: { _auth_user_id: string }; Returns: string[] }
       start_service: { Args: { _booking_id: string }; Returns: string }
+      store_attach_payment: {
+        Args: { _order_id: string; _rzp_order_id: string }
+        Returns: Json
+      }
+      store_cancel_order: {
+        Args: { _order_id: string; _reason?: string }
+        Returns: Json
+      }
+      store_confirm_payment: {
+        Args: { _order_id: string; _payment_id: string; _rzp_order_id: string }
+        Returns: Json
+      }
+      store_create_order: {
+        Args: {
+          _address_id: string
+          _items: Json
+          _merchant_id: string
+          _note?: string
+          _payment_mode?: string
+        }
+        Returns: Json
+      }
+      store_delivery_quote: { Args: { _items_total: number }; Returns: Json }
+      store_is_open_now: { Args: { _merchant_id: string }; Returns: boolean }
+      store_max_radius_km: { Args: never; Returns: number }
+      store_my_orders: { Args: never; Returns: Json }
+      store_setting: {
+        Args: { _default: number; _key: string }
+        Returns: number
+      }
       submit_booking_review: {
         Args: { _booking_id: string; _rating: number; _review: string }
         Returns: undefined
@@ -6573,6 +6834,10 @@ export type Database = {
           _refund_status: string
         }
         Returns: undefined
+      }
+      system_store_mark_paid: {
+        Args: { _payment_id: string; _rzp_order_id: string }
+        Returns: boolean
       }
       verify_commission_parity: {
         Args: never
