@@ -33,7 +33,66 @@ export type CourierOffer = {
   source?: string | null;
   store_name?: string | null;
   item_count?: number | null;
+  pickup_count?: number | null;
+  drop_count?: number | null;
 };
+
+export type CourierStop = {
+  id: string;
+  order_id: string;
+  stop_type: "pickup" | "drop" | "return";
+  sequence: number;
+  lat: number | null;
+  lng: number | null;
+  address: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
+  status: string;
+  arrived_at: string | null;
+  completed_at: string | null;
+  failed_at: string | null;
+};
+export type CourierParcel = {
+  id: string;
+  pickup_stop_id: string | null;
+  drop_stop_id: string | null;
+  return_stop_id: string | null;
+  status: string;
+};
+export type CourierCharge = {
+  id: string;
+  parcel_id: string | null;
+  charge_type: string | null;
+  amount: number | null;
+  total_amount: number | null;
+  status: string;
+};
+
+/** Stops, parcels and charges for an order. Polls every 10s while `fast`. */
+export function useCourierRoute(orderId: string, fast: boolean) {
+  return useQuery({
+    queryKey: ["courier-route", orderId],
+    refetchInterval: fast ? 10_000 : 15_000,
+    queryFn: async () => {
+      const db = supabase as unknown as { from: (t: string) => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+      const [s, p, c] = await Promise.all([
+        db.from("courier_order_stops")
+          .select("id, order_id, stop_type, sequence, lat, lng, address, contact_name, contact_phone, status, arrived_at, completed_at, failed_at")
+          .eq("order_id", orderId).order("sequence", { ascending: true }),
+        db.from("courier_order_parcels").select("id, pickup_stop_id, drop_stop_id, return_stop_id, status").eq("order_id", orderId),
+        db.from("courier_order_charges").select("id, parcel_id, charge_type, amount, total_amount, status").eq("order_id", orderId),
+      ]);
+      if (s.error) throw s.error;
+      if (p.error) throw p.error;
+      if (c.error) throw c.error;
+      return {
+        stops: (s.data ?? []) as CourierStop[],
+        parcels: (p.data ?? []) as CourierParcel[],
+        charges: (c.data ?? []) as CourierCharge[],
+      };
+    },
+  });
+}
 
 export type CourierStoreInfo = { store_name: string | null; order_number: string | null; item_count: number | null };
 
