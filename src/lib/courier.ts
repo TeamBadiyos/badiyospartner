@@ -151,6 +151,7 @@ export type CourierOrder = {
   distance_km: number | null;
   base_amount: number | null;
   extra_fee: number | null;
+  stops_fee?: number | null;
   commission_pct: number | null;
   incident_code: string | null;
   incident_notes: string | null;
