@@ -381,3 +381,11 @@ fallback). The battery page opens `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`
 Web screen: `/battery-guide` (`src/routes/battery-guide.tsx`). The buttons only
 render when `hasNativeOemSettings()` is true; otherwise riders see the written
 Xiaomi / Vivo / Oppo / Realme / Samsung steps only.
+
+## Camera for parcel scanning (business trips)
+1. `android/app/src/main/AndroidManifest.xml`, inside `<manifest>`:
+   `<uses-permission android:name="android.permission.CAMERA" />`
+   `<uses-feature android:name="android.hardware.camera" android:required="false" />`
+2. No Java change needed: MainActivity extends Capacitor's `BridgeWebChromeClient`, which already asks the Android camera permission and grants the in-app camera request. Do not override `onPermissionRequest`.
+3. `npx cap sync android`, build the AAB, and declare camera use ("scan parcel labels") in Play Console.
+Until then, riders can use "Type code".
