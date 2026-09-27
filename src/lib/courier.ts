@@ -72,6 +72,7 @@ export type CourierStop = {
   arrived_at: string | null;
   completed_at: string | null;
   failed_at: string | null;
+  scan_skipped_at?: string | null;
 };
 export type CourierParcel = {
   id: string;
@@ -98,7 +99,7 @@ export function useCourierRoute(orderId: string, fast: boolean) {
       const db = supabase as unknown as { from: (t: string) => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
       const [s, p, c] = await Promise.all([
         db.from("courier_order_stops")
-          .select("id, order_id, stop_type, sequence, lat, lng, address, contact_name, contact_phone, status, arrived_at, completed_at, failed_at")
+          .select("id, order_id, stop_type, sequence, lat, lng, address, contact_name, contact_phone, status, arrived_at, completed_at, failed_at, scan_skipped_at")
           .eq("order_id", orderId).order("sequence", { ascending: true }),
         db.from("courier_order_parcels").select("id, pickup_stop_id, drop_stop_id, return_stop_id, status").eq("order_id", orderId),
         db.from("courier_order_charges").select("id, parcel_id, charge_type, amount, total_amount, status").eq("order_id", orderId),
@@ -336,3 +337,48 @@ export const INCIDENT_CODES = [
   "accident",
 ] as const;
 export type IncidentCode = (typeof INCIDENT_CODES)[number];
+
+export type TripPacket = {
+  id: string;
+  code: string;
+  drop_stop_id: string;
+  drop_label: string | null;
+  packet_no: number | null;
+  packet_total: number | null;
+  scanned_pickup_at: string | null;
+  scanned_drop_at: string | null;
+};
+
+/** Business-trip parcels for the assigned rider. */
+export function useCourierTripPackets(orderId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["courier-trip-packets", orderId],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("courier_trip_packets" as never, { _courier_order_id: orderId } as never);
+      if (error) throw error;
+      const d = (data ?? {}) as { packets?: TripPacket[] };
+      return d.packets ?? [];
+    },
+  });
+}
+
+export type ScanResult = {
+  result: "ok" | "unknown" | "wrong_trip" | "wrong_stop" | "already_scanned";
+  ok: boolean;
+  scanned: number;
+  total: number;
+  packet_no: number | null;
+  drop_label: string | null;
+};
+
+export async function scanPacket(orderId: string, code: string, stage: "pickup" | "drop", stopId: string) {
+  const { data, error } = await supabase.rpc("courier_scan_packet" as never, {
+    _courier_order_id: orderId,
+    _code: code,
+    _stage: stage,
+    _stop_id: stopId,
+  } as never);
+  if (error) throw error;
+  return data as unknown as ScanResult;
+}
