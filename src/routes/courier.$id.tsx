@@ -353,6 +353,11 @@ function CourierJob() {
             {t("courier.done.returnEarning", { amount: formatINR(returnPaid) })}
           </p>
         )}
+        {isBusiness && packets.length > 0 && (
+          <p className="mt-2 text-[13px] font-semibold text-muted-foreground">
+            {t("courier.summary.stopsPackets", { s: stops.length, p: packets.length })}
+          </p>
+        )}
         <Link to="/home" className="mt-8 flex h-[54px] w-full items-center justify-center rounded-[16px] bg-primary text-[16px] font-bold text-primary-foreground">
           {t("courier.job.backHome")}
         </Link>
@@ -429,8 +434,15 @@ function CourierJob() {
               </p>
             )}
           </div>
-          <div className="rounded-full bg-primary/10 px-3 py-1.5">
-            <p className="amount-strong text-[15px] text-primary">{earning}</p>
+          <div className="flex flex-col items-end gap-1">
+            <div className="rounded-full bg-primary/10 px-3 py-1.5">
+              <p className="amount-strong text-[15px] text-primary">{earning}</p>
+            </div>
+            {isBusiness && packets.length > 0 && (
+              <p className="text-[11px] font-semibold text-muted-foreground">
+                {t("courier.summary.stopsPackets", { s: stops.length, p: packets.length })}
+              </p>
+            )}
           </div>
         </div>
         <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
@@ -550,6 +562,7 @@ function CourierJob() {
             }
             scanned={scanInfo.scanned}
             total={scanInfo.total}
+            packets={current.stop_type === "pickup" ? packets : packets.filter((p) => p.drop_stop_id === current.id)}
             onScanned={() => void packetsQ.refetch()}
           />
         )}
