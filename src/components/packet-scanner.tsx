@@ -109,7 +109,7 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, o
       </div>
 
       {done ? (
-        <p className="mt-3 flex items-center gap-2 text-[13px] font-semibold text-primary">
+        <p className="mt-3 flex items-center gap-2 text-[13px] font-semibold text-[color:var(--success)]">
           <CheckCircle2 className="h-4 w-4" /> {t("courier.scan.done")}
         </p>
       ) : (
@@ -170,7 +170,7 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, o
       {msg && (
         <p
           className={`mt-3 flex items-center gap-2 rounded-[12px] px-3 py-2 text-[13px] font-semibold ${
-            msg.ok ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"
+            msg.ok ? "bg-[color:var(--success-soft)] text-[color:var(--success)]" : "bg-destructive/10 text-destructive"
           }`}
         >
           {msg.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}

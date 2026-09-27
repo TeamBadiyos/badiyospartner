@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { PacketScanner } from "@/components/packet-scanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import {
@@ -24,6 +25,7 @@ import {
   useCourierRoute,
   useCourierStoreInfo,
   useCourierBusinessTrip,
+  useCourierTripPackets,
   useCourierLocationPing,
   riderEarning,
   mapsUrl,
@@ -104,6 +106,8 @@ function CourierJob() {
   const isBusiness = order?.source === "business";
   const businessQ = useCourierBusinessTrip(id, isBusiness);
   const businessTrip = businessQ.data;
+  const packetsQ = useCourierTripPackets(id, isBusiness);
+  const packets = packetsQ.data ?? [];
 
   const [fastPoll, setFastPoll] = useState(false);
   const routeQ = useCourierRoute(id, fastPoll);
@@ -143,6 +147,16 @@ function CourierJob() {
       .reduce((s, c) => s + Number(c.total_amount ?? 0), 0);
   }, [current, parcels, charges]);
   const paymentPending = pendingReturnAmount > 0;
+
+  // Business trips: parcels must be scanned before the OTP unlocks.
+  const scanInfo = useMemo(() => {
+    if (!isBusiness || !current || (current.stop_type !== "pickup" && current.stop_type !== "drop")) return null;
+    if (current.scan_skipped_at) return { skipped: true, scanned: 0, total: 0, complete: true };
+    const list = current.stop_type === "pickup" ? packets : packets.filter((p) => p.drop_stop_id === current.id);
+    const scanned = list.filter((p) => (current.stop_type === "pickup" ? p.scanned_pickup_at : p.scanned_drop_at)).length;
+    return { skipped: false, scanned, total: list.length, complete: scanned >= list.length };
+  }, [isBusiness, current, packets]);
+  const scanBlocked = !!scanInfo && !scanInfo.complete;
 
   useEffect(() => {
     setFastPoll(paymentPending);
@@ -197,6 +211,11 @@ function CourierJob() {
     },
     onSuccess: (res) => {
       if (!res?.ok) {
+        if (res?.reason === "packets_not_scanned") {
+          toast.error(t("courier.scan.needAll"));
+          void packetsQ.refetch();
+          return;
+        }
         if (res?.reason === "locked") toast.error(t("courier.stop.otpLocked"));
         else if (res?.reason === "expired") toast.error(t("courier.stop.otpExpired"));
         else if (res?.reason === "payment_pending")
@@ -512,7 +531,29 @@ function CourierJob() {
           </div>
         )}
 
-        {current && arrived && !(current.stop_type === "return" && paymentPending) && (
+        {current && arrived && scanInfo?.skipped && (
+          <p className="rounded-[14px] bg-muted px-4 py-3 text-[13px] font-semibold text-foreground">{t("courier.scan.skipped")}</p>
+        )}
+        {current && arrived && scanInfo && !scanInfo.skipped && (
+          <PacketScanner
+            orderId={id}
+            stopId={current.id}
+            stage={current.stop_type === "pickup" ? "pickup" : "drop"}
+            title={
+              current.stop_type === "pickup"
+                ? t("courier.scan.pickupTitle")
+                : t("courier.scan.dropTitle", {
+                    label: businessTrip?.drop_labels?.[current.id] ?? "",
+                    n: scanInfo.scanned,
+                    total: scanInfo.total,
+                  })
+            }
+            scanned={scanInfo.scanned}
+            total={scanInfo.total}
+            onScanned={() => void packetsQ.refetch()}
+          />
+        )}
+        {current && arrived && !scanBlocked && !(current.stop_type === "return" && paymentPending) && (
           <>
             <OtpBlock label={t("courier.stop.otpHelp")} value={otp} onChange={setOtp} />
             {current.stop_type === "drop" && (
@@ -633,7 +674,7 @@ function CourierJob() {
           ) : (
             <PrimaryAction
               busy={verify.isPending}
-              disabled={otp.length < 4 || (current.stop_type === "return" && paymentPending)}
+              disabled={scanBlocked || otp.length < 4 || (current.stop_type === "return" && paymentPending)}
               label={t("courier.stop.verify")}
               onClick={() => verify.mutate(current)}
             />
