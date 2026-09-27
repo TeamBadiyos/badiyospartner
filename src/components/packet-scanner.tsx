@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Keyboard, Loader2, ScanLine, XCircle } from "lucide-react";
-import { scanPacket, type ScanResult } from "@/lib/courier";
+import { CheckCircle2, Circle, Keyboard, Loader2, ScanLine, XCircle } from "lucide-react";
+import { printedPacketCode, scanPacket, type ScanResult, type TripPacket } from "@/lib/courier";
 import { hapticNotification } from "@/lib/haptics";
 import { useT } from "@/lib/i18n";
 
@@ -11,12 +11,22 @@ type Props = {
   title: string;
   scanned: number;
   total: number;
+  packets: TripPacket[];
   onScanned: () => void;
 };
 
 type Msg = { ok: boolean; text: string };
 
-export function PacketScanner({ orderId, stopId, stage, title, scanned, total, onScanned }: Props) {
+const CAMERA_DEBOUNCE_MS = 2000;
+
+/** Match a typed/scanned code to a packet (BDY1045217 / 1045217 / 104521-7). */
+function findPacket(packets: TripPacket[], raw: string) {
+  const c = raw.trim().toUpperCase();
+  const digits = c.replace(/^BDY/, "").replace(/[^0-9]/g, "");
+  return packets.find((p) => p.code.toUpperCase() === c || (digits.length === 7 && p.code === digits));
+}
+
+export function PacketScanner({ orderId, stopId, stage, title, scanned, total, packets, onScanned }: Props) {
   const t = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraOn, setCameraOn] = useState(false);
@@ -26,10 +36,13 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, o
   const [msg, setMsg] = useState<Msg | null>(null);
   const lastRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
   const busyRef = useRef(false);
+  const packetsRef = useRef(packets);
+  packetsRef.current = packets;
 
-  const describe = (r: ScanResult): Msg => {
+  const describe = (r: ScanResult, raw: string): Msg => {
     if (r.result === "ok") {
-      const extra = [r.drop_label, r.packet_no ? `#${r.packet_no}` : null].filter(Boolean).join(" · ");
+      const p = findPacket(packetsRef.current, raw);
+      const extra = [p ? printedPacketCode(p) : null, r.drop_label].filter(Boolean).join(" · ");
       return { ok: true, text: extra ? `${t("courier.scan.ok")} · ${extra}` : t("courier.scan.ok") };
     }
     if (r.result === "wrong_stop")
@@ -37,20 +50,22 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, o
     return { ok: false, text: t(`courier.scan.${r.result}`) };
   };
 
-  const submit = async (raw: string) => {
+  const submit = async (raw: string, method: "scan" | "manual") => {
     const c = raw.trim().toUpperCase();
     if (!c || busyRef.current) return;
-    const now = Date.now();
-    if (lastRef.current.code === c && now - lastRef.current.at < 2500) return;
-    lastRef.current = { code: c, at: now };
+    if (method === "scan") {
+      const now = Date.now();
+      if (lastRef.current.code === c && now - lastRef.current.at < CAMERA_DEBOUNCE_MS) return;
+      lastRef.current = { code: c, at: now };
+    }
     busyRef.current = true;
     setBusy(true);
     try {
-      const r = await scanPacket(orderId, c, stage, stopId);
-      const m = describe(r);
+      const r = await scanPacket(orderId, c, stage, stopId, method);
+      const m = describe(r, c);
       setMsg(m);
       hapticNotification(m.ok ? "success" : "error");
-      if (m.ok) setCode("");
+      if (m.ok && method === "manual") setCode("");
       onScanned();
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message });
@@ -74,7 +89,7 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, o
           { video: { facingMode: "environment" } },
           videoRef.current,
           (result) => {
-            if (result) void submit(result.getText());
+            if (result) void submit(result.getText(), "scan");
           },
         );
         if (cancelled) controls.stop();
@@ -135,7 +150,7 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, o
               className="flex h-11 items-center justify-center gap-2 rounded-[14px] border border-border bg-background text-[14px] font-bold text-foreground"
             >
               <Keyboard className="h-4 w-4 text-primary" />
-              {t("courier.scan.typeCode")}
+              {t("courier.scan.typeNumber")}
             </button>
           </div>
           {typing && (
@@ -143,15 +158,15 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, o
               className="mt-2 flex gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                lastRef.current = { code: "", at: 0 };
-                void submit(code);
+                void submit(code, "manual");
               }}
             >
               <input
                 value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder={t("courier.scan.codePlaceholder")}
-                autoCapitalize="characters"
+                onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^0-9A-Z-]/g, ""))}
+                placeholder={t("courier.scan.numberPlaceholder")}
+                inputMode="numeric"
+                autoComplete="off"
                 className="h-11 min-w-0 flex-1 rounded-[14px] border border-border bg-background px-3 text-[15px] font-semibold tracking-wider text-foreground outline-none focus:border-primary"
               />
               <button
@@ -176,6 +191,38 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, o
           {msg.ok ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
           {msg.text}
         </p>
+      )}
+
+      {packets.length > 0 && (
+        <div className="mt-3 border-t border-border pt-3">
+          <p className="text-[12px] font-bold uppercase tracking-wide text-muted-foreground">
+            {stage === "drop"
+              ? t("courier.scan.shopPackets", { n: packets.length })
+              : t("courier.scan.tripPackets", { n: packets.length })}
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {packets.map((p) => {
+              const at = stage === "pickup" ? p.scanned_pickup_at : p.scanned_drop_at;
+              const method = stage === "pickup" ? p.pickup_entry_method : p.drop_entry_method;
+              return (
+                <li key={p.id} className="flex items-center gap-2 text-[13px]">
+                  {at ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-[color:var(--success)]" />
+                  ) : (
+                    <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="font-semibold tracking-wider text-foreground">{printedPacketCode(p)}</span>
+                  {stage === "pickup" && p.drop_label && <span className="text-muted-foreground">· {p.drop_label}</span>}
+                  {at && method === "manual" && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                      {t("courier.scan.manualTag")}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </div>
   );
