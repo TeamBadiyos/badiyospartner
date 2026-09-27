@@ -4,6 +4,16 @@ import badiyosWhite from "@/assets/badiyos-wordmark-white.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "badiyos Expert — Partner access" },
+      { name: "description", content: "Open the badiyos Expert app to manage your work." },
+      { property: "og:title", content: "badiyos Expert — Partner access" },
+      { property: "og:description", content: "Open the badiyos Expert app to manage your work." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: Splash,
 });
 

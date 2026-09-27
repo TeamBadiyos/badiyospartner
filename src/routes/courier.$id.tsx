@@ -23,6 +23,7 @@ import {
   useCourierOrder,
   useCourierRoute,
   useCourierStoreInfo,
+  useCourierBusinessTrip,
   useCourierLocationPing,
   riderEarning,
   mapsUrl,
@@ -100,6 +101,9 @@ function CourierJob() {
   useCourierLocationPing(active);
   const isStore = !!order?.store_order_id || order?.source === "store";
   const storeQ = useCourierStoreInfo(id, isStore);
+  const isBusiness = order?.source === "business";
+  const businessQ = useCourierBusinessTrip(id, isBusiness);
+  const businessTrip = businessQ.data;
 
   const [fastPoll, setFastPoll] = useState(false);
   const routeQ = useCourierRoute(id, fastPoll);
@@ -351,6 +355,9 @@ function CourierJob() {
 
   const parcelLines = (s: CourierStop): string[] => {
     if (s.stop_type === "pickup") {
+      if (isBusiness) return [businessTrip?.trip_no != null
+        ? t("courier.business.collectBag", { n: businessTrip.trip_no })
+        : t("courier.business.collectBagFallback")];
       const mine = parcels.filter((p) => p.pickup_stop_id === s.id);
       const lines = [t("courier.stop.collect", { n: mine.length || 1 })];
       if (dropsIndex.length > 1)
@@ -395,6 +402,13 @@ function CourierJob() {
             <h1 className="text-[19px] font-bold leading-tight text-foreground">
               {t("courier.stop.progress", { x: stopNo, n: total })}
             </h1>
+            {isBusiness && businessTrip?.business_name && (
+              <p className="text-[13px] font-semibold leading-snug text-foreground">
+                {businessTrip.trip_no != null && businessTrip.trip_label
+                  ? t("courier.business.heading", { n: businessTrip.trip_no, label: businessTrip.trip_label, business: businessTrip.business_name })
+                  : businessTrip.business_name}
+              </p>
+            )}
           </div>
           <div className="rounded-full bg-primary/10 px-3 py-1.5">
             <p className="amount-strong text-[15px] text-primary">{earning}</p>
@@ -438,6 +452,11 @@ function CourierJob() {
               <MapPin className="mt-0.5 h-5 w-5 text-primary" />
               <p className="flex-1 text-[16px] font-semibold leading-snug text-foreground">{current.address ?? "—"}</p>
             </div>
+            {isBusiness && current.stop_type === "drop" && current.contact_name && (
+              <p className="mt-1 pl-7 text-[13px] font-semibold text-foreground">
+                {businessTrip?.drop_labels?.[current.id] ? `${businessTrip.drop_labels[current.id]} · ` : ""}{current.contact_name}
+              </p>
+            )}
             <div className="mt-2 space-y-0.5 pl-7">
               {parcelLines(current).map((l, i) => (
                 <p key={i} className={`text-[13px] ${i === 0 ? "font-bold text-foreground" : "text-[color:var(--text-secondary)]"}`}>
@@ -550,7 +569,11 @@ function CourierJob() {
                   return (
                     <li key={s.id} className={`flex items-center gap-2 py-1.5 ${done ? "opacity-50" : ""}`}>
                       <span className="w-16 shrink-0 text-[11px] font-bold uppercase text-primary">{typeLabel(s)}</span>
-                      <span className="flex-1 truncate text-[12px] text-foreground">{s.address ?? "—"}</span>
+                   <span className="flex-1 truncate text-[12px] text-foreground">
+                     {isBusiness && s.stop_type === "drop" && s.contact_name
+                       ? `${businessTrip?.drop_labels?.[s.id] ? `${businessTrip.drop_labels[s.id]} · ` : ""}${s.contact_name} · `
+                       : ""}{s.address ?? "—"}
+                   </span>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-[color:var(--text-secondary)]">
                         {t(`courier.stop.status.${s.status}` as TranslationKey)}
                       </span>
