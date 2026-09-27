@@ -1089,6 +1089,12 @@ function HomeDashboard() {
                           ? `${t("courier.store.label")}${o.store_name ? ` · ${o.store_name}` : ""}${
                               o.item_count ? ` · ${t("courier.store.items", { n: String(o.item_count) })}` : ""
                             }`
+                           : o.source === "business"
+                             ? o.business_trip?.business_name
+                               ? o.business_trip.trip_no != null && o.business_trip.trip_label
+                                 ? t("courier.business.heading", { n: o.business_trip.trip_no, label: o.business_trip.trip_label, business: o.business_trip.business_name })
+                                 : o.business_trip.business_name
+                               : t("courier.job.title")
                           : t("courier.job.title")}
                       </span>
                       <span className="text-[13px] font-bold text-primary">

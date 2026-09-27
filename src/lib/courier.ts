@@ -35,7 +35,28 @@ export type CourierOffer = {
   item_count?: number | null;
   pickup_count?: number | null;
   drop_count?: number | null;
+  business_trip?: BusinessTripDisplay | null;
 };
+
+export type BusinessTripDisplay = {
+  business_name?: string | null;
+  trip_no?: number | null;
+  trip_label?: string | null;
+  drop_labels?: Record<string, string> | null;
+};
+
+/** Business-trip display fields only; the RPC checks the assigned rider. */
+export function useCourierBusinessTrip(orderId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["courier-business-trip", orderId],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("courier_business_trip_display", { _order_id: orderId });
+      if (error) throw error;
+      return (data ?? {}) as BusinessTripDisplay;
+    },
+  });
+}
 
 export type CourierStop = {
   id: string;
