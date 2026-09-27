@@ -151,6 +151,7 @@ export type CourierOrder = {
   distance_km: number | null;
   base_amount: number | null;
   extra_fee: number | null;
+  stops_fee?: number | null;
   commission_pct: number | null;
   incident_code: string | null;
   incident_notes: string | null;
@@ -162,10 +163,12 @@ export type CourierOrder = {
 };
 
 const ORDER_COLUMNS =
-  "id, order_code, status, pickup_address, pickup_lat, pickup_lng, pickup_contact_name, pickup_contact_phone, drop_address, drop_lat, drop_lng, drop_contact_name, drop_contact_phone, package_description, weight_kg, distance_km, base_amount, extra_fee, commission_pct, incident_code, incident_notes, proof_photo_url, source, store_order_id, needs_ops_attention, cancel_reason_code";
+  "id, order_code, status, pickup_address, pickup_lat, pickup_lng, pickup_contact_name, pickup_contact_phone, drop_address, drop_lat, drop_lng, drop_contact_name, drop_contact_phone, package_description, weight_kg, distance_km, base_amount, extra_fee, stops_fee, commission_pct, incident_code, incident_notes, proof_photo_url, source, store_order_id, needs_ops_attention, cancel_reason_code";
 
-export function riderEarning(o: Pick<CourierOrder, "base_amount" | "extra_fee" | "commission_pct">): number {
-  const gross = Number(o.base_amount ?? 0) + Number(o.extra_fee ?? 0);
+export function riderEarning(
+  o: Pick<CourierOrder, "base_amount" | "extra_fee" | "commission_pct"> & { stops_fee?: number | null },
+): number {
+  const gross = Number(o.base_amount ?? 0) + Number(o.extra_fee ?? 0) + Number(o.stops_fee ?? 0);
   const pct = Number(o.commission_pct ?? 0);
   return Math.round(gross * (100 - pct)) / 100;
 }
