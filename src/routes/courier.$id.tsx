@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { PacketScanner } from "@/components/packet-scanner";
+import { LeavePacketsSheet } from "@/components/leave-packets-sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import {
@@ -601,6 +602,38 @@ function CourierJob() {
             total={scanInfo.total}
             packets={current.stop_type === "pickup" ? packets : packets.filter((p) => p.drop_stop_id === current.id)}
             onScanned={() => void packetsQ.refetch()}
+            onLeave={
+              current.stop_type === "pickup"
+                ? (ids) => {
+                    setLeaveIds(ids);
+                    setLeaveOpen(true);
+                  }
+                : undefined
+            }
+            removed={current.stop_type === "pickup" ? removedPackets : undefined}
+          />
+        )}
+        {isBusiness && (
+          <LeavePacketsSheet
+            orderId={id}
+            open={leaveOpen}
+            onOpenChange={setLeaveOpen}
+            selectedIds={leaveIds}
+            setSelectedIds={setLeaveIds}
+            packets={packets}
+            onDone={(r) => {
+              setLeaveOpen(false);
+              setLeaveIds([]);
+              if (r.trip_cancelled) {
+                toast.success(t("courier.leave.tripCancelled"));
+                void qc.invalidateQueries({ queryKey: ["courier-active"] });
+                void navigate({ to: "/home" });
+                return;
+              }
+              toast.success(t("courier.leave.done", { n: r.packets_removed ?? r.codes?.length ?? 0 }));
+              refresh();
+              void packetsQ.refetch();
+            }}
           />
         )}
         {current && arrived && !scanBlocked && !(current.stop_type === "return" && paymentPending) && (
