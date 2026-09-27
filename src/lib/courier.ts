@@ -350,7 +350,17 @@ export type TripPacket = {
   packet_total: number | null;
   scanned_pickup_at: string | null;
   scanned_drop_at: string | null;
+  pickup_entry_method?: "scan" | "manual" | null;
+  drop_entry_method?: "scan" | "manual" | null;
+  is_seal?: boolean | null;
+  printed_code?: string | null;
 };
+
+/** Sticker number in printed form, e.g. 1045217 → 104521-7. */
+export function printedPacketCode(p: Pick<TripPacket, "code" | "printed_code">): string {
+  if (p.printed_code) return p.printed_code;
+  return /^\d{7}$/.test(p.code) ? `${p.code.slice(0, 6)}-${p.code.slice(6)}` : p.code;
+}
 
 /** Business-trip parcels for the assigned rider. */
 export function useCourierTripPackets(orderId: string, enabled: boolean) {
@@ -375,12 +385,19 @@ export type ScanResult = {
   drop_label: string | null;
 };
 
-export async function scanPacket(orderId: string, code: string, stage: "pickup" | "drop", stopId: string) {
+export async function scanPacket(
+  orderId: string,
+  code: string,
+  stage: "pickup" | "drop",
+  stopId: string,
+  entryMethod: "scan" | "manual" = "scan",
+) {
   const { data, error } = await supabase.rpc("courier_scan_packet" as never, {
     _courier_order_id: orderId,
     _code: code,
     _stage: stage,
     _stop_id: stopId,
+    _entry_method: entryMethod,
   } as never);
   if (error) throw error;
   return data as unknown as ScanResult;
