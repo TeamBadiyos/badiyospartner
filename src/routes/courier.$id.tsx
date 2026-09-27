@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { PacketScanner } from "@/components/packet-scanner";
+import { LeavePacketsSheet } from "@/components/leave-packets-sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import {
@@ -106,12 +107,49 @@ function CourierJob() {
   const isBusiness = order?.source === "business";
   const businessQ = useCourierBusinessTrip(id, isBusiness);
   const businessTrip = businessQ.data;
-  const packetsQ = useCourierTripPackets(id, isBusiness);
-  const packets = packetsQ.data ?? [];
+  const atPickup = isBusiness && (order?.status === "DRIVER_ASSIGNED" || order?.status === "ARRIVED_PICKUP");
+  const packetsQ = useCourierTripPackets(id, isBusiness, atPickup);
+  const packets = packetsQ.data?.packets ?? [];
+  const removedPackets = packetsQ.data?.removed ?? [];
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [leaveIds, setLeaveIds] = useState<string[]>([]);
+
+  // Toast when the business removes packets from this trip.
+  const bizRemovedCount = removedPackets.filter((r) => r.removed_by === "business").length;
+  const bizRemovedRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!packetsQ.data) return;
+    const prev = bizRemovedRef.current;
+    if (prev != null && bizRemovedCount > prev) toast.info(t("courier.leave.businessRemoved", { n: bizRemovedCount - prev }));
+    bizRemovedRef.current = bizRemovedCount;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bizRemovedCount, packetsQ.data]);
+
+  // Order row changes (e.g. business removed packets → new total) → refresh.
+  useEffect(() => {
+    if (!isBusiness) return;
+    const ch = supabase
+      .channel(`courier-order-${id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "courier_orders", filter: `id=eq.${id}` }, () => {
+        void qc.invalidateQueries({ queryKey: ["courier-trip-packets", id] });
+        void qc.invalidateQueries({ queryKey: ["courier-order", id] });
+        void qc.invalidateQueries({ queryKey: ["courier-route", id] });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [isBusiness, id, qc]);
 
   const [fastPoll, setFastPoll] = useState(false);
   const routeQ = useCourierRoute(id, fastPoll);
-  const stops = routeQ.data?.stops ?? [];
+  const allStops = routeQ.data?.stops ?? [];
+  // Business trips: drops with no packets left disappear from the route.
+  const stops = useMemo(() => {
+    if (!isBusiness || !packetsQ.data || packets.length === 0) return allStops;
+    const withPackets = new Set(packets.map((p) => p.drop_stop_id));
+    return allStops.filter((s) => s.stop_type !== "drop" || withPackets.has(s.id) || s.status === "completed");
+  }, [isBusiness, packetsQ.data, packets, allStops]);
   const parcels = routeQ.data?.parcels ?? [];
   const charges = routeQ.data?.charges ?? [];
 
@@ -564,6 +602,38 @@ function CourierJob() {
             total={scanInfo.total}
             packets={current.stop_type === "pickup" ? packets : packets.filter((p) => p.drop_stop_id === current.id)}
             onScanned={() => void packetsQ.refetch()}
+            onLeave={
+              current.stop_type === "pickup"
+                ? (ids) => {
+                    setLeaveIds(ids);
+                    setLeaveOpen(true);
+                  }
+                : undefined
+            }
+            removed={current.stop_type === "pickup" ? removedPackets : undefined}
+          />
+        )}
+        {isBusiness && (
+          <LeavePacketsSheet
+            orderId={id}
+            open={leaveOpen}
+            onOpenChange={setLeaveOpen}
+            selectedIds={leaveIds}
+            setSelectedIds={setLeaveIds}
+            packets={packets}
+            onDone={(r) => {
+              setLeaveOpen(false);
+              setLeaveIds([]);
+              if (r.trip_cancelled) {
+                toast.success(t("courier.leave.tripCancelled"));
+                void qc.invalidateQueries({ queryKey: ["courier-active"] });
+                void navigate({ to: "/home" });
+                return;
+              }
+              toast.success(t("courier.leave.done", { n: r.packets_removed ?? r.codes?.length ?? 0 }));
+              refresh();
+              void packetsQ.refetch();
+            }}
           />
         )}
         {current && arrived && !scanBlocked && !(current.stop_type === "return" && paymentPending) && (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Circle, Keyboard, Loader2, ScanLine, XCircle } from "lucide-react";
-import { printedPacketCode, scanPacket, type ScanResult, type TripPacket } from "@/lib/courier";
+import { printedPacketCode, scanPacket, type RemovedPacket, type ScanResult, type TripPacket } from "@/lib/courier";
 import { hapticNotification } from "@/lib/haptics";
 import { useT } from "@/lib/i18n";
 
@@ -13,6 +13,9 @@ type Props = {
   total: number;
   packets: TripPacket[];
   onScanned: () => void;
+  /** Pickup only: rider couldn't find these packets. */
+  onLeave?: (ids: string[]) => void;
+  removed?: RemovedPacket[];
 };
 
 type Msg = { ok: boolean; text: string };
@@ -26,7 +29,7 @@ function findPacket(packets: TripPacket[], raw: string) {
   return packets.find((p) => p.code.toUpperCase() === c || (digits.length === 7 && p.code === digits));
 }
 
-export function PacketScanner({ orderId, stopId, stage, title, scanned, total, packets, onScanned }: Props) {
+export function PacketScanner({ orderId, stopId, stage, title, scanned, total, packets, onScanned, onLeave, removed }: Props) {
   const t = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraOn, setCameraOn] = useState(false);
@@ -195,11 +198,22 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, p
 
       {packets.length > 0 && (
         <div className="mt-3 border-t border-border pt-3">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-muted-foreground">
-            {stage === "drop"
-              ? t("courier.scan.shopPackets", { n: packets.length })
-              : t("courier.scan.tripPackets", { n: packets.length })}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[12px] font-bold uppercase tracking-wide text-muted-foreground">
+              {stage === "drop"
+                ? t("courier.scan.shopPackets", { n: packets.length })
+                : t("courier.scan.tripPackets", { n: packets.length })}
+            </p>
+            {onLeave && packets.some((p) => !p.scanned_pickup_at) && (
+              <button
+                type="button"
+                onClick={() => onLeave(packets.filter((p) => !p.scanned_pickup_at).map((p) => p.id))}
+                className="rounded-full border border-destructive/40 px-2.5 py-1 text-[11px] font-bold text-destructive"
+              >
+                {t("courier.leave.allRest")}
+              </button>
+            )}
+          </div>
           <ul className="mt-2 space-y-1.5">
             {packets.map((p) => {
               const at = stage === "pickup" ? p.scanned_pickup_at : p.scanned_drop_at;
@@ -218,12 +232,45 @@ export function PacketScanner({ orderId, stopId, stage, title, scanned, total, p
                       {t("courier.scan.manualTag")}
                     </span>
                   )}
+                  {onLeave && !at && (
+                    <button
+                      type="button"
+                      onClick={() => onLeave([p.id])}
+                      className="ml-auto rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-foreground"
+                    >
+                      {t("courier.leave.one")}
+                    </button>
+                  )}
                 </li>
               );
             })}
           </ul>
         </div>
       )}
+
+      {removed && removed.length > 0 && (
+        <div className="mt-3 border-t border-border pt-3 opacity-60">
+          <p className="text-[12px] font-bold uppercase tracking-wide text-muted-foreground">
+            {t("courier.leave.leftSection", { n: removed.length })}
+          </p>
+          <ul className="mt-2 space-y-1">
+            {removed.map((r, i) => (
+              <li key={`${r.code}-${i}`} className="text-[13px] text-muted-foreground line-through decoration-muted-foreground/50">
+                <span className="font-semibold tracking-wider">{printedPacketCode({ code: r.code })}</span>
+                {r.drop_label ? ` · ${r.drop_label}` : ""}
+                {r.reason ? ` · ${leaveReasonLabel(t, r.reason)}` : ""}
+                {r.removed_by === "business" ? ` · ${t("courier.leave.byBusiness")}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
+}
+
+function leaveReasonLabel(t: ReturnType<typeof useT>, reason: string) {
+  if (reason === "NOT_READY" || reason === "BUSINESS_HOLD" || reason === "DAMAGED" || reason === "OTHER")
+    return t(`courier.leave.r.${reason}`);
+  return reason;
 }
