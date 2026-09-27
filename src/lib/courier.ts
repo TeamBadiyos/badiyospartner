@@ -362,18 +362,53 @@ export function printedPacketCode(p: Pick<TripPacket, "code" | "printed_code">):
   return /^\d{7}$/.test(p.code) ? `${p.code.slice(0, 6)}-${p.code.slice(6)}` : p.code;
 }
 
-/** Business-trip parcels for the assigned rider. */
-export function useCourierTripPackets(orderId: string, enabled: boolean) {
+export type RemovedPacket = {
+  code: string;
+  drop_label: string | null;
+  receiver_name: string | null;
+  reason: string | null;
+  notes: string | null;
+  removed_by: string | null;
+  removed_at: string | null;
+};
+
+export type TripPacketsData = { packets: TripPacket[]; removed: RemovedPacket[]; trip_no: number | null };
+
+/** Business-trip parcels (and left-behind ones) for the assigned rider. */
+export function useCourierTripPackets(orderId: string, enabled: boolean, poll = false) {
   return useQuery({
     queryKey: ["courier-trip-packets", orderId],
     enabled,
-    queryFn: async () => {
+    refetchInterval: enabled && poll ? 10_000 : false,
+    queryFn: async (): Promise<TripPacketsData> => {
       const { data, error } = await supabase.rpc("courier_trip_packets" as never, { _courier_order_id: orderId } as never);
       if (error) throw error;
-      const d = (data ?? {}) as { packets?: TripPacket[] };
-      return d.packets ?? [];
+      const d = (data ?? {}) as { packets?: TripPacket[]; removed_packets?: RemovedPacket[]; trip_no?: number | null };
+      return { packets: d.packets ?? [], removed: d.removed_packets ?? [], trip_no: d.trip_no ?? null };
     },
   });
+}
+
+export type LeaveReason = "NOT_READY" | "BUSINESS_HOLD" | "DAMAGED" | "OTHER";
+export type LeaveResult = {
+  ok: boolean;
+  reason?: string;
+  trip_cancelled?: boolean;
+  codes?: string[];
+  packets_removed?: number;
+  new_total?: number;
+  drops_left?: number;
+};
+
+export async function leavePackets(orderId: string, packetIds: string[], reason: LeaveReason, notes: string | null) {
+  const { data, error } = await supabase.rpc("courier_rider_leave_packets" as never, {
+    _courier_order_id: orderId,
+    _packet_ids: packetIds,
+    _reason_code: reason,
+    _notes: notes,
+  } as never);
+  if (error) throw error;
+  return data as unknown as LeaveResult;
 }
 
 export type ScanResult = {
