@@ -372,7 +372,13 @@ export type RemovedPacket = {
   removed_at: string | null;
 };
 
-export type TripPacketsData = { packets: TripPacket[]; removed: RemovedPacket[]; trip_no: number | null };
+export type DropProofMode = "otp" | "bill_photo" | "otp_or_photo";
+export type TripPacketsData = {
+  packets: TripPacket[];
+  removed: RemovedPacket[];
+  trip_no: number | null;
+  drop_proof_mode: DropProofMode;
+};
 
 /** Business-trip parcels (and left-behind ones) for the assigned rider. */
 export function useCourierTripPackets(orderId: string, enabled: boolean, poll = false) {
@@ -383,10 +389,80 @@ export function useCourierTripPackets(orderId: string, enabled: boolean, poll = 
     queryFn: async (): Promise<TripPacketsData> => {
       const { data, error } = await supabase.rpc("courier_trip_packets" as never, { _courier_order_id: orderId } as never);
       if (error) throw error;
-      const d = (data ?? {}) as { packets?: TripPacket[]; removed_packets?: RemovedPacket[]; trip_no?: number | null };
-      return { packets: d.packets ?? [], removed: d.removed_packets ?? [], trip_no: d.trip_no ?? null };
+      const d = (data ?? {}) as {
+        packets?: TripPacket[];
+        removed_packets?: RemovedPacket[];
+        trip_no?: number | null;
+        drop_proof_mode?: DropProofMode | null;
+      };
+      return {
+        packets: d.packets ?? [],
+        removed: d.removed_packets ?? [],
+        trip_no: d.trip_no ?? null,
+        drop_proof_mode: d.drop_proof_mode ?? "otp",
+      };
     },
   });
+}
+
+const PROOF_UPLOAD_URL = "https://user.badiyos.com/api/public/proof/upload-url";
+
+export class ProofError extends Error {
+  constructor(public reason: string, public extra: Record<string, unknown> = {}) {
+    super(reason);
+  }
+}
+
+/** Ask the customer-app endpoint for a signed upload slot, then upload the JPEG. Returns the storage path. */
+export async function uploadDropProof(stopId: string, blob: Blob): Promise<string> {
+  const { data: s } = await supabase.auth.getSession();
+  const token = s.session?.access_token;
+  if (!token) throw new ProofError("UNAUTHORIZED");
+  let res: Response;
+  try {
+    res = await fetch(PROOF_UPLOAD_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ stop_id: stopId }),
+    });
+  } catch {
+    throw new ProofError("NETWORK");
+  }
+  const body = (await res.json().catch(() => null)) as
+    | { ok?: boolean; reason?: string; path?: string; token?: string; signed_url?: string }
+    | null;
+  if (!res.ok || !body?.ok || !body.path || !body.token) throw new ProofError(body?.reason ?? `HTTP_${res.status}`, body ?? {});
+  const { error } = await supabase.storage
+    .from("delivery-proofs")
+    .uploadToSignedUrl(body.path, body.token, blob, { contentType: "image/jpeg" });
+  if (error) throw new ProofError("UPLOAD_FAILED");
+  return body.path;
+}
+
+export type DropProofResult = {
+  ok: boolean;
+  reason?: string;
+  distance_m?: number;
+  limit_m?: number;
+  first_delivery?: boolean;
+  location_unverified?: boolean;
+};
+
+export async function completeDropWithProof(
+  stopId: string,
+  paths: string[],
+  fix: { lat: number; lng: number; accuracy: number; at: string },
+) {
+  const { data, error } = await supabase.rpc("courier_complete_drop_with_proof" as never, {
+    _stop_id: stopId,
+    _paths: paths,
+    _lat: fix.lat,
+    _lng: fix.lng,
+    _accuracy_m: fix.accuracy,
+    _captured_at: fix.at,
+  } as never);
+  if (error) throw error;
+  return data as unknown as DropProofResult;
 }
 
 export type LeaveReason = "NOT_READY" | "BUSINESS_HOLD" | "DAMAGED" | "OTHER";
