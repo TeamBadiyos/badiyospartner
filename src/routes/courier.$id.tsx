@@ -18,6 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { PacketScanner } from "@/components/packet-scanner";
+import { BillPhotoCapture } from "@/components/bill-photo-capture";
 import { LeavePacketsSheet } from "@/components/leave-packets-sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
@@ -30,6 +31,7 @@ import {
   useCourierLocationPing,
   riderEarning,
   mapsUrl,
+  printedPacketCode,
   COURIER_ACTIVE_STATUSES,
   type CourierStop,
 } from "@/lib/courier";
@@ -196,6 +198,13 @@ function CourierJob() {
   }, [isBusiness, current, packets]);
   const scanBlocked = !!scanInfo && !scanInfo.complete;
 
+  // Business drops: proof mode set by the business (OTP, bill photo, or either).
+  const isBizDrop = isBusiness && current?.stop_type === "drop";
+  const proofMode = packetsQ.data?.drop_proof_mode ?? "otp";
+  const [proofChoice, setProofChoice] = useState<"otp" | "photo">("otp");
+  const usePhoto =
+    isBizDrop && (proofMode === "bill_photo" || (proofMode === "otp_or_photo" && proofChoice === "photo"));
+
   useEffect(() => {
     setFastPoll(paymentPending);
   }, [paymentPending]);
@@ -204,6 +213,7 @@ function CourierJob() {
   useEffect(() => {
     setOtp("");
     setProofPath(null);
+    setProofChoice("otp");
   }, [current?.id]);
 
   const now = useNow(!!current && current.status === "arrived");
@@ -251,6 +261,17 @@ function CourierJob() {
       if (!res?.ok) {
         if (res?.reason === "packets_not_scanned") {
           toast.error(t("courier.scan.needAll"));
+          void packetsQ.refetch();
+          return;
+        }
+        if (res?.reason === "PHOTO_REQUIRED") {
+          toast.error(t("courier.proof.photoRequired"));
+          setProofChoice("photo");
+          void packetsQ.refetch();
+          return;
+        }
+        if (res?.reason === "ALREADY_COMPLETED") {
+          refresh();
           void packetsQ.refetch();
           return;
         }
@@ -636,10 +657,45 @@ function CourierJob() {
             }}
           />
         )}
-        {current && arrived && !scanBlocked && !(current.stop_type === "return" && paymentPending) && (
+        {current && arrived && !scanBlocked && isBizDrop && proofMode === "otp_or_photo" && (
+          <div className="grid grid-cols-2 gap-3">
+            {(["otp", "photo"] as const).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setProofChoice(c)}
+                className={`flex h-14 items-center justify-center gap-2 rounded-[14px] border text-[14px] font-bold ${
+                  proofChoice === c ? "border-primary bg-primary/10 text-primary" : "border-border bg-card text-foreground"
+                }`}
+              >
+                {c === "photo" && <Camera className="h-4 w-4" />}
+                {c === "otp" ? t("courier.proof.useOtp") : t("courier.proof.usePhoto")}
+              </button>
+            ))}
+          </div>
+        )}
+        {current && arrived && !scanBlocked && usePhoto && (
+          <BillPhotoCapture
+            key={current.id}
+            stopId={current.id}
+            codes={packets.filter((p) => p.drop_stop_id === current.id).map((p) => printedPacketCode(p))}
+            onDelivered={() => {
+              hapticNotification("success");
+              toast.success(t("courier.proof.delivered"));
+              refresh();
+              void packetsQ.refetch();
+            }}
+            onPacketsNotScanned={() => void packetsQ.refetch()}
+            onAlreadyCompleted={() => {
+              refresh();
+              void packetsQ.refetch();
+            }}
+          />
+        )}
+        {current && arrived && !scanBlocked && !usePhoto && !(current.stop_type === "return" && paymentPending) && (
           <>
             <OtpBlock label={t("courier.stop.otpHelp")} value={otp} onChange={setOtp} />
-            {current.stop_type === "drop" && (
+            {current.stop_type === "drop" && !isBizDrop && (
               <div className="rounded-[18px] border border-border bg-card p-4">
                 <input
                   ref={fileRef}
@@ -754,7 +810,7 @@ function CourierJob() {
                 arrive.mutate(current);
               }}
             />
-          ) : (
+          ) : usePhoto ? null : (
             <PrimaryAction
               busy={verify.isPending}
               disabled={scanBlocked || otp.length < 4 || (current.stop_type === "return" && paymentPending)}
