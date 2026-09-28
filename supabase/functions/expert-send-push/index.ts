@@ -183,9 +183,9 @@ async function sendCourierOffer(offerId: string, expertId: string): Promise<Resp
 
   const titleText = "New courier delivery";
   const bodyText =
-    `Pickup ${pickupArea || "nearby"}` +
-    (dropArea ? ` → ${dropArea}` : "") +
-    ` · you earn ₹${earning}`;
+    `You earn ₹${earning}` +
+    ` · pickup ${pickupArea || "nearby"}` +
+    (dropArea ? ` → ${dropArea}` : "");
 
   const dataPayload: Record<string, string> = {
     type: "courier_offer",
