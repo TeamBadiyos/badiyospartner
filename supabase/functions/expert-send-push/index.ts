@@ -155,7 +155,7 @@ async function sendCourierOffer(offerId: string, expertId: string): Promise<Resp
   const { data: order } = await admin
     .from("courier_orders")
     .select(
-      "id, pickup_address, drop_address, distance_km, base_amount, extra_fee, commission_pct",
+      "id, pickup_address, drop_address, distance_km, base_amount, extra_fee, stops_fee, commission_pct",
     )
     .eq("id", offer.order_id as string)
     .maybeSingle();
@@ -165,7 +165,11 @@ async function sendCourierOffer(offerId: string, expertId: string): Promise<Resp
     (addr ?? "").split(",")[0]?.trim() ?? "";
   const pickupArea = area(order.pickup_address as string | null);
   const dropArea = area(order.drop_address as string | null);
-  const gross = Number(order.base_amount ?? 0) + Number(order.extra_fee ?? 0);
+  // Must match courier_rider_offers / courier_settle_order exactly.
+  const gross =
+    Number(order.base_amount ?? 0) +
+    Number(order.extra_fee ?? 0) +
+    Number(order.stops_fee ?? 0);
   const earning = Math.round((gross - (gross * Number(order.commission_pct ?? 0)) / 100) * 100) / 100;
   const tripKm = order.distance_km != null ? String(order.distance_km) : "";
 
