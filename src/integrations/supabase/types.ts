@@ -2142,6 +2142,36 @@ export type Database = {
         }
         Relationships: []
       }
+      coin_redemptions: {
+        Row: {
+          coins: number
+          created_at: string
+          id: string
+          razorpay_order_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          coins: number
+          created_at?: string
+          id?: string
+          razorpay_order_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          coins?: number
+          created_at?: string
+          id?: string
+          razorpay_order_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       commission_rules: {
         Row: {
           created_at: string
@@ -5280,27 +5310,33 @@ export type Database = {
       }
       referral_config: {
         Row: {
+          booking_reward_coins: number
           id: string
           is_active: boolean
           milestone_referrals: number | null
           milestone_reward_coins: number | null
           reward_coins: number
+          signup_reward_coins: number
           updated_at: string | null
         }
         Insert: {
+          booking_reward_coins?: number
           id?: string
           is_active?: boolean
           milestone_referrals?: number | null
           milestone_reward_coins?: number | null
           reward_coins?: number
+          signup_reward_coins?: number
           updated_at?: string | null
         }
         Update: {
+          booking_reward_coins?: number
           id?: string
           is_active?: boolean
           milestone_referrals?: number | null
           milestone_reward_coins?: number | null
           reward_coins?: number
+          signup_reward_coins?: number
           updated_at?: string | null
         }
         Relationships: []
@@ -5395,6 +5431,8 @@ export type Database = {
       referral_transactions: {
         Row: {
           booking_id: string | null
+          booking_reward_amount: number | null
+          booking_reward_date: string | null
           created_at: string | null
           id: string
           referred_user_id: string | null
@@ -5403,10 +5441,14 @@ export type Database = {
           reversed_at: string | null
           reward_amount: number | null
           reward_date: string | null
+          signup_reward_amount: number | null
+          signup_reward_date: string | null
           status: string
         }
         Insert: {
           booking_id?: string | null
+          booking_reward_amount?: number | null
+          booking_reward_date?: string | null
           created_at?: string | null
           id?: string
           referred_user_id?: string | null
@@ -5415,10 +5457,14 @@ export type Database = {
           reversed_at?: string | null
           reward_amount?: number | null
           reward_date?: string | null
+          signup_reward_amount?: number | null
+          signup_reward_date?: string | null
           status?: string
         }
         Update: {
           booking_id?: string | null
+          booking_reward_amount?: number | null
+          booking_reward_date?: string | null
           created_at?: string | null
           id?: string
           referred_user_id?: string | null
@@ -5427,6 +5473,8 @@ export type Database = {
           reversed_at?: string | null
           reward_amount?: number | null
           reward_date?: string | null
+          signup_reward_amount?: number | null
+          signup_reward_date?: string | null
           status?: string
         }
         Relationships: [
@@ -7671,6 +7719,7 @@ export type Database = {
         Args: { _booking_id: string }
         Returns: undefined
       }
+      credit_referral_signup: { Args: { _txn_id: string }; Returns: number }
       current_merchant_id: { Args: never; Returns: string }
       customer_cancel_booking_apply: {
         Args: {
@@ -7921,6 +7970,7 @@ export type Database = {
         Args: { p_phone: string; p_pin: string }
         Returns: Json
       }
+      my_coin_balance: { Args: never; Returns: number }
       my_coupons: {
         Args: never
         Returns: {
@@ -7935,6 +7985,19 @@ export type Database = {
           source: string
           title: string
           valid_until: string
+        }[]
+      }
+      my_referral_history: {
+        Args: never
+        Returns: {
+          booking_reward_amount: number
+          created_at: string
+          id: string
+          referred_name: string
+          referred_user_id: string
+          reward_amount: number
+          signup_reward_amount: number
+          status: string
         }[]
       }
       my_referral_progress: { Args: never; Returns: Json }
@@ -8062,6 +8125,10 @@ export type Database = {
       register_device_token: {
         Args: { p_fcm_token: string; p_platform: string }
         Returns: string
+      }
+      release_my_coin_redemption: {
+        Args: { _order_id: string }
+        Returns: number
       }
       release_stale_coupon_reservations: { Args: never; Returns: number }
       resolve_booking_payouts: {
@@ -8439,6 +8506,7 @@ export type Database = {
       staff_generate_merchant_payout_batch: { Args: never; Returns: string }
       staff_generate_payout_batch: { Args: never; Returns: string }
       staff_generate_subscription_invoices: { Args: never; Returns: Json }
+      staff_get_referral_config: { Args: never; Returns: Json }
       staff_list_bulk_plans: { Args: never; Returns: Json }
       staff_list_notifications: {
         Args: { _filter?: string }
@@ -8838,6 +8906,16 @@ export type Database = {
         Args: { _is_active: boolean; _reward: number }
         Returns: undefined
       }
+      staff_update_referral_rewards: {
+        Args: {
+          _booking_reward: number
+          _is_active?: boolean
+          _milestone_referrals?: number
+          _milestone_reward_coins?: number
+          _signup_reward: number
+        }
+        Returns: Json
+      }
       staff_update_service_price: {
         Args: { _id: string; _payload: Json }
         Returns: undefined
@@ -9129,6 +9207,11 @@ export type Database = {
         Returns: Json
       }
       system_check_no_accept_alerts: { Args: never; Returns: string[] }
+      system_coins_release: { Args: { _order_id: string }; Returns: number }
+      system_coins_reserve: {
+        Args: { _coins: number; _order_id: string; _user_id: string }
+        Returns: number
+      }
       system_coupon_release: { Args: { _order_id: string }; Returns: undefined }
       system_coupon_reserve: {
         Args: {
