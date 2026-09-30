@@ -708,13 +708,12 @@ function StepStartOtp({
 
 function StepInProgress({
   booking,
-  customer,
   onDone,
 }: {
   booking: Booking;
-  customer: Customer;
   onDone: (payout: number | null) => void;
 }) {
+
   const t = useT();
   const [showEnd, setShowEnd] = useState(false);
   const [code, setCode] = useState("");
