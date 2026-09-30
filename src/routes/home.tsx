@@ -1271,6 +1271,34 @@ function HomeDashboard() {
         </section>
       )}
 
+      {/* Aane wale jobs — every assigned job, sorted by time. */}
+      {upcomingJobs.length > 0 && (
+        <section className="mt-6 px-6">
+          <h2 className="mb-3 text-[17px] font-extrabold text-foreground">
+            {t("home.upcoming.title")}
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {upcomingJobs.map((j) => (
+              <li key={j.id}>
+                <button
+                  onClick={() => navigate({ to: "/booking/$id", params: { id: j.id } })}
+                  className="w-full rounded-[18px] border border-border bg-card p-4 text-left card-lift transition active:scale-[0.99]"
+                >
+                  <SlotChip booking={j} />
+                  <p className="mt-2.5 text-[17px] font-bold text-foreground">
+                    {serviceTitle(j.service_label, j.service_duration_minutes)}
+                  </p>
+                  <div className="mt-1 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--text-secondary)]">
+                    <Clock className="h-4 w-4" /> {t("home.upcoming.open")}
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+
 
       <nav
         className="fixed inset-x-0 bottom-0 z-50 mx-auto grid w-full max-w-md grid-cols-4 gap-2 border-t border-border bg-background px-6 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
