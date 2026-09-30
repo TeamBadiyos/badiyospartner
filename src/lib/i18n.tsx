@@ -115,3 +115,8 @@ export function useLanguage(): Ctx {
 export function useT() {
   return useLanguage().t;
 }
+
+export function useLang(): Lang {
+  return useLanguage().lang;
+}
+
