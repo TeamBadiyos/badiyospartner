@@ -295,7 +295,6 @@ function BookingScreen() {
       {status === "in_progress" && (
         <StepInProgress
           booking={booking}
-          customer={customerQ.data ?? null}
           onDone={(payout) => {
             setEndPayout(payout);
             refresh();
