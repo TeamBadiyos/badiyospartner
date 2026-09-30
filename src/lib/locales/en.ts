@@ -568,5 +568,39 @@ export const en = {
   "courier.incident.accident_emergency": "Accident / emergency",
   "courier.done.returnEarning": "Return charge earnings: {amount}",
   "courier.done.allPickupsFailed": "Pickup could not be completed. You will be paid for this trip.",
+
+  // ---- Step-by-step job screens ----
+  "job.step.summary": "Job details",
+  "job.step.goNow": "NIKAL GAYI",
+  "job.step.going": "Wait…",
+  "job.step.onway.title": "Aap ja rahe ho",
+  "job.step.onway.sub": "Customer ko aapki live location dikh rahi hai.",
+  "job.step.reached": "PAHUNCH GAYI",
+  "job.step.customer": "Customer",
+  "job.step.call": "Call",
+  "job.step.map": "Map",
+  "job.step.startTitle": "SERVICE SHURU",
+  "job.step.startSub": "Customer se 4 number ka code poochho",
+  "job.step.startBtn": "SERVICE SHURU",
+  "job.step.endTitle": "KAAM POORA",
+  "job.step.endSub": "Customer se end ka 4 number ka code poochho",
+  "job.step.endBtn": "KAAM POORA",
+  "job.step.inProgress": "Kaam chal raha hai",
+  "job.step.elapsed": "Laga hua samay",
+  "job.step.left": "Bacha hua samay",
+  "job.step.openEndCode": "KAAM POORA",
+  "job.step.backToWork": "Wapas jao",
+  "job.step.donePoora": "Job poora ✅",
+  "job.step.doneEarned": "Aapki kamai",
+  "job.step.doneSub": "Paisa aapke wallet me aa gaya hai.",
+  "job.step.removedTitle": "Ye job aapse hata diya gaya hai",
+  "job.step.removedSub": "Home par le ja rahe hain…",
+  "job.step.locating": "Location bhej rahe hain…",
+
+  // ---- Home: upcoming jobs ----
+  "home.upcoming.title": "Aane wale jobs",
+  "home.upcoming.empty": "Abhi koi aane wala job nahi hai.",
+  "home.upcoming.open": "Kholo",
 } as const;
+
 

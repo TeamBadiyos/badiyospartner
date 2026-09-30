@@ -569,4 +569,38 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "courier.incident.accident_emergency": "अपघात / आणीबाणी",
   "courier.done.returnEarning": "परत शुल्क कमाई: {amount}",
   "courier.done.allPickupsFailed": "पिकअप पूर्ण होऊ शकले नाही. या ट्रिपचे पैसे तुम्हाला मिळतील.",
+
+  // ---- Step-by-step job screens ----
+  "job.step.summary": "कामाची माहिती",
+  "job.step.goNow": "निघालो",
+  "job.step.going": "थांबा…",
+  "job.step.onway.title": "तुम्ही जात आहात",
+  "job.step.onway.sub": "ग्राहकाला तुमचे लोकेशन दिसत आहे.",
+  "job.step.reached": "पोहोचलो",
+  "job.step.customer": "ग्राहक",
+  "job.step.call": "कॉल",
+  "job.step.map": "नकाशा",
+  "job.step.startTitle": "सेवा सुरू करा",
+  "job.step.startSub": "ग्राहकाकडून ४ आकड्यांचा कोड विचारा",
+  "job.step.startBtn": "सेवा सुरू करा",
+  "job.step.endTitle": "काम पूर्ण",
+  "job.step.endSub": "ग्राहकाकडून शेवटचा ४ आकड्यांचा कोड विचारा",
+  "job.step.endBtn": "काम पूर्ण",
+  "job.step.inProgress": "काम चालू आहे",
+  "job.step.elapsed": "झालेला वेळ",
+  "job.step.left": "उरलेला वेळ",
+  "job.step.openEndCode": "काम पूर्ण",
+  "job.step.backToWork": "मागे जा",
+  "job.step.donePoora": "काम पूर्ण झाले ✅",
+  "job.step.doneEarned": "तुमची कमाई",
+  "job.step.doneSub": "पैसे तुमच्या वॉलेटमध्ये जमा झाले आहेत.",
+  "job.step.removedTitle": "हे काम तुमच्याकडून काढले आहे",
+  "job.step.removedSub": "होमवर नेत आहोत…",
+  "job.step.locating": "लोकेशन पाठवत आहोत…",
+
+  // ---- Home: upcoming jobs ----
+  "home.upcoming.title": "येणारी कामे",
+  "home.upcoming.empty": "सध्या कोणतेही येणारे काम नाही.",
+  "home.upcoming.open": "उघडा",
 };
+
