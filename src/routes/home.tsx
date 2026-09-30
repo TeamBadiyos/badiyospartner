@@ -833,6 +833,8 @@ function HomeDashboard() {
     await Promise.all([
       qc.invalidateQueries({ queryKey: ["expert", userId] }),
       qc.invalidateQueries({ queryKey: ["assigned-booking"] }),
+      qc.invalidateQueries({ queryKey: ["upcoming-jobs"] }),
+
       qc.invalidateQueries({ queryKey: ["approved-skills-count"] }),
     ]);
   }, [qc, userId]);
