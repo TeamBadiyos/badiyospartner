@@ -588,6 +588,7 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "job.step.endBtn": "काम पूर्ण",
   "job.step.inProgress": "काम चालू आहे",
   "job.step.elapsed": "झालेला वेळ",
+  "job.step.elapsedMin": "{n} मिनिटे",
   "job.step.left": "उरलेला वेळ",
   "job.step.openEndCode": "काम पूर्ण",
   "job.step.backToWork": "मागे जा",
