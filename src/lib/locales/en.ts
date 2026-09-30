@@ -587,6 +587,7 @@ export const en = {
   "job.step.endBtn": "KAAM POORA",
   "job.step.inProgress": "Kaam chal raha hai",
   "job.step.elapsed": "Laga hua samay",
+  "job.step.elapsedMin": "{n} min",
   "job.step.left": "Bacha hua samay",
   "job.step.openEndCode": "KAAM POORA",
   "job.step.backToWork": "Wapas jao",
