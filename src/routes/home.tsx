@@ -39,6 +39,8 @@ import { serviceTitle } from "@/lib/service-pricing";
 import { useServiceSchedule, isBookingQueueable } from "@/lib/service-hours";
 import { SlotChip } from "@/components/slot-chip";
 import { slotSortKey } from "@/lib/slot-label";
+import { SlotReminder } from "@/components/slot-reminder";
+
 
 
 export const Route = createFileRoute("/home")({
@@ -859,6 +861,8 @@ function HomeDashboard() {
 
   return (
     <PullToRefresh className="relative" onRefresh={onPullRefresh}>
+    <SlotReminder jobs={upcomingQ.data ?? []} />
+
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[calc(env(safe-area-inset-bottom)+6rem)]">
       <header className="sticky top-0 z-30 flex items-center justify-between bg-background px-6 pb-4 pt-[calc(var(--safe-top)+1.5rem)]">
         <img src={badiyosBlue.url} alt="badiyos" className="h-7 w-auto" />
