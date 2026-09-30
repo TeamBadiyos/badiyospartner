@@ -1071,10 +1071,11 @@ function HomeDashboard() {
             onClick={() => navigate({ to: "/booking/$id", params: { id: assigned.id } })}
             className="w-full rounded-[18px] border border-border bg-card p-5 text-left card-lift transition active:scale-[0.99]"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="rounded-full bg-[color:var(--color-accent)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary">
                 {assigned.status === "in_progress" ? t("home.badge.inProgress") : t("home.badge.newBooking")}
               </span>
+              <SlotChip booking={assigned} />
             </div>
             <p className="mt-3 text-[18px] font-bold text-foreground">{serviceTitle(assigned.service_label, assigned.service_duration_minutes)}</p>
             <div className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--text-secondary)]">
@@ -1082,6 +1083,7 @@ function HomeDashboard() {
             </div>
           </button>
         </section>
+
       ) : sortedCandidates.length > 0 || courierOffers.length > 0 ? (
         <section className="mt-6 flex-1 px-6" data-tick={offerTick}>
           <h2 className="mb-3 text-[16px] font-bold text-foreground">
