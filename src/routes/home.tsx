@@ -588,9 +588,11 @@ function HomeDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, status, service_duration_minutes, service_label, price, address_id, created_at")
+        .select(
+          "id, status, service_duration_minutes, service_label, price, address_id, created_at, scheduled_date, scheduled_time_slot",
+        )
         .eq("assigned_expert_id", expert!.id)
-        .in("status", ["expert_assigned", "in_progress"])
+        .in("status", ["expert_assigned", "on_the_way", "arrived", "in_progress"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -598,6 +600,26 @@ function HomeDashboard() {
       return data;
     },
   });
+
+  // "Aane wale jobs" — every job assigned to this expert, sorted by slot time.
+  const upcomingQ = useQuery({
+    queryKey: ["upcoming-jobs", expert?.id],
+    enabled: !!expert?.id,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select(
+          "id, status, service_duration_minutes, service_label, created_at, scheduled_date, scheduled_time_slot",
+        )
+        .eq("assigned_expert_id", expert!.id)
+        .in("status", ["expert_assigned", "on_the_way", "arrived", "in_progress"])
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []).slice().sort((a, b) => slotSortKey(a) - slotSortKey(b));
+    },
+  });
+
 
   // Shows Google's in-app "Turn on location?" dialog and, when the expert
   // accepts, resumes the go-online flow automatically.
