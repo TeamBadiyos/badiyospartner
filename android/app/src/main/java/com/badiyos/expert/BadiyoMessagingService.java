@@ -80,6 +80,7 @@ public class BadiyoMessagingService extends MessagingService {
             case "order_cancelled":
             case "order_completed":
             case "reminder_10min":
+            case "reminder_30min":
                 return true;
             default:
                 return false;
@@ -90,7 +91,8 @@ public class BadiyoMessagingService extends MessagingService {
     static boolean isInfoAlert(String alertType) {
         return "order_cancelled".equals(alertType)
             || "order_completed".equals(alertType)
-            || "reminder_10min".equals(alertType);
+            || "reminder_10min".equals(alertType)
+            || "reminder_30min".equals(alertType);
     }
 
     private void showRingingNotification(Map<String, String> data) {
