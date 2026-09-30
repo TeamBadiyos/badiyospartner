@@ -601,6 +601,11 @@ export const en = {
   "home.upcoming.title": "Aane wale jobs",
   "home.upcoming.empty": "Abhi koi aane wala job nahi hai.",
   "home.upcoming.open": "Kholo",
+
+  // ---- Slot reminder ----
+  "reminder.minutes": "{n} minute me nikalna hai",
+  "reminder.open": "JOB KHOLO",
+  "reminder.ok": "Theek hai",
 } as const;
 
 

@@ -602,5 +602,10 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "home.upcoming.title": "येणारी कामे",
   "home.upcoming.empty": "सध्या कोणतेही येणारे काम नाही.",
   "home.upcoming.open": "उघडा",
+
+  // ---- Slot reminder ----
+  "reminder.minutes": "{n} मिनिटांत निघायचे आहे",
+  "reminder.open": "काम उघडा",
+  "reminder.ok": "ठीक आहे",
 };
 
