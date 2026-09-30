@@ -805,10 +805,20 @@ function StepInProgress({
       <SlotChip booking={booking} className="self-start" />
 
       <div className="mt-4 rounded-[22px] border-2 border-primary bg-[color:var(--color-accent)] p-6 text-center">
-        <p className="text-[13px] font-extrabold uppercase tracking-wider text-primary">
-          {countsDown ? t("job.step.left") : t("job.step.elapsed")}
-        </p>
-        <p className="mt-1 font-mono text-[52px] font-black leading-none text-primary">{timeText}</p>
+        {countsDown ? (
+          <>
+            <p className="text-[13px] font-extrabold uppercase tracking-wider text-primary">
+              {t("job.step.left")}
+            </p>
+            <p className="mt-1 font-mono text-[52px] font-black leading-none text-primary">
+              {timeText}
+            </p>
+          </>
+        ) : (
+          <p className="text-[26px] font-black leading-tight text-primary">
+            {t("job.step.inProgress")} · {t("job.step.elapsedMin", { n: Math.floor(total / 60) })}
+          </p>
+        )}
         <p className="mt-2 text-[15px] font-bold text-primary/80">
           {serviceTitle(booking.service_label, booking.service_duration_minutes)}
         </p>
