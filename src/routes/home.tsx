@@ -37,6 +37,9 @@ import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 import { serviceTitle } from "@/lib/service-pricing";
 import { useServiceSchedule, isBookingQueueable } from "@/lib/service-hours";
+import { SlotChip } from "@/components/slot-chip";
+import { slotSortKey } from "@/lib/slot-label";
+
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -573,7 +576,9 @@ function HomeDashboard() {
         { event: "*", schema: "public", table: "bookings", filter: `assigned_expert_id=eq.${expert.id}` },
         () => {
           qc.invalidateQueries({ queryKey: ["assigned-booking", expert.id] });
+          qc.invalidateQueries({ queryKey: ["upcoming-jobs", expert.id] });
           qc.invalidateQueries({ queryKey: ["expert", userId] });
+
         },
       )
       .subscribe();
@@ -837,6 +842,9 @@ function HomeDashboard() {
   }
 
   const assigned = assignedQ.data;
+  // Exclude the job already shown in the big active card above.
+  const upcomingJobs = (upcomingQ.data ?? []).filter((j) => j.id !== assigned?.id);
+
 
   // Newest first; dismissed items sink to the bottom but stay acceptable.
   const sortedCandidates = [...candidates].sort((a, b) => {
