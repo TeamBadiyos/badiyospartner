@@ -824,20 +824,6 @@ function StepInProgress({
         </p>
       </div>
 
-      <div className="mt-4 rounded-[20px] border border-border bg-card p-5">
-        <p className="text-[12px] font-bold uppercase tracking-wider text-[color:var(--text-secondary)]">
-          {t("job.step.customer")}
-        </p>
-        <p className="mt-1 text-[22px] font-extrabold text-foreground">
-          {customer?.full_name ?? "—"}
-        </p>
-        <a
-          href={customer?.phone ? `tel:${customer.phone}` : undefined}
-          className={`mt-4 flex h-[62px] items-center justify-center gap-2 rounded-[16px] bg-[#059669] text-[18px] font-extrabold text-white ${customer?.phone ? "" : "pointer-events-none opacity-40"}`}
-        >
-          <Phone className="h-6 w-6" /> {t("job.step.call")}
-        </a>
-      </div>
 
       <div className="mt-auto pt-6">
         <BigButton onClick={() => setShowEnd(true)} tone="green">
