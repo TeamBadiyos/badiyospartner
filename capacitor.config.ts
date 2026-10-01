@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-// Capacitor config for the badiyos Partner native shell.
+// Capacitor config for the badiyos Expert native shell.
 // The Android/iOS projects are generated locally with `npx cap add` and are
 // NOT committed to this repo — this file is the source of truth for their
 // runtime configuration.

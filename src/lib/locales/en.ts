@@ -260,7 +260,7 @@ export const en = {
   "login.title": "Welcome, Expert",
   "login.heading": "Login to your account",
   "login.subheading": "We'll send an OTP on WhatsApp",
-  "login.tagline": "Join badiyos as a Partner",
+  "login.tagline": "Join badiyos as an Expert",
   "login.label": "Mobile number",
   "login.placeholder": "98765 43210",
   "login.terms": "Only registered badiyos Experts can sign in. By continuing you agree to badiyos' Terms and Privacy Policy.",
