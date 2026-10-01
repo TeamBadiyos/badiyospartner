@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { friendlyError } from "@/lib/friendly-error";
 import { useState } from "react";
 import { Phone, Loader2 } from "lucide-react";
 import badiyosWhite from "@/assets/badiyos-wordmark-white.png.asset.json";
@@ -47,7 +48,7 @@ function LoginScreen() {
       if (msg.includes("NOT_REGISTERED")) {
         navigate({ to: "/not-registered" });
       } else {
-        setError(msg);
+        setError(friendlyError(err, t("login.failed")));
       }
     } finally {
       setLoading(false);
@@ -120,6 +121,10 @@ function LoginScreen() {
             <p className="mt-3 text-[13px] font-semibold text-[color:var(--color-destructive)]">
               {error}
             </p>
+          )}
+
+          {!valid && digits.length > 0 && (
+            <p className="mt-2 text-[12px] text-[color:var(--text-secondary)]">Enter all 10 digits of your mobile number.</p>
           )}
 
           <div className="mt-auto pt-8">

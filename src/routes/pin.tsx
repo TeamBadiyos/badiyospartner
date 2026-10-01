@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { friendlyError } from "@/lib/friendly-error";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { expertApi } from "@/lib/expert-client";
@@ -66,7 +67,7 @@ function PinScreen() {
         }
         setDigits(["", "", "", ""]);
         setTimeout(() => inputs.current[0]?.focus(), 50);
-        setError(msg);
+        setError(friendlyError(err));
         toast.error(msg);
       } finally {
         setLoading(false);
