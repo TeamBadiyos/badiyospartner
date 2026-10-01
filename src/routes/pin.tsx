@@ -10,7 +10,9 @@ import badiyosBlue from "@/assets/badiyos-wordmark-blue.png.asset.json";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 
-const searchSchema = z.object({ phone: z.string().optional() });
+const searchSchema = z.object({
+  phone: z.union([z.string(), z.number()]).transform((v) => String(v)).optional(),
+});
 
 export const Route = createFileRoute("/pin")({
   validateSearch: (s) => searchSchema.parse(s),
