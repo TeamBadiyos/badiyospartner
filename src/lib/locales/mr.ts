@@ -598,6 +598,9 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "job.step.removedTitle": "हे काम तुमच्याकडून काढले आहे",
   "job.step.removedSub": "होमवर नेत आहोत…",
   "job.step.locating": "लोकेशन पाठवत आहोत…",
+  "job.details.title": "ग्राहकाची माहिती",
+  "job.details.continue": "पुढे जा",
+
 
   // ---- Home: upcoming jobs ----
   "home.upcoming.title": "येणारी कामे",
