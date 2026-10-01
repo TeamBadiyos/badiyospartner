@@ -597,6 +597,9 @@ export const en = {
   "job.step.removedTitle": "Ye job aapse hata diya gaya hai",
   "job.step.removedSub": "Home par le ja rahe hain…",
   "job.step.locating": "Location bhej rahe hain…",
+  "job.details.title": "Customer ki detail",
+  "job.details.continue": "Aage badho",
+
 
   // ---- Home: upcoming jobs ----
   "home.upcoming.title": "Aane wale jobs",
