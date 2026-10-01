@@ -90,6 +90,8 @@ function BookingScreen() {
   const { loading: sessionLoading, userId } = useExpertSession();
   const { data: expert } = useExpert(userId);
   const [endPayout, setEndPayout] = useState<number | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+
 
   const bookingQ = useQuery({
     queryKey: ["booking", id],
