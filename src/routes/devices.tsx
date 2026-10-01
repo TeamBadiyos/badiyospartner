@@ -13,6 +13,7 @@ import {
 import { getDeviceId } from "@/lib/device-id";
 import { supabase } from "@/integrations/supabase/client";
 import { useT } from "@/lib/i18n";
+import { friendlyError } from "@/lib/friendly-error";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 const searchSchema = z.object({ limit: z.union([z.boolean(), z.string()]).optional() });
@@ -43,7 +44,7 @@ function DevicesScreen() {
       setDevices(rows);
       setThisId(id);
     } catch (err) {
-      toast.error((err as Error).message ?? t("devices.toast.loadFailed"));
+      toast.error(friendlyError(err, t("devices.toast.loadFailed")));
       setDevices([]);
     }
   }, [t]);
@@ -74,7 +75,7 @@ function DevicesScreen() {
       await load();
       toast.success(t("devices.toast.loggedOut"));
     } catch (err) {
-      toast.error((err as Error).message ?? t("devices.toast.logoutFailed"));
+      toast.error(friendlyError(err, t("devices.toast.logoutFailed")));
     } finally {
       setBusy(null);
     }
