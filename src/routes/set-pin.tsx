@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { friendlyError } from "@/lib/friendly-error";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,7 +82,7 @@ function SetPinScreen() {
       navigate({ to: "/home" });
 
     } catch (err) {
-      setError((err as Error).message ?? t("setpin.saveFailed"));
+      setError(friendlyError(err, t("setpin.saveFailed")));
       setPin1(["", "", "", ""]);
       setPin2(["", "", "", ""]);
       setStep("enter");

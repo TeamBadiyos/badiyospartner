@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { friendlyError } from "@/lib/friendly-error";
 import { ChevronLeft, ChevronRight, LogOut, Phone, MapPin, Award, ShieldCheck, Loader2, Camera, Radio, Wrench, Smartphone, Languages, Check, FileText , BatteryCharging, Clock } from "lucide-react";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -134,7 +135,7 @@ function ProfileScreen() {
       if (rpcErr) throw rpcErr;
       await qc.invalidateQueries({ queryKey: ["expert", userId] });
     } catch (err) {
-      setError((err as Error).message ?? t("profile.err.uploadFailed"));
+      setError(friendlyError(err, t("profile.err.uploadFailed")));
     } finally {
       setUploading(false);
     }
