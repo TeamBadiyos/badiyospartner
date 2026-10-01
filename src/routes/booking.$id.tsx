@@ -244,14 +244,34 @@ function BookingScreen() {
     );
   }
 
+  const canPeekDetails = status === "arrived" || status === "in_progress";
+
   const header = (
     <header className="sticky top-0 z-30 flex items-center justify-between bg-background px-6 pb-3 pt-[calc(var(--safe-top)+1.25rem)]">
-      <Link
-        to="/home"
-        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
-      >
-        <ChevronLeft className="h-6 w-6" />
-      </Link>
+      {canPeekDetails && !showDetails ? (
+        <button
+          onClick={() => setShowDetails(true)}
+          aria-label={t("job.details.title")}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+      ) : showDetails ? (
+        <button
+          onClick={() => setShowDetails(false)}
+          aria-label={t("job.step.backToWork")}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+      ) : (
+        <Link
+          to="/home"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </Link>
+      )}
       {(status === "in_progress" || status === "arrived") && (
         <Link
           to="/sos"
@@ -263,6 +283,45 @@ function BookingScreen() {
       )}
     </header>
   );
+
+  if (canPeekDetails && showDetails) {
+    return (
+      <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),1.5rem)]">
+        {header}
+        <div className="flex flex-1 flex-col px-6">
+          <SlotChip booking={booking} size="lg" className="self-start" />
+          <h1 className="mt-4 text-[26px] font-extrabold leading-tight text-foreground">
+            {t("job.details.title")}
+          </h1>
+
+          <div className="mt-4">
+            <CustomerCard customer={customerQ.data ?? null} address={addressQ.data ?? null} />
+          </div>
+
+          <div className="mt-4 rounded-[20px] border border-border bg-card p-5">
+            <p className="text-[12px] font-bold uppercase tracking-wider text-[color:var(--text-secondary)]">
+              {t("job.address.label")}
+            </p>
+            <p className="mt-1 text-[16px] font-bold text-foreground">
+              {addressQ.data?.full_address ?? t("job.address.unavailable")}
+            </p>
+          </div>
+
+          <div className="mt-auto pt-6">
+            <BigButton onClick={() => setShowDetails(false)} tone="green">
+              {t("job.details.continue")} <ArrowRight className="h-6 w-6" />
+            </BigButton>
+            <Link
+              to="/home"
+              className="mt-3 flex h-[52px] w-full items-center justify-center rounded-[14px] border border-border bg-card text-[16px] font-bold text-foreground"
+            >
+              {t("job.notFound.back")}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),1.5rem)]">
@@ -306,6 +365,7 @@ function BookingScreen() {
     </div>
   );
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Shared bits                                                         */
