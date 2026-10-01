@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { friendlyError } from "@/lib/friendly-error";
 import { ChevronLeft, AlertTriangle, Loader2, Phone, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
@@ -52,7 +53,7 @@ function SosScreen() {
       });
       setState("sent");
     } catch (e) {
-      setState("idle"); setErr((e as Error).message);
+      setState("idle"); setErr(friendlyError(e));
     }
   }
 

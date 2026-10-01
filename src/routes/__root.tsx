@@ -7,6 +7,7 @@ import {
   useRouterState,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
@@ -40,7 +41,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -140,6 +141,19 @@ function RootComponent() {
   useEffect(() => {
     initSafeArea();
     void import("../lib/native-init").then((m) => m.initNativeShell());
+    // Safety net: a tap whose async work throws without a handler must still
+    // show feedback (Play "unresponsive UI" policy).
+    let last = 0;
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const now = Date.now();
+      if (now - last < 3000) return;
+      last = now;
+      void import("../lib/friendly-error").then(({ friendlyError }) =>
+        void import("sonner").then(({ toast }) => toast.error(friendlyError(e.reason))),
+      );
+    };
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => window.removeEventListener("unhandledrejection", onRejection);
   }, []);
 
   return (

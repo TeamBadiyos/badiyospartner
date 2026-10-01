@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { friendlyError } from "@/lib/friendly-error";
 import { useRef, useState, useEffect } from "react";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import { z } from "zod";
@@ -74,7 +75,7 @@ function OtpScreen() {
       }
       navigate({ to: "/home" });
     } catch (err) {
-      setError((err as Error).message ?? t("otp.failed"));
+      setError(friendlyError(err, t("otp.failed")));
     } finally {
       setLoading(false);
     }
@@ -87,7 +88,7 @@ function OtpScreen() {
       setResendIn(30);
       setError(null);
     } catch (err) {
-      setError((err as Error).message ?? t("otp.resendFailed"));
+      setError(friendlyError(err, t("otp.resendFailed")));
     }
   }
 

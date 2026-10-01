@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { friendlyError } from "@/lib/friendly-error";
 import { Inbox, MapPin, Loader2, Wallet, History, Award, LifeBuoy, Clock, X, AlertTriangle, Bike } from "lucide-react";
 import badiyosBlue from "@/assets/badiyos-wordmark-blue.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
@@ -215,7 +216,7 @@ function HomeDashboard() {
       void qc.invalidateQueries({ queryKey: ["courier-active", expert?.id] });
       if (res.order_id) navigate({ to: "/courier/$id", params: { id: res.order_id } });
     },
-    onError: (err: Error) => toast.error(err.message || t("courier.toast.failed")),
+    onError: (err: Error) => toast.error(friendlyError(err, t("courier.toast.failed"))),
   });
 
   const tracker = useExpertLocationTracking(online);

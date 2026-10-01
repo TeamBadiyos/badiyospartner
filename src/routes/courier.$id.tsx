@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { friendlyError } from "@/lib/friendly-error";
 import {
   ChevronLeft,
   Loader2,
@@ -242,7 +243,7 @@ function CourierJob() {
       refresh();
     },
     onError: (e: Error) => {
-      toast.error(e.message);
+      toast.error(friendlyError(e));
       refresh();
     },
   });
@@ -288,7 +289,7 @@ function CourierJob() {
       refresh();
     },
     onError: (e: Error) => {
-      toast.error(e.message);
+      toast.error(friendlyError(e));
       refresh();
     },
   });
@@ -315,7 +316,7 @@ function CourierJob() {
       setFailNotes("");
       refresh();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyError(e)),
   });
 
   const report = useMutation({
@@ -333,7 +334,7 @@ function CourierJob() {
       setIncidentOpen(false);
       refresh();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyError(e)),
   });
 
   const cancel = useMutation({
@@ -346,7 +347,7 @@ function CourierJob() {
       refresh();
       navigate({ to: "/home" });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyError(e)),
   });
 
   const onPickPhoto = async (file: File | null) => {
