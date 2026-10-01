@@ -4741,6 +4741,7 @@ export type Database = {
           query_doc_types: string[] | null
           query_notes: string | null
           rejection_reason: string | null
+          reuploaded_at: string | null
           segment_id: string | null
           shop_photo_url: string | null
           state: string | null
@@ -4749,6 +4750,7 @@ export type Database = {
           store_enabled: boolean
           store_hours: Json | null
           store_name: string | null
+          store_slug: string | null
           updated_at: string
           zone_id: string | null
         }
@@ -4794,6 +4796,7 @@ export type Database = {
           query_doc_types?: string[] | null
           query_notes?: string | null
           rejection_reason?: string | null
+          reuploaded_at?: string | null
           segment_id?: string | null
           shop_photo_url?: string | null
           state?: string | null
@@ -4802,6 +4805,7 @@ export type Database = {
           store_enabled?: boolean
           store_hours?: Json | null
           store_name?: string | null
+          store_slug?: string | null
           updated_at?: string
           zone_id?: string | null
         }
@@ -4847,6 +4851,7 @@ export type Database = {
           query_doc_types?: string[] | null
           query_notes?: string | null
           rejection_reason?: string | null
+          reuploaded_at?: string | null
           segment_id?: string | null
           shop_photo_url?: string | null
           state?: string | null
@@ -4855,6 +4860,7 @@ export type Database = {
           store_enabled?: boolean
           store_hours?: Json | null
           store_name?: string | null
+          store_slug?: string | null
           updated_at?: string
           zone_id?: string | null
         }
@@ -6762,6 +6768,177 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicle_lead_notes: {
+        Row: {
+          author_id: string | null
+          author_name: string | null
+          created_at: string
+          id: string
+          lead_id: string
+          note: string
+        }
+        Insert: {
+          author_id?: string | null
+          author_name?: string | null
+          created_at?: string
+          id?: string
+          lead_id: string
+          note: string
+        }
+        Update: {
+          author_id?: string | null
+          author_name?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_lead_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_leads: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          id: string
+          next_followup_date: string | null
+          renewed_at: string | null
+          status: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          id?: string
+          next_followup_date?: string | null
+          renewed_at?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          id?: string
+          next_followup_date?: string | null
+          renewed_at?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_leads_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: true
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          archived: boolean
+          booking_id: string | null
+          consent_reminder: boolean
+          created_at: string
+          created_by: string | null
+          customer_name: string
+          customer_phone: string
+          expert_id: string | null
+          id: string
+          insurance_expiry: string | null
+          insurer: string | null
+          make_model: string | null
+          photos: string[]
+          puc_expiry: string | null
+          reg_number: string
+          source: string
+          updated_at: string
+          user_id: string | null
+          vehicle_type: string
+        }
+        Insert: {
+          archived?: boolean
+          booking_id?: string | null
+          consent_reminder?: boolean
+          created_at?: string
+          created_by?: string | null
+          customer_name: string
+          customer_phone: string
+          expert_id?: string | null
+          id?: string
+          insurance_expiry?: string | null
+          insurer?: string | null
+          make_model?: string | null
+          photos?: string[]
+          puc_expiry?: string | null
+          reg_number: string
+          source?: string
+          updated_at?: string
+          user_id?: string | null
+          vehicle_type: string
+        }
+        Update: {
+          archived?: boolean
+          booking_id?: string | null
+          consent_reminder?: boolean
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string
+          customer_phone?: string
+          expert_id?: string | null
+          id?: string
+          insurance_expiry?: string | null
+          insurer?: string | null
+          make_model?: string | null
+          photos?: string[]
+          puc_expiry?: string | null
+          reg_number?: string
+          source?: string
+          updated_at?: string
+          user_id?: string | null
+          vehicle_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_expert_id_fkey"
+            columns: ["expert_id"]
+            isOneToOne: false
+            referencedRelation: "experts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waitlist_notify_events: {
         Row: {
           channel: string
@@ -7044,6 +7221,7 @@ export type Database = {
           short_address: string | null
           store_category_id: string | null
           store_name: string | null
+          store_slug: string | null
           zone_id: string | null
         }
         Relationships: [
@@ -8795,6 +8973,7 @@ export type Database = {
       staff_generate_payout_batch: { Args: never; Returns: string }
       staff_generate_subscription_invoices: { Args: never; Returns: Json }
       staff_get_referral_config: { Args: never; Returns: Json }
+      staff_insurance_stats: { Args: never; Returns: Json }
       staff_list_bulk_plans: { Args: never; Returns: Json }
       staff_list_notifications: {
         Args: { _filter?: string }
@@ -9057,6 +9236,10 @@ export type Database = {
         Args: { _minutes: number; _service_key: string }
         Returns: Json
       }
+      staff_set_lead_status: {
+        Args: { _kind: string; _lead_id: string; _status: string }
+        Returns: boolean
+      }
       staff_set_merchant_commission: {
         Args: { _merchant_id: string; _pct: number }
         Returns: Json
@@ -9145,9 +9328,17 @@ export type Database = {
         Args: { _staff_user_id: string; _zone_ids: string[] }
         Returns: undefined
       }
+      staff_set_store_slug: {
+        Args: { _merchant_id: string; _slug: string }
+        Returns: string
+      }
       staff_set_user_deleted: {
         Args: { _deleted: boolean; _user_id: string }
         Returns: Json
+      }
+      staff_set_vehicle_archived: {
+        Args: { _archived: boolean; _id: string }
+        Returns: boolean
       }
       staff_soft_delete_area_partner: {
         Args: { _partner_id: string; _reason: string }
@@ -9234,6 +9425,16 @@ export type Database = {
           _user_id: string
         }
         Returns: Json
+      }
+      staff_update_vehicle_lead: {
+        Args: {
+          _assigned_to: string
+          _lead_id: string
+          _next_followup_date: string
+          _note: string
+          _status: string
+        }
+        Returns: boolean
       }
       staff_update_zone: {
         Args: { _payload: Json; _zone_id: string }
@@ -9410,6 +9611,24 @@ export type Database = {
         Returns: string
       }
       staff_upsert_task_detail: { Args: { _payload: Json }; Returns: string }
+      staff_upsert_vehicle: {
+        Args: {
+          _booking_id: string
+          _consent: boolean
+          _customer_name: string
+          _customer_phone: string
+          _expert_id: string
+          _id: string
+          _insurance_expiry: string
+          _insurer: string
+          _make_model: string
+          _photos: string[]
+          _puc_expiry: string
+          _reg_number: string
+          _vehicle_type: string
+        }
+        Returns: Json
+      }
       staff_verify_end_otp: {
         Args: { _booking_id: string; _otp: string }
         Returns: undefined
@@ -9499,7 +9718,12 @@ export type Database = {
         Args: { _default: number; _key: string }
         Returns: number
       }
+      store_slugify: { Args: { _text: string }; Returns: string }
       store_sweeper: { Args: never; Returns: undefined }
+      store_unique_slug: {
+        Args: { _base: string; _merchant_id: string }
+        Returns: string
+      }
       submit_booking_review: {
         Args: { _booking_id: string; _rating: number; _review: string }
         Returns: undefined
