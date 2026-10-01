@@ -68,7 +68,7 @@ function PinScreen() {
         setDigits(["", "", "", ""]);
         setTimeout(() => inputs.current[0]?.focus(), 50);
         setError(friendlyError(err));
-        toast.error(msg);
+        toast.error(friendlyError(err));
       } finally {
         setLoading(false);
       }
