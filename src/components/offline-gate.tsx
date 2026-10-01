@@ -84,7 +84,7 @@ export function OfflineGate({ children }: { children: React.ReactNode }) {
       </div>
       <h1 className="mt-6 text-[22px] font-extrabold">No internet connection</h1>
       <p className="mt-2 max-w-xs text-[15px] leading-relaxed text-white/85">
-        badiyos Partner needs an internet connection. Check your mobile data or Wi-Fi and try again.
+        badiyos Expert needs an internet connection. Check your mobile data or Wi-Fi and try again.
       </p>
       <button
         type="button"

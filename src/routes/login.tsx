@@ -9,8 +9,8 @@ import { useLanguage, useT, type Lang } from "@/lib/i18n";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Sign in — badiyos Partner" },
-      { name: "description", content: "Sign in to badiyos Partner with your registered mobile number." },
+      { title: "Sign in — badiyos Expert" },
+      { name: "description", content: "Sign in to badiyos Expert with your registered mobile number." },
     ],
   }),
   component: LoginScreen,

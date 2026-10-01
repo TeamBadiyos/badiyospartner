@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Section heading with a small blue accent bar, matching the Customer App's
- * SectionHeading pattern (adapted to the Partner App's blue brand).
+ * SectionHeading pattern (adapted to the Expert App's blue brand).
  */
 export function SectionHeading({
   children,

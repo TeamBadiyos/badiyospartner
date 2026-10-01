@@ -17,7 +17,7 @@ export const Route = createFileRoute("/otp")({
   validateSearch: (s) => searchSchema.parse(s),
   head: () => ({
     meta: [
-      { title: "Verify code — badiyos Partner" },
+      { title: "Verify code — badiyos Expert" },
       { name: "description", content: "Enter the 4-digit code sent to your WhatsApp." },
     ],
   }),

@@ -7,8 +7,8 @@ import { useT } from "@/lib/i18n";
 export const Route = createFileRoute("/legal/$slug")({
   head: () => ({
     meta: [
-      { title: "Legal — badiyos Partner" },
-      { name: "description", content: "Privacy Policy and Terms & Conditions for badiyos Partner." },
+      { title: "Legal — badiyos Expert" },
+      { name: "description", content: "Privacy Policy and Terms & Conditions for badiyos Expert." },
     ],
   }),
   component: LegalScreen,
