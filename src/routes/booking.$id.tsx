@@ -4,7 +4,7 @@ import {
   MapPin,
   Phone,
   Loader2,
-  Navigation2,
+  Footprints,
   X,
   AlertTriangle,
   ArrowRight,
@@ -460,12 +460,13 @@ function CustomerCard({
   address: Address | null;
 }) {
   const t = useT();
+  // Coordinates only — address text can send Google to the wrong place.
+  const lat = Number(address?.latitude);
+  const lng = Number(address?.longitude);
   const mapHref =
-    address?.latitude != null && address?.longitude != null
-      ? `https://www.google.com/maps/dir/?api=1&destination=${address.latitude},${address.longitude}`
-      : address?.full_address
-        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address.full_address)}`
-        : null;
+    address?.latitude != null && address?.longitude != null && Number.isFinite(lat) && Number.isFinite(lng)
+      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking&dir_action=navigate`
+      : null;
 
   return (
     <div className="rounded-[20px] border border-border bg-card p-5">
@@ -490,10 +491,18 @@ function CustomerCard({
         <a
           href={mapHref ?? undefined}
           target="_blank"
-          rel="noreferrer"
-          className={`flex h-[62px] items-center justify-center gap-2 rounded-[16px] bg-primary text-[18px] font-extrabold text-primary-foreground ${mapHref ? "" : "pointer-events-none opacity-40"}`}
+          rel="noopener noreferrer"
+          onClick={(e) => {
+            if (!mapHref) return;
+            e.preventDefault();
+            hapticImpact("medium");
+            const w = window.open(mapHref, "_system");
+            if (!w) window.open(mapHref, "_blank", "noopener,noreferrer");
+          }}
+          aria-disabled={!mapHref}
+          className={`flex h-[62px] items-center justify-center gap-2 rounded-[16px] bg-[#059669] text-[18px] font-extrabold text-white ${mapHref ? "" : "pointer-events-none opacity-40"}`}
         >
-          <Navigation2 className="h-6 w-6" /> {t("job.step.map")}
+          <Footprints className="h-6 w-6" /> रस्ता दाखवा
         </a>
       </div>
     </div>
