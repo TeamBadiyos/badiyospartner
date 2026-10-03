@@ -2298,6 +2298,68 @@ export type Database = {
           },
         ]
       }
+      coupon_attempt_logs: {
+        Row: {
+          code_attempted: string | null
+          created_at: string
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          code_attempted?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          code_attempted?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coupon_phone_grants: {
+        Row: {
+          converted_at: string | null
+          converted_user_id: string | null
+          coupon_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          phone10: string
+        }
+        Insert: {
+          converted_at?: string | null
+          converted_user_id?: string | null
+          coupon_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          phone10: string
+        }
+        Update: {
+          converted_at?: string | null
+          converted_user_id?: string | null
+          coupon_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          phone10?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_phone_grants_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coupon_redemptions: {
         Row: {
           base_amount: number
@@ -2367,6 +2429,7 @@ export type Database = {
           max_discount: number | null
           min_order_amount: number
           per_user_limit: number
+          show_in_list: boolean
           title: string
           total_usage_limit: number | null
           updated_at: string
@@ -2388,6 +2451,7 @@ export type Database = {
           max_discount?: number | null
           min_order_amount?: number
           per_user_limit?: number
+          show_in_list?: boolean
           title?: string
           total_usage_limit?: number | null
           updated_at?: string
@@ -2409,6 +2473,7 @@ export type Database = {
           max_discount?: number | null
           min_order_amount?: number
           per_user_limit?: number
+          show_in_list?: boolean
           title?: string
           total_usage_limit?: number | null
           updated_at?: string
@@ -3841,6 +3906,9 @@ export type Database = {
           id: string
           is_busy: boolean
           is_online: boolean
+          jacket_issued: boolean
+          jacket_issued_at: string | null
+          joining_date: string | null
           kyc_aadhaar_url: string | null
           kyc_address_proof_url: string | null
           kyc_pan_url: string | null
@@ -3861,6 +3929,7 @@ export type Database = {
           referred_by_expert_id: string | null
           security_deposit_status: string
           status: string
+          training_progress: Json
           wallet_balance: number
           zone_id: string | null
         }
@@ -3877,6 +3946,9 @@ export type Database = {
           id?: string
           is_busy?: boolean
           is_online?: boolean
+          jacket_issued?: boolean
+          jacket_issued_at?: string | null
+          joining_date?: string | null
           kyc_aadhaar_url?: string | null
           kyc_address_proof_url?: string | null
           kyc_pan_url?: string | null
@@ -3897,6 +3969,7 @@ export type Database = {
           referred_by_expert_id?: string | null
           security_deposit_status?: string
           status?: string
+          training_progress?: Json
           wallet_balance?: number
           zone_id?: string | null
         }
@@ -3913,6 +3986,9 @@ export type Database = {
           id?: string
           is_busy?: boolean
           is_online?: boolean
+          jacket_issued?: boolean
+          jacket_issued_at?: string | null
+          joining_date?: string | null
           kyc_aadhaar_url?: string | null
           kyc_address_proof_url?: string | null
           kyc_pan_url?: string | null
@@ -3933,6 +4009,7 @@ export type Database = {
           referred_by_expert_id?: string | null
           security_deposit_status?: string
           status?: string
+          training_progress?: Json
           wallet_balance?: number
           zone_id?: string | null
         }
@@ -6535,6 +6612,185 @@ export type Database = {
           },
         ]
       }
+      suggestion_remarks: {
+        Row: {
+          created_at: string
+          id: string
+          new_status_id: string | null
+          old_status_id: string | null
+          remark: string
+          staff_id: string | null
+          suggestion_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_status_id?: string | null
+          old_status_id?: string | null
+          remark: string
+          staff_id?: string | null
+          suggestion_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_status_id?: string | null
+          old_status_id?: string | null
+          remark?: string
+          staff_id?: string | null
+          suggestion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestion_remarks_new_status_id_fkey"
+            columns: ["new_status_id"]
+            isOneToOne: false
+            referencedRelation: "suggestion_statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestion_remarks_old_status_id_fkey"
+            columns: ["old_status_id"]
+            isOneToOne: false
+            referencedRelation: "suggestion_statuses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestion_remarks_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestion_remarks_suggestion_id_fkey"
+            columns: ["suggestion_id"]
+            isOneToOne: false
+            referencedRelation: "suggestions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suggestion_statuses: {
+        Row: {
+          active: boolean
+          color: string
+          created_at: string
+          customer_label_en: string
+          customer_label_mr: string
+          id: string
+          is_final: boolean
+          key: string
+          label: string
+          notify_customer: boolean
+          notify_message: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          color?: string
+          created_at?: string
+          customer_label_en: string
+          customer_label_mr?: string
+          id?: string
+          is_final?: boolean
+          key: string
+          label: string
+          notify_customer?: boolean
+          notify_message?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          color?: string
+          created_at?: string
+          customer_label_en?: string
+          customer_label_mr?: string
+          id?: string
+          is_final?: boolean
+          key?: string
+          label?: string
+          notify_customer?: boolean
+          notify_message?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      suggestions: {
+        Row: {
+          archived: boolean
+          assigned_to: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          final_at: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          photo_path: string | null
+          priority: string
+          source: string
+          status_id: string | null
+          text: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          archived?: boolean
+          assigned_to?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          final_at?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          photo_path?: string | null
+          priority?: string
+          source?: string
+          status_id?: string | null
+          text: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          archived?: boolean
+          assigned_to?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          final_at?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          photo_path?: string | null
+          priority?: string
+          source?: string
+          status_id?: string | null
+          text?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suggestions_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suggestions_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "suggestion_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_inquiries: {
         Row: {
           contact: string
@@ -7751,6 +8007,10 @@ export type Database = {
           rate: number
         }[]
       }
+      coupon_convert_phone_grants: {
+        Args: { _phone: string; _user_id: string }
+        Returns: number
+      }
       coupon_preview: {
         Args: {
           _base_amount: number
@@ -7760,7 +8020,26 @@ export type Database = {
         }
         Returns: Json
       }
+      coupon_preview_listed: {
+        Args: {
+          _base_amount: number
+          _category_id?: string
+          _code: string
+          _duration_minutes?: number
+        }
+        Returns: Json
+      }
       coupon_quote: {
+        Args: {
+          _base_amount: number
+          _category_id?: string
+          _code: string
+          _duration_minutes?: number
+          _user_id: string
+        }
+        Returns: Json
+      }
+      coupon_quote_core: {
         Args: {
           _base_amount: number
           _category_id?: string
@@ -8433,6 +8712,7 @@ export type Database = {
         Returns: Json
       }
       my_coin_balance: { Args: never; Returns: number }
+      my_coupon_claim_phone_grants: { Args: never; Returns: number }
       my_coupons: {
         Args: never
         Returns: {
@@ -8443,6 +8723,7 @@ export type Database = {
           discount_value: number
           id: string
           is_personal: boolean
+          is_targeted: boolean
           max_discount: number
           min_order_amount: number
           source: string
@@ -8783,6 +9064,14 @@ export type Database = {
       staff_commerce_admin_id: { Args: never; Returns: string }
       staff_confirm_payout_batch: {
         Args: { _batch_id: string }
+        Returns: undefined
+      }
+      staff_coupon_grant_phones: {
+        Args: { _id: string; _phones: string[] }
+        Returns: Json
+      }
+      staff_coupon_revoke_grant: {
+        Args: { _coupon_id: string; _grant_id: string; _kind: string }
         Returns: undefined
       }
       staff_courier_assignable_riders: {
@@ -9196,6 +9485,18 @@ export type Database = {
         }
         Returns: string
       }
+      staff_set_booking_location: {
+        Args: {
+          _area: string
+          _booking_id: string
+          _city: string
+          _full_address: string
+          _lat: number
+          _lng: number
+          _pincode: string
+        }
+        Returns: undefined
+      }
       staff_set_booking_refund: {
         Args: {
           _booking_id: string
@@ -9232,6 +9533,10 @@ export type Database = {
       }
       staff_set_delivery_status: {
         Args: { _merchant_id: string; _reason: string; _status: string }
+        Returns: undefined
+      }
+      staff_set_expert_onboarding: {
+        Args: { _expert_id: string; _payload: Json }
         Returns: undefined
       }
       staff_set_expert_zones: {
@@ -9508,6 +9813,7 @@ export type Database = {
           _max_discount: number
           _min_order_amount: number
           _per_user_limit: number
+          _show_in_list?: boolean
           _title: string
           _total_usage_limit: number
           _valid_from: string
