@@ -599,6 +599,9 @@ export const en = {
   "job.step.locating": "Location bhej rahe hain…",
   "job.details.title": "Customer ki detail",
   "job.details.continue": "Aage badho",
+  "job.locked.title": "Pehle chalu kaam poora karein",
+  "job.locked.sub": "Ye job chalu kaam poora hone ke baad hi shuru hoga.",
+  "job.locked.open": "Chalu kaam kholo",
 
 
   // ---- Home: upcoming jobs ----

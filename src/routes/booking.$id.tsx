@@ -141,6 +141,26 @@ function BookingScreen() {
     },
   });
 
+  // Another of my jobs already running? Then this one waits.
+  const runningQ = useQuery({
+    queryKey: ["running-job", expert?.id, id],
+    enabled: !!expert?.id,
+    refetchInterval: 20_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("assigned_expert_id", expert!.id)
+        .in("status", ["on_the_way", "arrived", "in_progress"])
+        .neq("id", id)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string } | null;
+    },
+  });
+  const runningJob = runningQ.data ?? null;
+
   // Realtime updates for this booking
   useEffect(() => {
     if (!id) return;
@@ -329,7 +349,28 @@ function BookingScreen() {
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-background pb-[max(env(safe-area-inset-bottom),1.5rem)]">
       {header}
 
-      {status === "expert_assigned" && (
+      {status === "expert_assigned" && runningJob && (
+        <div className="flex flex-1 flex-col px-6">
+          <SlotChip booking={booking} size="lg" className="self-start" />
+          <div className="mt-5 rounded-[20px] border border-[color:var(--warning-border)] bg-[color:var(--warning-soft)] p-5">
+            <AlertTriangle className="h-8 w-8 text-[color:var(--warning-icon)]" />
+            <h1 className="mt-3 text-[22px] font-extrabold leading-tight text-foreground">
+              {t("job.locked.title")}
+            </h1>
+            <p className="mt-2 text-[15px] text-[color:var(--text-secondary)]">{t("job.locked.sub")}</p>
+          </div>
+          <div className="mt-auto pt-6">
+            <BigButton
+              tone="green"
+              onClick={() => navigate({ to: "/booking/$id", params: { id: runningJob.id } })}
+            >
+              {t("job.locked.open")} <ArrowRight className="h-6 w-6" />
+            </BigButton>
+          </div>
+        </div>
+      )}
+
+      {status === "expert_assigned" && !runningJob && (
         <StepGo
           booking={booking}
           address={addressQ.data ?? null}
