@@ -600,6 +600,9 @@ export const mr: Partial<Record<keyof typeof en, string>> = {
   "job.step.locating": "लोकेशन पाठवत आहोत…",
   "job.details.title": "ग्राहकाची माहिती",
   "job.details.continue": "पुढे जा",
+  "job.locked.title": "आधी चालू काम पूर्ण करा",
+  "job.locked.sub": "हे काम चालू असलेले काम पूर्ण झाल्यावरच सुरू करता येईल.",
+  "job.locked.open": "चालू काम उघडा",
 
 
   // ---- Home: upcoming jobs ----
