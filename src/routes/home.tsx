@@ -601,11 +601,14 @@ function HomeDashboard() {
         )
         .eq("assigned_expert_id", expert!.id)
         .in("status", ["expert_assigned", "on_the_way", "arrived", "in_progress"])
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(50);
       if (error) throw error;
-      return data;
+      // Running job always wins; otherwise earliest slot first.
+      const rank: Record<string, number> = { in_progress: 0, arrived: 1, on_the_way: 2, expert_assigned: 3 };
+      const rows = (data ?? []).slice().sort(
+        (a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || slotSortKey(a) - slotSortKey(b),
+      );
+      return rows[0] ?? null;
     },
   });
 
