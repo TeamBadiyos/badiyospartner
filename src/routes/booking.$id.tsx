@@ -20,6 +20,8 @@ import { hapticImpact, hapticNotification } from "@/lib/haptics";
 import { SlotChip } from "@/components/slot-chip";
 import { OtpGreenKeypad } from "@/components/otp-green-keypad";
 import { getFix } from "@/lib/courier";
+import { shouldSkipPing, markPinged } from "@/lib/location-throttle";
+import { setNativeLocationMode } from "@/lib/background-location";
 
 export const Route = createFileRoute("/booking/$id")({
   head: () => ({
@@ -86,11 +88,6 @@ function useJobLocationPing(active: boolean) {
       window.clearInterval(id);
       void setNativeLocationMode("normal");
     };
-  }, [active]);
-}
-const _unusedEnd = () => {
-  {
-    return () => window.clearInterval(id);
   }, [active]);
 }
 
