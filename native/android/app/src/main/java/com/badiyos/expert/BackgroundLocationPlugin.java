@@ -316,7 +316,7 @@ public class BackgroundLocationPlugin extends Plugin {
     // ---------------- Courier mode (dormant until next native build) -------
 
     /** setMode({ mode: "courier" | "normal" }) — courier mode reports location
-     * every 15s at PRIORITY_HIGH_ACCURACY while a delivery is active. */
+     * every 10s at PRIORITY_HIGH_ACCURACY while a delivery is active. */
     @PluginMethod
     public void setMode(PluginCall call) {
         String mode = call.getString("mode", "normal");
