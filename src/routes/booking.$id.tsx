@@ -566,7 +566,7 @@ function CustomerCard({
 /* ------------------------------------------------------------------ */
 
 function CustomerNote({ bookingId }: { bookingId: string | undefined }) {
-  const { t } = useLang();
+  const t = useT();
   const q = useQuery({
     queryKey: ["job-details-note", bookingId],
     enabled: !!bookingId,
