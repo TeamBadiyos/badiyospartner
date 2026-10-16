@@ -1,6 +1,10 @@
 // Utilities for the Home-screen broadcast experience.
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { shouldSkipPing, markPinged } from "@/lib/location-throttle";
+
+/** Online with no active job: one ping per 60s. */
+const IDLE_PING_MS = 60_000;
 
 export type Coords = { lat: number; lng: number };
 
@@ -46,6 +50,7 @@ async function pushLocation(coords: Coords): Promise<void> {
     console.error("[expert] expert_update_location failed", error);
     throw new Error(error.message || "Could not save location");
   }
+  markPinged(coords.lat, coords.lng);
 }
 
 // Hard timeout wrapper — some Android OEM WebViews silently drop the Capacitor
@@ -307,10 +312,15 @@ export function useExpertLocationTracking(enabled: boolean): LocationTracker {
     let cancelled = false;
     let clearWatch: (() => void) | null = null;
     let interval: number | null = null;
+    let lastIdlePing = 0;
 
     const onPosition = (pos: GeolocationPosition) => {
       if (cancelled) return;
       const coords = applyPosition(pos);
+      const now = Date.now();
+      if (now - lastIdlePing < IDLE_PING_MS - 2_000) return;
+      if (shouldSkipPing(coords.lat, coords.lng, now)) return;
+      lastIdlePing = now;
       pushLocation(coords)
         .then(() => setLastPushedAt(Date.now()))
         .catch((err) => console.error("[expert] location push failed", err));
@@ -341,7 +351,7 @@ export function useExpertLocationTracking(enabled: boolean): LocationTracker {
         return;
       }
 
-      interval = window.setInterval(pollOnce, 30_000);
+      interval = window.setInterval(pollOnce, IDLE_PING_MS);
     })();
 
 

@@ -61,7 +61,13 @@ public class BackgroundAvailabilityService extends Service {
     // COURIER MODE (dormant until the next native build).
     // While a rider is on an active courier delivery the web layer calls
     // BackgroundLocation.setMode({ mode: "courier" }), which flips these.
-    private static final long COURIER_INTERVAL_MS = 15_000L;
+    private static final long COURIER_INTERVAL_MS = 10_000L;
+
+    // Skip a ping if moved < 10 m and the last ping was < 30 s ago.
+    private static final float SKIP_MOVE_M = 10f;
+    private static final long SKIP_GAP_MS = 30_000L;
+    private Location lastPinged;
+    private long lastPingedAt = 0L;
     private static volatile boolean courierMode = false;
 
     /** Called from BackgroundLocationPlugin.setMode(). Restarts the cycle so
@@ -269,7 +275,15 @@ public class BackgroundAvailabilityService extends Service {
                 Log.w(TAG, "no access token in Preferences — skip push");
                 return;
             }
+            long now = System.currentTimeMillis();
+            if (lastPinged != null && lastPinged.distanceTo(loc) < SKIP_MOVE_M
+                    && now - lastPingedAt < SKIP_GAP_MS) {
+                Log.d(TAG, "ping skipped — moved <10m within 30s");
+                return;
+            }
             postExpertUpdateLocation(token, loc.getLatitude(), loc.getLongitude());
+            lastPinged = loc;
+            lastPingedAt = now;
         } catch (Throwable t) {
             Log.e(TAG, "pushLocation failed (swallowed)", t);
         }

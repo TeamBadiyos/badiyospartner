@@ -20,6 +20,8 @@ import { hapticImpact, hapticNotification } from "@/lib/haptics";
 import { SlotChip } from "@/components/slot-chip";
 import { OtpGreenKeypad } from "@/components/otp-green-keypad";
 import { getFix } from "@/lib/courier";
+import { shouldSkipPing, markPinged } from "@/lib/location-throttle";
+import { setNativeLocationMode } from "@/lib/background-location";
 
 export const Route = createFileRoute("/booking/$id")({
   head: () => ({
@@ -68,17 +70,24 @@ function useJobLocationPing(active: boolean) {
       if (busy.current) return;
       busy.current = true;
       getFix()
-        .then(({ lat, lng }) =>
-          supabase.rpc("expert_update_location", { p_lat: lat, p_lng: lng }),
-        )
+        .then(async ({ lat, lng }) => {
+          if (shouldSkipPing(lat, lng)) return;
+          const { error } = await supabase.rpc("expert_update_location", { p_lat: lat, p_lng: lng });
+          if (error) throw error;
+          markPinged(lat, lng);
+        })
         .catch((err) => console.warn("[job] location ping failed", err))
         .finally(() => {
           busy.current = false;
         });
     };
     tick();
-    const id = window.setInterval(tick, 15_000);
-    return () => window.clearInterval(id);
+    void setNativeLocationMode("courier");
+    const id = window.setInterval(tick, 10_000);
+    return () => {
+      window.clearInterval(id);
+      void setNativeLocationMode("normal");
+    };
   }, [active]);
 }
 

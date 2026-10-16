@@ -325,12 +325,12 @@ published APK keeps working untouched.
 
 ### (a) Courier location mode — DONE in this folder
 
-- `BackgroundAvailabilityService.java`: `COURIER_INTERVAL_MS = 15_000L`,
+- `BackgroundAvailabilityService.java`: `COURIER_INTERVAL_MS = 10_000L`,
   `setCourierMode(Context, boolean)`, `ACTION_RETUNE`, and
   `Priority.PRIORITY_HIGH_ACCURACY` while courier mode is on.
 - `BackgroundLocationPlugin.java`: `setMode({ mode: "courier" | "normal" })`.
 - Web caller: `setNativeLocationMode()` in `src/lib/background-location.ts`,
-  used by `useCourierLocationPing()` in `src/lib/courier.ts` (15s foreground
+  used by `useCourierLocationPing()` in `src/lib/courier.ts` (10s foreground
   ping while a delivery is active, reverts to "normal" when it ends).
 - No new permissions. Do NOT add `ACTIVITY_RECOGNITION`,
   `SCHEDULE_EXACT_ALARM`, or `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`.

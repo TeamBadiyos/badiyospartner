@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { setNativeLocationMode } from "@/lib/background-location";
+import { shouldSkipPing, markPinged } from "@/lib/location-throttle";
 
 export const COURIER_CATEGORY_NAME = "Courier Delivery";
 
@@ -281,11 +282,13 @@ export function useCourierOrder(orderId: string) {
 
 async function pushFix(): Promise<void> {
   const pos = await getFix();
+  if (shouldSkipPing(pos.lat, pos.lng)) return;
   const { error } = await supabase.rpc("expert_update_location", {
     p_lat: pos.lat,
     p_lng: pos.lng,
   });
   if (error) throw error;
+  markPinged(pos.lat, pos.lng);
 }
 
 export async function getFix(): Promise<{ lat: number; lng: number }> {
@@ -303,8 +306,8 @@ export async function getFix(): Promise<{ lat: number; lng: number }> {
 }
 
 /**
- * While a courier job is active, push the rider's location every 15s (instead
- * of the usual 30s/60s cadence) and ask the native layer — when it supports it
+ * While a courier job is active, push the rider's location every 10s (instead
+ * of the 60s idle cadence) and ask the native layer — when it supports it
  * — to switch to high-accuracy courier mode. Reverts on unmount / job end.
  */
 export function useCourierLocationPing(active: boolean) {
@@ -324,7 +327,7 @@ export function useCourierLocationPing(active: boolean) {
         });
     };
     tick();
-    const id = window.setInterval(tick, 15_000);
+    const id = window.setInterval(tick, 10_000);
     return () => {
       window.clearInterval(id);
       void setNativeLocationMode("normal");
