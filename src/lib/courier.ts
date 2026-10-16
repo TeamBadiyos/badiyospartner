@@ -281,11 +281,13 @@ export function useCourierOrder(orderId: string) {
 
 async function pushFix(): Promise<void> {
   const pos = await getFix();
+  if (shouldSkipPing(pos.lat, pos.lng)) return;
   const { error } = await supabase.rpc("expert_update_location", {
     p_lat: pos.lat,
     p_lng: pos.lng,
   });
   if (error) throw error;
+  markPinged(pos.lat, pos.lng);
 }
 
 export async function getFix(): Promise<{ lat: number; lng: number }> {
@@ -324,7 +326,7 @@ export function useCourierLocationPing(active: boolean) {
         });
     };
     tick();
-    const id = window.setInterval(tick, 15_000);
+    const id = window.setInterval(tick, 10_000);
     return () => {
       window.clearInterval(id);
       void setNativeLocationMode("normal");
