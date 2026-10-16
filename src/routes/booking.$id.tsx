@@ -337,6 +337,7 @@ function BookingScreen() {
               {addressQ.data?.full_address ?? t("job.address.unavailable")}
             </p>
           </div>
+          <CustomerNote bookingId={booking?.id} />
 
           <div className="mt-auto pt-6">
             <BigButton onClick={() => setShowDetails(false)} tone="green">
@@ -498,6 +499,7 @@ function JobSummary({
           className="mt-4 aspect-video w-full rounded-[14px] object-cover"
         />
       )}
+      <CustomerNote bookingId={booking?.id} />
     </div>
   );
 }
@@ -562,6 +564,28 @@ function CustomerCard({
 /* ------------------------------------------------------------------ */
 /* Step 1 — after Accept                                               */
 /* ------------------------------------------------------------------ */
+
+function CustomerNote({ bookingId }: { bookingId: string | undefined }) {
+  const { t } = useLang();
+  const q = useQuery({
+    queryKey: ["job-details-note", bookingId],
+    enabled: !!bookingId,
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)("expert_job_details", { _booking_id: bookingId });
+      if (error) return null;
+      const note = (data as { customer_note?: string | null } | null)?.customer_note;
+      return typeof note === "string" && note.trim() ? note.trim() : null;
+    },
+  });
+  if (!q.data) return null;
+  return (
+    <div className="mt-4 rounded-[20px] border-2 border-warning/40 bg-warning/10 p-5">
+      <p className="text-[12px] font-bold uppercase tracking-wider text-foreground">{t("job.note.label")}</p>
+      <p className="mt-1 whitespace-pre-wrap break-words text-[16px] font-semibold text-foreground">{q.data}</p>
+    </div>
+  );
+}
 
 function StepGo({
   booking,
@@ -733,6 +757,7 @@ function StepOnTheWay({
           {address?.full_address ?? t("job.address.unavailable")}
         </p>
       </div>
+      <CustomerNote bookingId={booking?.id} />
 
       <div className="mt-auto pt-6">
         {err && (

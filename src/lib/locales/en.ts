@@ -73,6 +73,7 @@ export const en = {
   "job.badge.completed": "Completed",
   "job.badge.new": "New booking",
   "job.title": "{minutes}-minute service",
+  "job.note.label": "Customer note",
   "job.address.label": "Customer address",
   "job.address.loading": "Loading…",
   "job.address.unavailable": "Address unavailable",
