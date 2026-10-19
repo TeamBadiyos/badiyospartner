@@ -35,6 +35,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import { Tr } from "@/lib/translate-text";
+import { TravelBadge } from "@/lib/travel-fee";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
@@ -72,6 +73,8 @@ type BroadcastBooking = {
   created_at?: string | null;
   deleted_at?: string | null;
   dispatch_exhausted_at?: string | null;
+  travel_fee?: number | null;
+  travel_expert_share_pct?: number | null;
 };
 
 // Only bookings created within this window are treated as live broadcasts.
@@ -443,7 +446,7 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, service_label, scheduled_time_slot, scheduled_date, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id",
+          "id, status, service_duration_minutes, service_label, scheduled_time_slot, scheduled_date, slot_type, address_id, booking_lat, booking_lng, assigned_expert_id, created_at, deleted_at, dispatch_exhausted_at, service_category_id, travel_fee, travel_expert_share_pct",
         )
         .eq("status", "accepted")
         .is("assigned_expert_id", null)
@@ -599,7 +602,7 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, service_label, price, address_id, created_at, scheduled_date, scheduled_time_slot",
+          "id, status, service_duration_minutes, service_label, price, address_id, created_at, scheduled_date, scheduled_time_slot, travel_fee, travel_expert_share_pct",
         )
         .eq("assigned_expert_id", expert!.id)
         .in("status", ["expert_assigned", "on_the_way", "arrived", "in_progress"])
@@ -623,7 +626,7 @@ function HomeDashboard() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, service_label, created_at, scheduled_date, scheduled_time_slot",
+          "id, status, service_duration_minutes, service_label, created_at, scheduled_date, scheduled_time_slot, travel_fee, travel_expert_share_pct",
         )
         .eq("assigned_expert_id", expert!.id)
         .in("status", ["expert_assigned", "on_the_way", "arrived", "in_progress"])
@@ -1094,6 +1097,7 @@ function HomeDashboard() {
               <SlotChip booking={assigned} />
             </div>
             <p className="mt-3 text-[18px] font-bold text-foreground">{serviceTitle(assigned.service_label, assigned.service_duration_minutes)}</p>
+            <TravelBadge booking={assigned} className="mt-2" />
             <div className="mt-2 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--text-secondary)]">
               <MapPin className="h-4 w-4" /> {t("home.card.tapDetails")}
             </div>
@@ -1227,6 +1231,7 @@ function HomeDashboard() {
                     {serviceTitle(c.booking.service_label, c.booking.service_duration_minutes)}
                     {c.booking.scheduled_time_slot ? ` · ${c.booking.scheduled_time_slot}` : ""}
                   </div>
+                  <TravelBadge booking={c.booking} className="mt-2" />
                   <div className="mt-3 flex items-start gap-2 rounded-[14px] bg-[color:var(--divider)] p-3">
                     <MapPin className="mt-0.5 h-4 w-4 text-primary" />
                     <div className="text-[13px] leading-snug text-foreground">
@@ -1304,6 +1309,7 @@ function HomeDashboard() {
                   <p className="mt-2.5 text-[17px] font-bold text-foreground">
                     {serviceTitle(j.service_label, j.service_duration_minutes)}
                   </p>
+                  <TravelBadge booking={j} className="mt-1.5" />
                   <div className="mt-1 flex items-center gap-1 text-[13px] font-semibold text-[color:var(--text-secondary)]">
                     <Clock className="h-4 w-4" /> {t("home.upcoming.open")}
                   </div>
