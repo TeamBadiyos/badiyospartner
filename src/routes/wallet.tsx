@@ -6,7 +6,6 @@ import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import { useT } from "@/lib/i18n";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SectionHeading } from "@/components/section-heading";
-import { travelEarning } from "@/lib/travel-fee";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
@@ -47,24 +46,6 @@ function WalletScreen() {
     },
   });
 
-  // Travel fee per completed job (cancelled / no-show jobs never count).
-  const travelQ = useQuery({
-    queryKey: ["travel-earnings", expert?.id],
-    enabled: !!expert?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("id, travel_fee, travel_expert_share_pct, service_end_at, updated_at")
-        .eq("assigned_expert_id", expert!.id)
-        .eq("status", "completed")
-        .gt("travel_fee", 0)
-        .order("updated_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   if (loading) return <div className="flex min-h-[100dvh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
   const items = ledgerQ.data ?? [];
@@ -74,22 +55,19 @@ function WalletScreen() {
   // below and as a fallback while the expert row is still loading.
   const ledgerSum = items.reduce((sum, tx) => sum + (tx.type === "credit" ? Number(tx.amount) : -Number(tx.amount)), 0);
   const balance = expert ? Number(expert.wallet_balance ?? 0) : ledgerSum;
-  const travelById = new Map<string, number>();
-  for (const b of travelQ.data ?? []) travelById.set(b.id, travelEarning(b));
+  // Travel is its own server-written ledger entry ("Travel fee: <booking>"),
+  // reversed by "Travel fee refund: <booking>" if the job is refunded.
+  const isTravel = (reason: string | null) => /^Travel fee( refund)?:/i.test(reason ?? "");
   const weekStart = (() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // Monday
     return d.getTime();
   })();
-  const weeklyTravel = (travelQ.data ?? []).reduce((sum, b) => {
-    const at = new Date(b.service_end_at ?? b.updated_at ?? 0).getTime();
-    return at >= weekStart ? sum + travelEarning(b) : sum;
+  const weeklyTravel = items.reduce((sum, tx) => {
+    if (!isTravel(tx.reason) || new Date(tx.created_at).getTime() < weekStart) return sum;
+    return sum + (tx.type === "credit" ? Number(tx.amount) : -Number(tx.amount));
   }, 0);
-  const travelFor = (reason: string | null) => {
-    const m = /^Booking payout:\s*([0-9a-f-]{36})/i.exec(reason ?? "");
-    return m ? travelById.get(m[1]) ?? 0 : 0;
-  };
 
   return (
     <PullToRefresh className="relative" onRefresh={() => ledgerQ.refetch()}>
@@ -129,15 +107,10 @@ function WalletScreen() {
                   {courier ? <Bike className="h-5 w-5" /> : tx.type === "credit" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
                 </div>
                 <div className="flex-1">
-                  <p className="text-[14px] font-semibold text-foreground">
-                    {courier ? t("wallet.courier.item") : formatReason(tx.reason, tx.type, { credit: t("wallet.credit"), debit: t("wallet.debit") })}
+                  <p className={`text-[14px] font-semibold ${isTravel(tx.reason) ? "text-[color:var(--success-strong)]" : "text-foreground"}`}>
+                    {courier ? t("wallet.courier.item") : isTravel(tx.reason) ? t("travel.travel") : formatReason(tx.reason, tx.type, { credit: t("wallet.credit"), debit: t("wallet.debit") })}
                   </p>
                   <p className="text-[12px] text-[color:var(--text-secondary)]">{new Date(tx.created_at).toLocaleString("en-IN")}</p>
-                  {tx.type === "credit" && travelFor(tx.reason) > 0 && (
-                    <p className="mt-0.5 text-[12px] font-bold text-[color:var(--success-strong)]">
-                      {t("travel.service")} {formatINR(Math.max(0, Number(tx.amount) - travelFor(tx.reason)))} · {t("travel.travel")} +{formatINR(travelFor(tx.reason))}
-                    </p>
-                  )}
                 </div>
                 <span className={`amount-strong text-[16px] ${tx.type === "credit" ? "text-primary" : "text-red-600"}`}>
                   {tx.type === "credit" ? "+" : "−"}{formatINR(tx.amount)}
