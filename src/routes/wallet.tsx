@@ -6,7 +6,6 @@ import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import { useT } from "@/lib/i18n";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SectionHeading } from "@/components/section-heading";
-import { travelEarning } from "@/lib/travel-fee";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
@@ -108,15 +107,10 @@ function WalletScreen() {
                   {courier ? <Bike className="h-5 w-5" /> : tx.type === "credit" ? <ArrowDownLeft className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
                 </div>
                 <div className="flex-1">
-                  <p className="text-[14px] font-semibold text-foreground">
-                    {courier ? t("wallet.courier.item") : formatReason(tx.reason, tx.type, { credit: t("wallet.credit"), debit: t("wallet.debit") })}
+                  <p className={`text-[14px] font-semibold ${isTravel(tx.reason) ? "text-[color:var(--success-strong)]" : "text-foreground"}`}>
+                    {courier ? t("wallet.courier.item") : isTravel(tx.reason) ? t("travel.travel") : formatReason(tx.reason, tx.type, { credit: t("wallet.credit"), debit: t("wallet.debit") })}
                   </p>
                   <p className="text-[12px] text-[color:var(--text-secondary)]">{new Date(tx.created_at).toLocaleString("en-IN")}</p>
-                  {tx.type === "credit" && travelFor(tx.reason) > 0 && (
-                    <p className="mt-0.5 text-[12px] font-bold text-[color:var(--success-strong)]">
-                      {t("travel.service")} {formatINR(Math.max(0, Number(tx.amount) - travelFor(tx.reason)))} · {t("travel.travel")} +{formatINR(travelFor(tx.reason))}
-                    </p>
-                  )}
                 </div>
                 <span className={`amount-strong text-[16px] ${tx.type === "credit" ? "text-primary" : "text-red-600"}`}>
                   {tx.type === "credit" ? "+" : "−"}{formatINR(tx.amount)}
