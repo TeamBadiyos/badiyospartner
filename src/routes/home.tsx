@@ -1,3 +1,4 @@
+import { resolveExpertPhoto } from "@/lib/expert-photo";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { friendlyError } from "@/lib/friendly-error";
 import { Inbox, MapPin, Loader2, Wallet, History, Award, LifeBuoy, Clock, X, AlertTriangle, Bike } from "lucide-react";
@@ -877,7 +878,7 @@ function HomeDashboard() {
           </Link>
           <Link to="/profile" className="rounded-full" aria-label={t("aria.profile")}>
             {expert?.photo_url ? (
-              <img src={expert.photo_url} alt={expert.name ?? "Expert"} className="h-9 w-9 rounded-full object-cover border border-border" />
+              <img src={resolveExpertPhoto(expert.photo_url) ?? undefined} onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }} alt={expert.name ?? "Expert"} className="h-9 w-9 rounded-full object-cover border border-border" />
             ) : (
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--color-charcoal)] text-[13px] font-bold text-white">
                 {initials(expert?.name)}

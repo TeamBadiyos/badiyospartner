@@ -1,3 +1,4 @@
+import { resolveExpertPhoto } from "@/lib/expert-photo";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { friendlyError } from "@/lib/friendly-error";
 import { ChevronLeft, ChevronRight, LogOut, Phone, MapPin, Award, ShieldCheck, Loader2, Camera, Radio, Wrench, Smartphone, Languages, Check, FileText , BatteryCharging, Clock } from "lucide-react";
@@ -155,7 +156,7 @@ function ProfileScreen() {
       <section className="flex flex-col items-center px-6 text-center">
         <div className="relative">
           {expert?.photo_url ? (
-            <img src={expert.photo_url} alt={expert.name ?? ""} className="h-24 w-24 rounded-full object-cover" />
+            <img src={resolveExpertPhoto(expert.photo_url) ?? undefined} onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }} alt={expert.name ?? ""} className="h-24 w-24 rounded-full object-cover" />
           ) : (
             <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[color:var(--color-charcoal)] text-3xl font-bold text-white">
               {initials(expert?.name)}
