@@ -38,6 +38,7 @@ import {
 } from "@/lib/courier";
 import { computeReturnDistances, getCourierFailWaitMinutes } from "@/lib/courier-returns.functions";
 import { useT, type TranslationKey } from "@/lib/i18n";
+import { Tr } from "@/lib/translate-text";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 
 export const Route = createFileRoute("/courier/$id")({
@@ -541,7 +542,7 @@ function CourierJob() {
             </div>
             <div className="mt-3 flex items-start gap-2">
               <MapPin className="mt-0.5 h-5 w-5 text-primary" />
-              <p className="flex-1 text-[16px] font-semibold leading-snug text-foreground">{current.address ?? "—"}</p>
+              <p className="flex-1 text-[16px] font-semibold leading-snug text-foreground"><Tr text={current.address} fallback="—" /></p>
             </div>
             {isBusiness && current.stop_type === "drop" && current.contact_name && (
               <p className="mt-1 pl-7 text-[13px] font-semibold text-foreground">
@@ -753,7 +754,7 @@ function CourierJob() {
                    <span className="flex-1 truncate text-[12px] text-foreground">
                      {isBusiness && s.stop_type === "drop" && s.contact_name
                        ? `${businessTrip?.drop_labels?.[s.id] ? `${businessTrip.drop_labels[s.id]} · ` : ""}${s.contact_name} · `
-                       : ""}{s.address ?? "—"}
+                       : ""}<Tr text={s.address} fallback="—" />
                    </span>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-[color:var(--text-secondary)]">
                         {t(`courier.stop.status.${s.status}` as TranslationKey)}
