@@ -83,7 +83,7 @@ function WalletScreen() {
     return d.getTime();
   })();
   const weeklyTravel = (travelQ.data ?? []).reduce((sum, b) => {
-    const at = new Date(b.service_end_at ?? b.updated_at).getTime();
+    const at = new Date(b.service_end_at ?? b.updated_at ?? 0).getTime();
     return at >= weekStart ? sum + travelEarning(b) : sum;
   }, 0);
   const travelFor = (reason: string | null) => {
