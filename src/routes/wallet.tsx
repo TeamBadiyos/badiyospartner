@@ -47,24 +47,6 @@ function WalletScreen() {
     },
   });
 
-  // Travel fee per completed job (cancelled / no-show jobs never count).
-  const travelQ = useQuery({
-    queryKey: ["travel-earnings", expert?.id],
-    enabled: !!expert?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("id, travel_fee, travel_expert_share_pct, service_end_at, updated_at")
-        .eq("assigned_expert_id", expert!.id)
-        .eq("status", "completed")
-        .gt("travel_fee", 0)
-        .order("updated_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   if (loading) return <div className="flex min-h-[100dvh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
 
   const items = ledgerQ.data ?? [];
@@ -74,22 +56,19 @@ function WalletScreen() {
   // below and as a fallback while the expert row is still loading.
   const ledgerSum = items.reduce((sum, tx) => sum + (tx.type === "credit" ? Number(tx.amount) : -Number(tx.amount)), 0);
   const balance = expert ? Number(expert.wallet_balance ?? 0) : ledgerSum;
-  const travelById = new Map<string, number>();
-  for (const b of travelQ.data ?? []) travelById.set(b.id, travelEarning(b));
+  // Travel is its own server-written ledger entry ("Travel fee: <booking>"),
+  // reversed by "Travel fee refund: <booking>" if the job is refunded.
+  const isTravel = (reason: string | null) => /^Travel fee( refund)?:/i.test(reason ?? "");
   const weekStart = (() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // Monday
     return d.getTime();
   })();
-  const weeklyTravel = (travelQ.data ?? []).reduce((sum, b) => {
-    const at = new Date(b.service_end_at ?? b.updated_at ?? 0).getTime();
-    return at >= weekStart ? sum + travelEarning(b) : sum;
+  const weeklyTravel = items.reduce((sum, tx) => {
+    if (!isTravel(tx.reason) || new Date(tx.created_at).getTime() < weekStart) return sum;
+    return sum + (tx.type === "credit" ? Number(tx.amount) : -Number(tx.amount));
   }, 0);
-  const travelFor = (reason: string | null) => {
-    const m = /^Booking payout:\s*([0-9a-f-]{36})/i.exec(reason ?? "");
-    return m ? travelById.get(m[1]) ?? 0 : 0;
-  };
 
   return (
     <PullToRefresh className="relative" onRefresh={() => ledgerQ.refetch()}>
