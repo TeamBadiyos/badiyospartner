@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useT } from "@/lib/i18n";
+import { Tr } from "@/lib/translate-text";
 import { useDurationCategoryIds, isDurationBased, serviceTitle } from "@/lib/service-pricing";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 import { SlotChip } from "@/components/slot-chip";
@@ -334,7 +335,7 @@ function BookingScreen() {
               {t("job.address.label")}
             </p>
             <p className="mt-1 text-[16px] font-bold text-foreground">
-              {addressQ.data?.full_address ?? t("job.address.unavailable")}
+              <Tr text={addressQ.data?.full_address} fallback={t("job.address.unavailable")} />
             </p>
           </div>
           <CustomerNote bookingId={booking?.id} />
@@ -483,7 +484,7 @@ function JobSummary({
           <p className="mt-1 text-[16px] font-bold text-foreground">
             {addressLoading
               ? t("job.address.loading")
-              : (address?.full_address ?? t("job.address.unavailable"))}
+              : <Tr text={address?.full_address} fallback={t("job.address.unavailable")} />}
           </p>
           {(address?.area || address?.city) && (
             <p className="mt-0.5 text-[14px] text-[color:var(--text-secondary)]">
@@ -526,7 +527,7 @@ function CustomerCard({
         {t("job.step.customer")}
       </p>
       <p className="mt-1 text-[24px] font-extrabold text-foreground">
-        {customer?.full_name ?? "—"}
+        <Tr text={customer?.full_name} fallback="—" />
       </p>
       {customer?.phone && (
         <p className="mt-0.5 text-[17px] font-bold tracking-wide text-[color:var(--text-secondary)]">
@@ -754,7 +755,7 @@ function StepOnTheWay({
           {t("job.address.label")}
         </p>
         <p className="mt-1 text-[16px] font-bold text-foreground">
-          {address?.full_address ?? t("job.address.unavailable")}
+          <Tr text={address?.full_address} fallback={t("job.address.unavailable")} />
         </p>
       </div>
       <CustomerNote bookingId={booking?.id} />
@@ -825,7 +826,7 @@ function StepStartOtp({
         {t("job.step.startSub")}
       </p>
       {customer?.full_name && (
-        <p className="mt-2 text-[16px] font-bold text-foreground">{customer.full_name}</p>
+        <p className="mt-2 text-[16px] font-bold text-foreground"><Tr text={customer.full_name} /></p>
       )}
 
       <div className="mt-6">

@@ -33,6 +33,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
+import { Tr } from "@/lib/translate-text";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { SwipeToDismiss } from "@/components/swipe-to-dismiss";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
@@ -1228,10 +1229,10 @@ function HomeDashboard() {
                   <div className="mt-3 flex items-start gap-2 rounded-[14px] bg-[color:var(--divider)] p-3">
                     <MapPin className="mt-0.5 h-4 w-4 text-primary" />
                     <div className="text-[13px] leading-snug text-foreground">
-                      <p className="font-semibold">{c.address?.full_address ?? t("home.broadcast.address")}</p>
+                      <p className="font-semibold"><Tr text={c.address?.full_address} fallback={t("home.broadcast.address")} /></p>
                       {(c.address?.area || c.address?.city) && (
                         <p className="text-[color:var(--text-secondary)]">
-                          {[c.address?.area, c.address?.city].filter(Boolean).join(", ")}
+                          <Tr text={[c.address?.area, c.address?.city].filter(Boolean).join(", ")} />
                         </p>
                       )}
                       <p className="mt-1 text-[12px] font-semibold text-[color:var(--text-secondary)]">
