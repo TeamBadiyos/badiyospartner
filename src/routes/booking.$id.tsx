@@ -583,7 +583,7 @@ function CustomerNote({ bookingId }: { bookingId: string | undefined }) {
   return (
     <div className="mt-4 rounded-[20px] border-2 border-[color:var(--warning-border)] bg-[color:var(--warning-soft)] p-5">
       <p className="text-[12px] font-bold uppercase tracking-wider text-foreground">{t("job.note.label")}</p>
-      <p className="mt-1 whitespace-pre-wrap break-words text-[16px] font-semibold text-foreground">{q.data}</p>
+      <p className="mt-1 whitespace-pre-wrap break-words text-[16px] font-semibold text-foreground"><Tr text={q.data} /></p>
     </div>
   );
 }
