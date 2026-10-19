@@ -16,6 +16,7 @@ import { useExpert, useExpertSession, formatINR } from "@/lib/expert-client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useT } from "@/lib/i18n";
 import { Tr } from "@/lib/translate-text";
+import { travelEarning } from "@/lib/travel-fee";
 import { useDurationCategoryIds, isDurationBased, serviceTitle } from "@/lib/service-pricing";
 import { hapticImpact, hapticNotification } from "@/lib/haptics";
 import { SlotChip } from "@/components/slot-chip";
@@ -49,6 +50,9 @@ type Booking = {
   scheduled_time_slot: string | null;
   user_id: string;
   created_at: string;
+  snapshot_expert_payout: number | null;
+  travel_fee: number | null;
+  travel_expert_share_pct: number | null;
 };
 
 type Address = {
@@ -111,7 +115,7 @@ function BookingScreen() {
       const { data, error } = await supabase
         .from("bookings")
         .select(
-          "id, status, service_duration_minutes, service_label, service_category_id, price, address_id, assigned_expert_id, started_at, service_end_at, scheduled_date, scheduled_time_slot, user_id, created_at",
+          "id, status, service_duration_minutes, service_label, service_category_id, price, address_id, assigned_expert_id, started_at, service_end_at, scheduled_date, scheduled_time_slot, user_id, created_at, snapshot_expert_payout, travel_fee, travel_expert_share_pct",
         )
         .eq("id", id)
         .maybeSingle();
@@ -339,6 +343,7 @@ function BookingScreen() {
             </p>
           </div>
           <CustomerNote bookingId={booking?.id} />
+          <EarningBreakdown booking={booking} className="mt-4" />
 
           <div className="mt-auto pt-6">
             <BigButton onClick={() => setShowDetails(false)} tone="green">
@@ -455,6 +460,24 @@ function BigButton({
     >
       {children}
     </button>
+  );
+}
+
+/** Service / Travel / Total — only when this job carries an outer-zone travel fee. */
+function EarningBreakdown({ booking, className = "" }: { booking: Booking; className?: string }) {
+  const t = useT();
+  const travel = travelEarning(booking);
+  if (travel <= 0) return null;
+  const service = Math.max(0, Number(booking.snapshot_expert_payout ?? 0));
+  return (
+    <div className={`rounded-[20px] border-2 border-[color:var(--success-border)] bg-[color:var(--success-soft)] p-5 ${className}`}>
+      <p className="text-[12px] font-bold uppercase tracking-wider text-[color:var(--success-strong)]">{t("travel.earnTitle")}</p>
+      <div className="mt-2 space-y-1 text-[17px] font-bold text-foreground">
+        <div className="flex justify-between"><span>{t("travel.service")}</span><span>{formatINR(service)}</span></div>
+        <div className="flex justify-between text-[color:var(--success-strong)]"><span>{t("travel.travel")}</span><span>+{formatINR(travel)}</span></div>
+        <div className="mt-1 flex justify-between border-t border-[color:var(--success-border)] pt-2 text-[20px] font-black"><span>{t("travel.total")}</span><span>{formatINR(service + travel)}</span></div>
+      </div>
+    </div>
   );
 }
 
@@ -632,6 +655,7 @@ function StepGo({
         <div className="mt-4">
           <JobSummary booking={booking} address={address} addressLoading={addressLoading} />
         </div>
+        <EarningBreakdown booking={booking} className="mt-4" />
 
         <div className="mt-auto pt-6">
           {err && (
@@ -968,6 +992,7 @@ function StepInProgress({
           {serviceTitle(booking.service_label, booking.service_duration_minutes)}
         </p>
       </div>
+      <EarningBreakdown booking={booking} className="mt-4" />
 
 
       <div className="mt-auto pt-6">
