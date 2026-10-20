@@ -2978,6 +2978,7 @@ export type Database = {
           description: string | null
           discount_type: string
           discount_value: number
+          free_price_option_id: string | null
           id: string
           is_active: boolean
           max_discount: number | null
@@ -3001,6 +3002,7 @@ export type Database = {
           description?: string | null
           discount_type?: string
           discount_value?: number
+          free_price_option_id?: string | null
           id?: string
           is_active?: boolean
           max_discount?: number | null
@@ -3024,6 +3026,7 @@ export type Database = {
           description?: string | null
           discount_type?: string
           discount_value?: number
+          free_price_option_id?: string | null
           id?: string
           is_active?: boolean
           max_discount?: number | null
@@ -3043,6 +3046,13 @@ export type Database = {
             columns: ["city_id"]
             isOneToOne: false
             referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupons_free_price_option_id_fkey"
+            columns: ["free_price_option_id"]
+            isOneToOne: false
+            referencedRelation: "service_price_options"
             referencedColumns: ["id"]
           },
         ]
@@ -12245,6 +12255,8 @@ export type Database = {
           off_by: string | null
           off_reason: string | null
           off_until: string | null
+          outer_pocket_fee: number
+          outer_pockets: Json
           segment_id: string
           status: string
           travel_fee: number
@@ -12270,6 +12282,8 @@ export type Database = {
           off_by?: string | null
           off_reason?: string | null
           off_until?: string | null
+          outer_pocket_fee?: number
+          outer_pockets?: Json
           segment_id: string
           status?: string
           travel_fee?: number
@@ -12295,6 +12309,8 @@ export type Database = {
           off_by?: string | null
           off_reason?: string | null
           off_until?: string | null
+          outer_pocket_fee?: number
+          outer_pockets?: Json
           segment_id?: string
           status?: string
           travel_fee?: number
@@ -12666,6 +12682,10 @@ export type Database = {
       app_catalog_url: { Args: { _p: string }; Returns: string }
       app_categories: {
         Args: { _city_id?: string; _kind: string }
+        Returns: Json
+      }
+      app_change_booking_address: {
+        Args: { _address_id: string; _booking_id: string }
         Returns: Json
       }
       app_checkout_coupons: {
@@ -13864,6 +13884,7 @@ export type Database = {
         Args: { _city: string; _svc: string }
         Returns: number
       }
+      ensure_end_otp: { Args: { _booking_id: string }; Returns: string }
       ensure_start_otp: { Args: { _booking_id: string }; Returns: string }
       evaluate_reward_triggers: {
         Args: {
@@ -15975,6 +15996,10 @@ export type Database = {
         Args: { _category_ids: string[]; _id: string }
         Returns: undefined
       }
+      staff_set_coupon_free_service: {
+        Args: { _id: string; _price_option_id: string }
+        Returns: undefined
+      }
       staff_set_delivery_status: {
         Args: { _merchant_id: string; _reason: string; _status: string }
         Returns: undefined
@@ -16173,6 +16198,10 @@ export type Database = {
           _reason?: string
           _until?: string
         }
+        Returns: Json
+      }
+      staff_set_zone_outer_pockets: {
+        Args: { _cell: string; _fee: number; _pockets: Json }
         Returns: Json
       }
       staff_set_zone_pricing: {
@@ -16986,6 +17015,10 @@ export type Database = {
         Returns: Json
       }
       zone_delete_impact: { Args: { _zone_id: string }; Returns: Json }
+      zone_in_pocket: {
+        Args: { _lat: number; _lng: number; _pockets: Json }
+        Returns: boolean
+      }
       zone_is_off_at: { Args: { _lat: number; _lng: number }; Returns: boolean }
       zone_lookup: { Args: { _lat: number; _lng: number }; Returns: Json }
       zv2_assert_no_overlap: { Args: { _city: string }; Returns: undefined }
@@ -17027,6 +17060,7 @@ export type Database = {
         Returns: string
       }
       zv2_normalize: { Args: { _city: string }; Returns: number }
+      zv2_outer_pockets: { Args: { _city: string }; Returns: Json }
       zv2_outside_zone_bookings: { Args: { _city: string }; Returns: Json }
       zv2_remap_zone: {
         Args: { _new: string; _old: string }
