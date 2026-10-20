@@ -28,7 +28,7 @@ import java.util.Map;
  * Behaviour:
  *   - Data-only message with alert_type = "assigned" | "broadcast" AND the app
  *     NOT in the foreground  -> build a CATEGORY_CALL, ongoing, full-screen
- *     intent notification on the existing "new_booking_alerts" channel and
+ *     intent notification on the "new_booking_alerts_v2" channel and
  *     launch {@link BookingRingActivity} (rings + wakes/unlocks the screen).
  *   - Anything else (app open, or any non-alert push) -> delegate to super,
  *     which forwards to the webview. The existing in-app looping alert on the
@@ -38,7 +38,9 @@ public class BadiyoMessagingService extends MessagingService {
 
     private static final String TAG = "BadiyoFCM";
 
-    static final String CHANNEL_ID = "new_booking_alerts";
+    static final String CHANNEL_ID = "new_booking_alerts_v2";
+    /** Old channel created with the default chime; deleted so it cannot win. */
+    static final String LEGACY_CHANNEL_ID = "new_booking_alerts";
     static final int RING_NOTIFICATION_ID = 5120;
 
     @Override
@@ -50,8 +52,11 @@ public class BadiyoMessagingService extends MessagingService {
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
-        Map<String, String> data = remoteMessage.getData();
-        String alertType = data.get("alert_type");
+        Map<String, String> data = new java.util.HashMap<>(remoteMessage.getData());
+        // A push can arrive before MainActivity ever ran (killed / rebooted).
+        ensureChannel(getApplicationContext());
+        String alertType = resolveAlertType(data);
+        if (alertType != null) data.put("alert_type", alertType);
 
         // "Already taken" / offer withdrawn: stop any ring for that job.
         if (isStopAlert(alertType)) {
@@ -85,6 +90,44 @@ public class BadiyoMessagingService extends MessagingService {
             Log.e(TAG, "showRingingNotification failed — falling back", t);
             super.onMessageReceived(remoteMessage);
         }
+    }
+
+    /** alert_type, falling back to the payload "type" for job pushes. */
+    static String resolveAlertType(Map<String, String> data) {
+        String a = data.get("alert_type");
+        if (a != null && !a.isEmpty()) return a;
+        String t = data.get("type");
+        if (t == null) return null;
+        switch (t) {
+            case "new_booking_broadcast": return "broadcast";
+            case "booking_assigned": return "assigned";
+            default: return null;
+        }
+    }
+
+    /** Creates the loud alarm-sound job channel (idempotent). */
+    static void ensureChannel(Context ctx) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+        NotificationManager nm = ctx.getSystemService(NotificationManager.class);
+        if (nm == null) return;
+        try { if (nm.getNotificationChannel(LEGACY_CHANNEL_ID) != null) nm.deleteNotificationChannel(LEGACY_CHANNEL_ID); } catch (Throwable ignored) {}
+        if (nm.getNotificationChannel(CHANNEL_ID) != null) return;
+        android.app.NotificationChannel ch = new android.app.NotificationChannel(
+            CHANNEL_ID, "New Job Alerts", NotificationManager.IMPORTANCE_HIGH);
+        ch.setDescription("Loud ringing alerts for new jobs.");
+        ch.enableVibration(true);
+        ch.setVibrationPattern(new long[] { 0, 700, 400, 700 });
+        ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        int resId = ctx.getResources().getIdentifier("booking_alert", "raw", ctx.getPackageName());
+        android.net.Uri sound = resId != 0
+            ? android.net.Uri.parse("android.resource://" + ctx.getPackageName() + "/" + resId)
+            : android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM);
+        ch.setSound(sound, new android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build());
+        ch.enableLights(true);
+        nm.createNotificationChannel(ch);
     }
 
     /** Alert types that get the full-screen wake-the-lockscreen treatment. */

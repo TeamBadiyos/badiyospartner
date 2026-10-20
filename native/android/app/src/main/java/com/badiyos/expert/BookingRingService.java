@@ -248,6 +248,7 @@ public class BookingRingService extends Service {
     }
 
     private Notification fallbackNotification() {
+        BadiyoMessagingService.ensureChannel(this);
         return new NotificationCompat.Builder(this, BadiyoMessagingService.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle("New job")
