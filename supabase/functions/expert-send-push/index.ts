@@ -231,19 +231,24 @@ async function sendCourierOffer(offerId: string, expertId: string): Promise<Resp
   const fcmUrl = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
 
   let sent = 0;
+  let nativeCount = 0;
   const failed: string[] = [];
-  for (const token of tokens) {
+  for (const dev of tokens) {
+    const token = dev.token;
+    // Ring natively only when the flag is on AND this device runs build >= 6.
+    const native = nativeAlert && supportsNativeRing(dev);
+    if (native) nativeCount += 1;
     const android: Record<string, unknown> = {
       priority: "HIGH",
       ttl: `${secondsLeft}s`,
     };
     const message: Record<string, unknown> = { token, data: dataPayload, android };
 
-    if (nativeAlert) {
-      // Native courier alert build: data-only, the app rings by itself.
+    if (native) {
+      // Native-ring build: data-only, the app rings by itself.
       android.direct_boot_ok = true;
     } else {
-      // Published APK: let the OS post a plain heads-up on our own channel.
+      // Old app (or flag off): let the OS post a plain heads-up on our own channel.
       message.notification = { title: titleText, body: bodyText };
       android.notification = {
         channel_id: "courier_offers",
@@ -279,9 +284,9 @@ async function sendCourierOffer(offerId: string, expertId: string): Promise<Resp
   }
   await pruneTokens(admin, failed);
   console.log(
-    `expert-send-push courier_offer sent=${sent}/${tokens.length} offer=${offerId} native=${nativeAlert}`,
+    `expert-send-push courier_offer sent=${sent}/${tokens.length} offer=${offerId} flag=${nativeAlert} native_devices=${nativeCount}`,
   );
-  return json({ ok: true, sent, mode: nativeAlert ? "data" : "notification" });
+  return json({ ok: true, sent, native_devices: nativeCount, legacy_devices: tokens.length - nativeCount });
 }
 
 Deno.serve(async (req) => {
