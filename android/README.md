@@ -31,7 +31,7 @@ in `MainActivity.createNewBookingNotificationChannel`):
 ```xml
 <meta-data
   android:name="com.google.firebase.messaging.default_notification_channel_id"
-  android:value="new_booking_alerts" />
+  android:value="new_booking_alerts_v2" />
 ```
 
 Also add inside `<application>` — declares the Phase 2 background availability
@@ -134,7 +134,7 @@ notification land on the loud channel:
 ```xml
 <meta-data
     android:name="com.google.firebase.messaging.default_notification_channel_id"
-    android:value="new_booking_alerts" />
+    android:value="new_booking_alerts_v2" />
 ```
 
 ## 3. Alert sound (optional but recommended)

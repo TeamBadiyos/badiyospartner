@@ -19,7 +19,7 @@ import com.getcapacitor.BridgeWebChromeClient;
  * Custom MainActivity:
  *   1. Overrides WebChromeClient to auto-grant HTML5 Geolocation for the app's
  *      own origin (Capacitor still enforces OS-level permission via JS layer).
- *   2. Registers the "new_booking_alerts" NotificationChannel on Android O+
+ *   2. Registers the "new_booking_alerts_v2" NotificationChannel on Android O+
  *      so FCM pushes for new bookings ring loudly with heads-up + vibration.
  *
  * The Android project is NOT committed to the repo — it's generated locally via
@@ -28,7 +28,7 @@ import com.getcapacitor.BridgeWebChromeClient;
  */
 public class MainActivity extends BridgeActivity {
 
-    private static final String NEW_BOOKING_CHANNEL_ID = "new_booking_alerts";
+    private static final String NEW_BOOKING_CHANNEL_ID = BadiyoMessagingService.CHANNEL_ID;
     private static final String COURIER_OFFER_CHANNEL_ID = "courier_offer_alerts";
 
     /** Extra used by the full-screen booking alert to deep-link after Accept. */
@@ -108,38 +108,8 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void createNewBookingNotificationChannel() {
-        // NotificationChannel API is only available on Android O (API 26) and above.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
-
-        NotificationManager manager = getSystemService(NotificationManager.class);
-        if (manager == null) return;
-
-        // Idempotent — calling createNotificationChannel with an existing ID is a no-op
-        // for the user-modifiable settings (importance, sound), but we still guard to
-        // avoid unnecessary work on every launch.
-        if (manager.getNotificationChannel(NEW_BOOKING_CHANNEL_ID) != null) return;
-
-        NotificationChannel channel = new NotificationChannel(
-            NEW_BOOKING_CHANNEL_ID,
-            "New Booking Alerts",
-            NotificationManager.IMPORTANCE_HIGH
-        );
-        channel.setDescription("Loud alerts when a new booking is available nearby.");
-
-        channel.enableVibration(true);
-        channel.setVibrationPattern(new long[] { 0, 400, 200, 400 });
-
-        Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        AudioAttributes audioAttributes = new AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build();
-        channel.setSound(soundUri, audioAttributes);
-
-        // Leave setBypassDnd off — requires user-granted DND access policy.
-        channel.enableLights(true);
-
-        manager.createNotificationChannel(channel);
+        // v2 channel with the loud alarm sound; also deletes the old chime channel.
+        BadiyoMessagingService.ensureChannel(this);
     }
 
     private void createCourierOfferNotificationChannel() {

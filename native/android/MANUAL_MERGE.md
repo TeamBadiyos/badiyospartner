@@ -126,7 +126,7 @@ that isn't a ring alert.
 
 <meta-data
     android:name="com.google.firebase.messaging.default_notification_channel_id"
-    android:value="new_booking_alerts" />
+    android:value="new_booking_alerts_v2" />
 ```
 
 ### 2d. Inside `<application>` — full-screen alarm activity + action receiver
@@ -156,7 +156,7 @@ Both channels are created in code (`MainActivity.ensureChannels()` and
 
 | Channel id             | Importance | Purpose                                             |
 | ---------------------- | ---------- | --------------------------------------------------- |
-| `new_booking_alerts`   | HIGH       | Ringing full-screen job alerts (sound + vibration)   |
+| `new_booking_alerts_v2` | HIGH       | Ringing full-screen job alerts (sound + vibration)   |
 | `courier_offer_alerts` | HIGH       | Ringing full-screen parcel (courier) offer alerts    |
 | `expert_online_status` | LOW        | Silent ongoing "You're online" foreground-service ux |
 
