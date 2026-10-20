@@ -80,11 +80,21 @@ function adminClient() {
   });
 }
 
+/** First Android build (versionCode) whose native service rings on data-only pushes. */
+const MIN_NATIVE_RING_VERSION_CODE = 6;
+
+type DeviceToken = { token: string; versionCode: number | null };
+
+/** True only for devices that reported a build new enough to ring by themselves. */
+function supportsNativeRing(t: DeviceToken): boolean {
+  return t.versionCode != null && t.versionCode >= MIN_NATIVE_RING_VERSION_CODE;
+}
+
 /** FCM tokens for an expert, de-duped across device_tokens + legacy expert_push_tokens. */
 async function tokensForExpert(
   admin: ReturnType<typeof adminClient>,
   expertId: string,
-): Promise<string[]> {
+): Promise<DeviceToken[]> {
   const expertRow = await admin
     .from("experts")
     .select("auth_user_id")
@@ -98,16 +108,23 @@ async function tokensForExpert(
   const ids = Array.from(new Set([expertId, authUserId].filter(Boolean) as string[]));
 
   const [dtRes, eptRes] = await Promise.all([
-    admin.from("device_tokens").select("fcm_token").eq("user_type", "expert").in("user_id", ids),
+    admin
+      .from("device_tokens")
+      .select("fcm_token, version_code")
+      .eq("user_type", "expert")
+      .in("user_id", ids),
     admin.from("expert_push_tokens").select("fcm_token").eq("expert_id", expertId),
   ]);
   if (dtRes.error) console.error("expert-send-push device_tokens error", dtRes.error);
   if (eptRes.error) console.error("expert-send-push expert_push_tokens error", eptRes.error);
 
-  const set = new Set<string>();
-  for (const r of dtRes.data ?? []) if (r.fcm_token) set.add(r.fcm_token);
-  for (const r of eptRes.data ?? []) if (r.fcm_token) set.add(r.fcm_token);
-  return Array.from(set);
+  // Legacy tokens carry no build number → treated as old app.
+  const map = new Map<string, number | null>();
+  for (const r of eptRes.data ?? []) if (r.fcm_token) map.set(r.fcm_token, null);
+  for (const r of (dtRes.data ?? []) as { fcm_token: string; version_code: number | null }[]) {
+    if (r.fcm_token) map.set(r.fcm_token, r.version_code ?? null);
+  }
+  return Array.from(map, ([token, versionCode]) => ({ token, versionCode }));
 }
 
 async function pruneTokens(admin: ReturnType<typeof adminClient>, failed: string[]) {
