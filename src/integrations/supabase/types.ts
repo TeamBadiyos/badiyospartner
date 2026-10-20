@@ -395,6 +395,9 @@ export type Database = {
       app_config: {
         Row: {
           current_version: string
+          expert_latest_version: string | null
+          expert_min_version_code: number
+          expert_play_store_url: string
           id: number
           latest_version_code: number
           min_supported_version: string
@@ -404,6 +407,9 @@ export type Database = {
         }
         Insert: {
           current_version?: string
+          expert_latest_version?: string | null
+          expert_min_version_code?: number
+          expert_play_store_url?: string
           id?: number
           latest_version_code?: number
           min_supported_version?: string
@@ -413,6 +419,9 @@ export type Database = {
         }
         Update: {
           current_version?: string
+          expert_latest_version?: string | null
+          expert_min_version_code?: number
+          expert_play_store_url?: string
           id?: number
           latest_version_code?: number
           min_supported_version?: string
