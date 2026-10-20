@@ -396,11 +396,12 @@ export function startNotificationLoop(): { stop: () => void } {
     if (ctx.state === "suspended") void ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.18);
+    // Square wave at full gain — much louder/harsher than a sine beep.
+    osc.type = "square";
+    osc.frequency.setValueAtTime(900, ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(1500, ctx.currentTime + 0.3);
     gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.4, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(1.0, ctx.currentTime + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.55);
     osc.connect(gain).connect(ctx.destination);
     osc.start();
