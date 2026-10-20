@@ -219,6 +219,7 @@ public class BadiyoMessagingService extends MessagingService {
             .setOngoing(true)
             .setAutoCancel(false)
             .setOnlyAlertOnce(false)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setTimeoutAfter(timeoutSeconds * 1000L)
             .setFullScreenIntent(fullScreen, true)
@@ -264,16 +265,35 @@ public class BadiyoMessagingService extends MessagingService {
 
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm == null) return;
-        Notification n = builder.build();
-        n.flags |= Notification.FLAG_INSISTENT; // keep ringing until acted on
-        nm.notify(RING_NOTIFICATION_ID, n);
 
-        // On locked / dozing devices the full-screen intent fires immediately.
-        // When the device is merely idle-but-unlocked some OEMs only show the
-        // heads-up, so start the activity ourselves too (safe: singleTask).
+        // Android 14+: full-screen intent only when the expert allowed it.
+        // Otherwise this stays a PRIORITY_MAX heads-up with the looping alarm.
+        boolean fullScreenAllowed = RingGuard.canUseFullScreenIntent(this);
+        if (!fullScreenAllowed) {
+            builder.setFullScreenIntent(null, false);
+            Log.d(TAG, "full-screen intent not allowed — heads-up fallback");
+        }
+
+        // The looping sound comes from the foreground service, so the
+        // notification itself only alerts once (no double sound).
+        builder.setOnlyAlertOnce(true).setSilent(true);
+        Notification n = builder.build();
+
+        boolean serviceStarted = BookingRingService.start(
+            getApplicationContext(), n, bookingId, soundUrl, timeoutSeconds * 1000L);
+        if (!serviceStarted) {
+            // FGS start refused (rare OEM restriction): fall back to an
+            // insistent notification that loops the channel sound.
+            Notification loud = builder.setSilent(false).setOnlyAlertOnce(false).build();
+            loud.flags |= Notification.FLAG_INSISTENT;
+            nm.notify(RING_NOTIFICATION_ID, loud);
+        }
+
+        // On locked devices start the ring screen directly too (singleTask),
+        // but only when full-screen alerts are allowed.
         KeyguardManager km = getSystemService(KeyguardManager.class);
         boolean locked = km != null && km.isKeyguardLocked();
-        if (locked || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        if (fullScreenAllowed && (locked || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)) {
             try {
                 startActivity(ring);
             } catch (Throwable t) {
