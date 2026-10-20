@@ -2,7 +2,6 @@ package com.badiyos.expert;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
-
 import android.app.NotificationManager;
 import android.media.AudioAttributes;
 import android.media.RingtoneManager;
@@ -32,7 +31,6 @@ public class MainActivity extends BridgeActivity {
     private static final String NEW_BOOKING_CHANNEL_ID = "new_booking_alerts";
     private static final String COURIER_OFFER_CHANNEL_ID = "courier_offer_alerts";
 
-
     /** Extra used by the full-screen booking alert to deep-link after Accept. */
     public static final String EXTRA_ROUTE = "badiyo_route";
 
@@ -51,6 +49,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Register custom plugins BEFORE super.onCreate so Capacitor picks them up.
         registerPlugin(BackgroundLocationPlugin.class);
+        registerPlugin(AlertSetupPlugin.class);
         super.onCreate(savedInstanceState);
 
 
@@ -65,9 +64,10 @@ public class MainActivity extends BridgeActivity {
             }
         });
 
+        // If the app crashed / was killed mid-ring, put the expert's alarm volume back.
+        if (!BookingRingService.isRunning()) RingGuard.restoreIfPending(this);
         createNewBookingNotificationChannel();
         createCourierOfferNotificationChannel();
-
         handleRouteExtra(getIntent());
     }
 
@@ -175,4 +175,3 @@ public class MainActivity extends BridgeActivity {
         manager.createNotificationChannel(channel);
     }
 }
-
