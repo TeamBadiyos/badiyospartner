@@ -33,6 +33,9 @@ public class MainActivity extends BridgeActivity {
 
     /** Extra used by the full-screen booking alert to deep-link after Accept. */
     public static final String EXTRA_ROUTE = "badiyo_route";
+    /** Set by notification taps: stop the ring + remove the notification on open. */
+    public static final String EXTRA_STOP_RING = "badiyo_stop_ring";
+    public static final String EXTRA_RING_BOOKING_ID = "badiyo_ring_booking_id";
 
     /**
      * Tracks whether the webview UI is currently visible. BadiyoMessagingService
@@ -96,6 +99,12 @@ public class MainActivity extends BridgeActivity {
      */
     private void handleRouteExtra(Intent intent) {
         if (intent == null) return;
+        if (intent.getBooleanExtra(EXTRA_STOP_RING, false)) {
+            intent.removeExtra(EXTRA_STOP_RING);
+            String bid = intent.getStringExtra(EXTRA_RING_BOOKING_ID);
+            BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+            BookingRingActivity.dismissIfShowing(getApplicationContext(), bid);
+        }
         final String route = intent.getStringExtra(EXTRA_ROUTE);
         if (TextUtils.isEmpty(route)) return;
         intent.removeExtra(EXTRA_ROUTE);

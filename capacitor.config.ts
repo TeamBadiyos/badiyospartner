@@ -33,6 +33,13 @@ const config: CapacitorConfig = {
   },
   backgroundColor: "#0074E4",
   plugins: {
+    // Keep the native splash as short as possible (only splash in the app).
+    SplashScreen: {
+      launchShowDuration: 0,
+      launchAutoHide: true,
+      launchFadeOutDuration: 0,
+      backgroundColor: "#0074E4",
+    },
     StatusBar: {
       // Do not draw content underneath the OS status bar. The webview is
       // resized so the top of the app starts below the clock/wifi/battery row.

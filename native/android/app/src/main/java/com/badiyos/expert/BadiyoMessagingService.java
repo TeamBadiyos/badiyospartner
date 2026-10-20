@@ -335,7 +335,9 @@ public class BadiyoMessagingService extends MessagingService {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setTimeoutAfter(timeoutSeconds * 1000L)
             .setFullScreenIntent(fullScreen, true)
-            .setContentIntent(fullScreen);
+            // Notification-bar tap goes straight into the app on the offer
+            // (MainActivity stops the ring + removes the notification).
+            .setContentIntent(openAppPendingIntent(this, offerRoute(alertType, bookingId), bookingId));
 
         if (info) {
             PendingIntent okPi = PendingIntent.getBroadcast(
@@ -360,12 +362,8 @@ public class BadiyoMessagingService extends MessagingService {
             );
             builder.addAction(0, "Accept", acceptPi).addAction(0, "Decline", declinePi);
         } else if (courier) {
-            PendingIntent openPi = PendingIntent.getBroadcast(
-                this,
-                ("courier-open:" + bookingId).hashCode(),
-                BookingAlertActions.openCourierIntent(this, bookingId),
-                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-            );
+            // Activity PendingIntent (no broadcast trampoline — blocked on Android 12+).
+            PendingIntent openPi = openAppPendingIntent(this, "/home", bookingId);
             PendingIntent dismissPi = PendingIntent.getBroadcast(
                 this,
                 ("courier-dismiss:" + bookingId).hashCode(),
@@ -426,6 +424,30 @@ public class BadiyoMessagingService extends MessagingService {
                 Log.w(TAG, "direct startActivity blocked; relying on full-screen intent", t);
             }
         }
+    }
+
+    /** Where a tap should land: offers on Home's offer card, everything else on the booking. */
+    static String offerRoute(String alertType, String bookingId) {
+        if ("courier_offer".equals(alertType)
+            || "broadcast".equals(alertType)
+            || "new_booking_broadcast".equals(alertType)
+            || "new_order".equals(alertType)
+            || bookingId == null || bookingId.isEmpty()) {
+            return "/home";
+        }
+        return "/booking/" + bookingId;
+    }
+
+    static PendingIntent openAppPendingIntent(Context ctx, String route, String bookingId) {
+        Intent open = new Intent(ctx, MainActivity.class);
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+            | Intent.FLAG_ACTIVITY_SINGLE_TOP
+            | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        open.putExtra(MainActivity.EXTRA_ROUTE, route);
+        open.putExtra(MainActivity.EXTRA_STOP_RING, true);
+        open.putExtra(MainActivity.EXTRA_RING_BOOKING_ID, bookingId == null ? "" : bookingId);
+        return PendingIntent.getActivity(ctx, ("open:" + route + bookingId).hashCode(), open,
+            piFlags(PendingIntent.FLAG_UPDATE_CURRENT));
     }
 
     static int piFlags(int base) {
