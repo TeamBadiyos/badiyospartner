@@ -183,6 +183,31 @@ public class BookingRingActivity extends Activity {
                 }
                 finishRing();
             });
+        } else if ("courier_offer".equals(alertType)) {
+            // Ring-screen Accept doesn't support parcel jobs yet: open the
+            // offer screen in the app where the rider accepts.
+            subtitleView.setVisibility(body.isEmpty() ? View.GONE : View.VISIBLE);
+            subtitleView.setText(body);
+            addressView.setText(address);
+            addressView.setVisibility(address.isEmpty() ? View.GONE : View.VISIBLE);
+
+            accept.setVisibility(View.VISIBLE);
+            reject.setVisibility(View.VISIBLE);
+            ok.setVisibility(View.GONE);
+            accept.setText("Open offer");
+            reject.setText("Dismiss");
+            accept.setOnClickListener(v -> {
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                BookingAlertActions.openApp(getApplicationContext(),
+                    bookingId.isEmpty() ? "/courier" : "/courier/" + bookingId);
+                finishRing();
+            });
+            reject.setOnClickListener(v -> {
+                stopRinging();
+                BadiyoMessagingService.cancelRingNotification(getApplicationContext());
+                finishRing();
+            });
         } else {
             subtitleView.setVisibility(View.VISIBLE);
             addressView.setVisibility(View.VISIBLE);
@@ -235,6 +260,7 @@ public class BookingRingActivity extends Activity {
         if (alertType == null) return "New booking";
         switch (alertType) {
             case "extension_request": return "Extension requested";
+            case "courier_offer":     return "New delivery offer";
             case "order_cancelled":   return "Booking cancelled";
             case "order_completed":   return "Booking completed";
             case "reminder_10min":    return "Starting in 10 minutes";
