@@ -80,11 +80,21 @@ function adminClient() {
   });
 }
 
+/** First Android build (versionCode) whose native service rings on data-only pushes. */
+const MIN_NATIVE_RING_VERSION_CODE = 6;
+
+type DeviceToken = { token: string; versionCode: number | null };
+
+/** True only for devices that reported a build new enough to ring by themselves. */
+function supportsNativeRing(t: DeviceToken): boolean {
+  return t.versionCode != null && t.versionCode >= MIN_NATIVE_RING_VERSION_CODE;
+}
+
 /** FCM tokens for an expert, de-duped across device_tokens + legacy expert_push_tokens. */
 async function tokensForExpert(
   admin: ReturnType<typeof adminClient>,
   expertId: string,
-): Promise<string[]> {
+): Promise<DeviceToken[]> {
   const expertRow = await admin
     .from("experts")
     .select("auth_user_id")
@@ -98,16 +108,23 @@ async function tokensForExpert(
   const ids = Array.from(new Set([expertId, authUserId].filter(Boolean) as string[]));
 
   const [dtRes, eptRes] = await Promise.all([
-    admin.from("device_tokens").select("fcm_token").eq("user_type", "expert").in("user_id", ids),
+    admin
+      .from("device_tokens")
+      .select("fcm_token, version_code")
+      .eq("user_type", "expert")
+      .in("user_id", ids),
     admin.from("expert_push_tokens").select("fcm_token").eq("expert_id", expertId),
   ]);
   if (dtRes.error) console.error("expert-send-push device_tokens error", dtRes.error);
   if (eptRes.error) console.error("expert-send-push expert_push_tokens error", eptRes.error);
 
-  const set = new Set<string>();
-  for (const r of dtRes.data ?? []) if (r.fcm_token) set.add(r.fcm_token);
-  for (const r of eptRes.data ?? []) if (r.fcm_token) set.add(r.fcm_token);
-  return Array.from(set);
+  // Legacy tokens carry no build number → treated as old app.
+  const map = new Map<string, number | null>();
+  for (const r of eptRes.data ?? []) if (r.fcm_token) map.set(r.fcm_token, null);
+  for (const r of (dtRes.data ?? []) as { fcm_token: string; version_code: number | null }[]) {
+    if (r.fcm_token) map.set(r.fcm_token, r.version_code ?? null);
+  }
+  return Array.from(map, ([token, versionCode]) => ({ token, versionCode }));
 }
 
 async function pruneTokens(admin: ReturnType<typeof adminClient>, failed: string[]) {
@@ -214,19 +231,24 @@ async function sendCourierOffer(offerId: string, expertId: string): Promise<Resp
   const fcmUrl = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
 
   let sent = 0;
+  let nativeCount = 0;
   const failed: string[] = [];
-  for (const token of tokens) {
+  for (const dev of tokens) {
+    const token = dev.token;
+    // Ring natively only when the flag is on AND this device runs build >= 6.
+    const native = nativeAlert && supportsNativeRing(dev);
+    if (native) nativeCount += 1;
     const android: Record<string, unknown> = {
       priority: "HIGH",
       ttl: `${secondsLeft}s`,
     };
     const message: Record<string, unknown> = { token, data: dataPayload, android };
 
-    if (nativeAlert) {
-      // Native courier alert build: data-only, the app rings by itself.
+    if (native) {
+      // Native-ring build: data-only, the app rings by itself.
       android.direct_boot_ok = true;
     } else {
-      // Published APK: let the OS post a plain heads-up on our own channel.
+      // Old app (or flag off): let the OS post a plain heads-up on our own channel.
       message.notification = { title: titleText, body: bodyText };
       android.notification = {
         channel_id: "courier_offers",
@@ -262,9 +284,9 @@ async function sendCourierOffer(offerId: string, expertId: string): Promise<Resp
   }
   await pruneTokens(admin, failed);
   console.log(
-    `expert-send-push courier_offer sent=${sent}/${tokens.length} offer=${offerId} native=${nativeAlert}`,
+    `expert-send-push courier_offer sent=${sent}/${tokens.length} offer=${offerId} flag=${nativeAlert} native_devices=${nativeCount}`,
   );
-  return json({ ok: true, sent, mode: nativeAlert ? "data" : "notification" });
+  return json({ ok: true, sent, native_devices: nativeCount, legacy_devices: tokens.length - nativeCount });
 }
 
 Deno.serve(async (req) => {
@@ -306,39 +328,10 @@ Deno.serve(async (req) => {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // Read FCM tokens from BOTH the shared `device_tokens` table (written by
-    // the current client via the shared `register_device_token` RPC — this is
-    // where every fresh registration now lands) AND the legacy
-    // `expert_push_tokens` table (populated by the older
-    // `expert-register-push-token` edge fn — kept for back-compat with any
-    // tokens that never re-registered). De-dupe by token.
-    const expertRow = await admin
-      .from("experts")
-      .select("auth_user_id")
-      .eq("id", body.expert_id)
-      .maybeSingle();
-    const authUserId = expertRow.data?.auth_user_id ?? null;
-
-    const [dtRes, eptRes] = await Promise.all([
-      authUserId
-        ? admin
-            .from("device_tokens")
-            .select("fcm_token")
-            .eq("user_type", "expert")
-            .eq("user_id", authUserId)
-        : Promise.resolve({ data: [] as { fcm_token: string }[], error: null }),
-      admin.from("expert_push_tokens").select("fcm_token").eq("expert_id", body.expert_id),
-    ]);
-    if (dtRes.error) console.error("expert-send-push device_tokens error", dtRes.error);
-    if (eptRes.error) console.error("expert-send-push expert_push_tokens error", eptRes.error);
-
-    const tokenSet = new Set<string>();
-    for (const r of dtRes.data ?? []) if (r.fcm_token) tokenSet.add(r.fcm_token);
-    for (const r of eptRes.data ?? []) if (r.fcm_token) tokenSet.add(r.fcm_token);
-    const tokens = Array.from(tokenSet).map((t) => ({ fcm_token: t }));
-
+    // device_tokens (with build number) + legacy expert_push_tokens, de-duped.
+    const tokens = await tokensForExpert(admin, body.expert_id);
     console.log(
-      `expert-send-push tokens: expert_id=${body.expert_id} auth_user_id=${authUserId} device_tokens=${dtRes.data?.length ?? 0} expert_push_tokens=${eptRes.data?.length ?? 0} unique=${tokens.length}`,
+      `expert-send-push tokens: expert_id=${body.expert_id} unique=${tokens.length} native=${tokens.filter(supportsNativeRing).length}`,
     );
     if (tokens.length === 0) {
       return json({ ok: true, sent: 0, reason: "no tokens" });
@@ -429,6 +422,9 @@ Deno.serve(async (req) => {
     let sent = 0;
     const failedTokens: string[] = [];
     for (const t of tokens) {
+      // Old app (build < 6 or unknown): add a visible notification so the OS
+      // still shows the job; build >= 6 gets data-only and rings natively.
+      const legacy = !supportsNativeRing(t);
       const res = await fetch(fcmUrl, {
         method: "POST",
         headers: {
@@ -437,13 +433,25 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           message: {
-            token: t.fcm_token,
+            token: t.token,
             data: dataPayload,
-            android: {
-              priority: "HIGH",
-              ttl: `${timeoutSeconds}s`,
-              direct_boot_ok: true,
-            },
+            ...(legacy ? { notification: { title: titleText, body: bodyText } } : {}),
+            android: legacy
+              ? {
+                  priority: "HIGH",
+                  ttl: `${timeoutSeconds}s`,
+                  notification: {
+                    channel_id: "new_booking_alerts",
+                    sound: "default",
+                    notification_priority: "PRIORITY_MAX",
+                    visibility: "PUBLIC",
+                  },
+                }
+              : {
+                  priority: "HIGH",
+                  ttl: `${timeoutSeconds}s`,
+                  direct_boot_ok: true,
+                },
             apns: {
               headers: { "apns-priority": "10", "apns-push-type": "alert" },
               payload: {
@@ -455,7 +463,6 @@ Deno.serve(async (req) => {
               },
             },
           },
-
         }),
       });
       if (res.ok) {
@@ -463,7 +470,7 @@ Deno.serve(async (req) => {
       } else {
         const errBody = await res.text();
         console.error("FCM send failed", res.status, errBody);
-        if (res.status === 404 || res.status === 400) failedTokens.push(t.fcm_token);
+        if (res.status === 404 || res.status === 400) failedTokens.push(t.token);
       }
     }
     if (failedTokens.length > 0) {

@@ -4480,6 +4480,7 @@ export type Database = {
       }
       device_tokens: {
         Row: {
+          app_version: string | null
           created_at: string
           fcm_token: string
           id: string
@@ -4488,8 +4489,10 @@ export type Database = {
           updated_at: string
           user_id: string
           user_type: string
+          version_code: number | null
         }
         Insert: {
+          app_version?: string | null
           created_at?: string
           fcm_token: string
           id?: string
@@ -4498,8 +4501,10 @@ export type Database = {
           updated_at?: string
           user_id: string
           user_type: string
+          version_code?: number | null
         }
         Update: {
+          app_version?: string | null
           created_at?: string
           fcm_token?: string
           id?: string
@@ -4508,6 +4513,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_type?: string
+          version_code?: number | null
         }
         Relationships: []
       }
@@ -5131,6 +5137,9 @@ export type Database = {
       experts: {
         Row: {
           address: string | null
+          app_version: string | null
+          app_version_code: number | null
+          app_version_updated_at: string | null
           approved_by: string | null
           auth_user_id: string | null
           bank_account_holder_name: string | null
@@ -5178,6 +5187,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          app_version?: string | null
+          app_version_code?: number | null
+          app_version_updated_at?: string | null
           approved_by?: string | null
           auth_user_id?: string | null
           bank_account_holder_name?: string | null
@@ -5225,6 +5237,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          app_version?: string | null
+          app_version_code?: number | null
+          app_version_updated_at?: string | null
           approved_by?: string | null
           auth_user_id?: string | null
           bank_account_holder_name?: string | null
@@ -14664,7 +14679,12 @@ export type Database = {
       }
       referral_phone10: { Args: { _phone: string }; Returns: string }
       register_device_token: {
-        Args: { p_fcm_token: string; p_platform: string }
+        Args: {
+          p_app_version?: string
+          p_fcm_token: string
+          p_platform: string
+          p_version_code?: number
+        }
         Returns: string
       }
       release_my_coin_redemption: {
@@ -15388,6 +15408,10 @@ export type Database = {
           _reason: string
         }
         Returns: undefined
+      }
+      staff_expert_app_version_summary: {
+        Args: { _min_code?: number }
+        Returns: Json
       }
       staff_expert_kyc_decision: {
         Args: { _decision: string; _expert_id: string; _reason: string }
