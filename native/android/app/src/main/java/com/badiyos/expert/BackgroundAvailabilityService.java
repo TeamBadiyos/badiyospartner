@@ -58,45 +58,6 @@ public class BackgroundAvailabilityService extends Service {
     // Battery-conscious: background is a safety-net, not primary tracking.
     private static final long LOCATION_INTERVAL_MS = 60_000L;
 
-    // COURIER MODE (dormant until the next native build).
-    // While a rider is on an active courier delivery the web layer calls
-    // BackgroundLocation.setMode({ mode: "courier" }), which flips these.
-    private static final long COURIER_INTERVAL_MS = 10_000L;
-
-    // Skip a ping if moved < 10 m and the last ping was < 30 s ago.
-    private static final float SKIP_MOVE_M = 10f;
-    private static final long SKIP_GAP_MS = 30_000L;
-    private Location lastPinged;
-    private long lastPingedAt = 0L;
-    private static volatile boolean courierMode = false;
-
-    /** Called from BackgroundLocationPlugin.setMode(). Restarts the cycle so
-     * the new interval takes effect immediately. */
-    static void setCourierMode(Context ctx, boolean enabled) {
-        courierMode = enabled;
-        Intent svc = new Intent(ctx, BackgroundAvailabilityService.class);
-        svc.setAction(ACTION_RETUNE);
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                ContextCompat.startForegroundService(ctx, svc);
-            } else {
-                ctx.startService(svc);
-            }
-        } catch (Throwable t) {
-            Log.w(TAG, "setCourierMode: could not retune service", t);
-        }
-    }
-
-    static boolean isCourierMode() {
-        return courierMode;
-    }
-
-    public static final String ACTION_RETUNE = "com.badiyos.expert.action.RETUNE_AVAILABILITY";
-
-    private long currentIntervalMs() {
-        return courierMode ? COURIER_INTERVAL_MS : LOCATION_INTERVAL_MS;
-    }
-
     // Must match src/integrations/supabase/client.ts + Capacitor Preferences.
     // Capacitor Preferences on Android writes to SharedPreferences file
     // "CapacitorStorage" with the raw key as-is.
@@ -140,11 +101,6 @@ public class BackgroundAvailabilityService extends Service {
             return START_NOT_STICKY;
         }
 
-        if (ACTION_RETUNE.equals(action)) {
-            // Interval changed (courier mode on/off) — restart the cycle.
-            stopLocationCycle();
-        }
-
         // A location-typed foreground service may collect location with only
         // ACCESS_FINE/COARSE_LOCATION ("While using the app"). Requiring
         // ACCESS_BACKGROUND_LOCATION here killed tracking for most riders the
@@ -179,11 +135,10 @@ public class BackgroundAvailabilityService extends Service {
             Log.d(TAG, "location cycle already running");
             return;
         }
-        long interval = currentIntervalMs();
-        Log.d(TAG, "starting location cycle every " + interval + "ms (courierMode=" + courierMode + ")");
+        Log.d(TAG, "starting location cycle every " + LOCATION_INTERVAL_MS + "ms");
         scheduler = Executors.newSingleThreadScheduledExecutor();
         cycleFuture = scheduler.scheduleWithFixedDelay(
-            this::runOneCycleSafe, 0L, interval, TimeUnit.MILLISECONDS
+            this::runOneCycleSafe, 0L, LOCATION_INTERVAL_MS, TimeUnit.MILLISECONDS
         );
     }
 
@@ -229,7 +184,7 @@ public class BackgroundAvailabilityService extends Service {
             "You're receiving nearby job alerts"
         );
         CancellationTokenSource cts = new CancellationTokenSource();
-        fused.getCurrentLocation(courierMode ? Priority.PRIORITY_HIGH_ACCURACY : Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.getToken())
+        fused.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, cts.getToken())
             .addOnSuccessListener(loc -> {
                 if (loc == null) {
                     Log.w(TAG, "getCurrentLocation returned null");
@@ -275,15 +230,7 @@ public class BackgroundAvailabilityService extends Service {
                 Log.w(TAG, "no access token in Preferences — skip push");
                 return;
             }
-            long now = System.currentTimeMillis();
-            if (lastPinged != null && lastPinged.distanceTo(loc) < SKIP_MOVE_M
-                    && now - lastPingedAt < SKIP_GAP_MS) {
-                Log.d(TAG, "ping skipped — moved <10m within 30s");
-                return;
-            }
             postExpertUpdateLocation(token, loc.getLatitude(), loc.getLongitude());
-            lastPinged = loc;
-            lastPingedAt = now;
         } catch (Throwable t) {
             Log.e(TAG, "pushLocation failed (swallowed)", t);
         }

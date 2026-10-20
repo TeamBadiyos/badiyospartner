@@ -209,3 +209,56 @@ extra_price      e.g. "250" -> rendered as "₹250"
 | order_cancelled / order_completed / reminder_10min | OK only, auto-dismiss after 20s | none; OK deep-links to `/booking/<booking_id>` |
 
 Nothing else in the manifest changes.
+
+
+---
+
+# MANUAL MERGE BLOCK — Play-Store-safe loud ringing (Android 14+)
+
+New tracked sources: `BookingRingService.java` (mediaPlayback foreground
+service that owns the looping alarm), `RingGuard.java` (full-screen-intent
+check, DND guard, crash-safe alarm volume), `AlertSetupPlugin.java` (checklist
+status + settings shortcuts; registered in `MainActivity`).
+
+## Final `<uses-permission>` list (inside `<manifest>`)
+
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+<uses-permission android:name="android.permission.VIBRATE" />
+<uses-permission android:name="android.permission.TURN_SCREEN_ON" />
+<uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+<uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+```
+
+Do NOT add `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (Play policy restricted);
+the checklist opens the system "Battery optimisation" list instead.
+Do NOT add `SYSTEM_ALERT_WINDOW`.
+
+## Inside `<application>`
+
+```xml
+<service
+    android:name=".BookingRingService"
+    android:exported="false"
+    android:foregroundServiceType="mediaPlayback"
+    android:stopWithTask="true" />
+```
+
+## Backend payload
+
+Ring window = `expires_at` (ISO, preferred) → `accept_timeout_seconds` →
+`timeout_seconds`. To stop a ring because someone else took the job, send a
+data push with `alert_type` = `already_taken` (also accepted: `booking_taken`,
+`offer_taken`, `offer_expired`, `offer_withdrawn`, `ring_stop`) and the
+`booking_id`.

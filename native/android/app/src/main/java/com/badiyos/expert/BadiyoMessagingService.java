@@ -18,8 +18,7 @@ import com.google.firebase.messaging.RemoteMessage;
 import java.util.Map;
 
 /**
- * Full-screen "ringing" alert for new booking pushes and courier (parcel)
- * offers.
+ * Full-screen "ringing" alert for new booking pushes.
  *
  * Extends the Capacitor push plugin's MessagingService (instead of
  * FirebaseMessagingService directly) so token registration and the JS
@@ -31,9 +30,6 @@ import java.util.Map;
  *     NOT in the foreground  -> build a CATEGORY_CALL, ongoing, full-screen
  *     intent notification on the existing "new_booking_alerts" channel and
  *     launch {@link BookingRingActivity} (rings + wakes/unlocks the screen).
- *   - Data-only message with type = "courier_offer" AND the app NOT in the
- *     foreground -> same treatment on the "courier_offer_alerts" channel, with
- *     the countdown driven by the offer's expires_at.
  *   - Anything else (app open, or any non-alert push) -> delegate to super,
  *     which forwards to the webview. The existing in-app looping alert on the
  *     Home screen is therefore untouched.
@@ -43,32 +39,32 @@ public class BadiyoMessagingService extends MessagingService {
     private static final String TAG = "BadiyoFCM";
 
     static final String CHANNEL_ID = "new_booking_alerts";
-    static final String COURIER_CHANNEL_ID = "courier_offer_alerts";
     static final int RING_NOTIFICATION_ID = 5120;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        // Process may have died mid-ring with the alarm volume boosted.
+        if (!BookingRingService.isRunning()) RingGuard.restoreIfPending(this);
+    }
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         Map<String, String> data = remoteMessage.getData();
         String alertType = data.get("alert_type");
 
-        // data: type=courier_offer, offer_id, order_id, order_code, expires_at
-        //       (ISO), earning, pickup_area, drop_area, trip_km
-        if ("courier_offer".equals(orEmpty(data.get("type")))) {
-            if (MainActivity.isAppInForeground()) {
-                Log.d(TAG, "courier offer while foreground — delegating to webview");
-                super.onMessageReceived(remoteMessage);
-                return;
-            }
-            try {
-                showCourierOffer(data);
-            } catch (Throwable t) {
-                Log.e(TAG, "showCourierOffer failed — falling back", t);
-                super.onMessageReceived(remoteMessage);
-            }
+        // "Already taken" / offer withdrawn: stop any ring for that job.
+        if (isStopAlert(alertType)) {
+            String id = orEmpty(data.get("booking_id"));
+            if (id.isEmpty()) id = orEmpty(data.get("order_id"));
+            BookingRingService.stopFor(getApplicationContext(), id);
+            BookingRingActivity.dismissIfShowing(getApplicationContext(), id);
+            super.onMessageReceived(remoteMessage);
             return;
         }
 
         boolean isBookingAlert = isRingAlert(alertType);
+
 
         if (!isBookingAlert) {
             super.onMessageReceived(remoteMessage);
@@ -109,6 +105,22 @@ public class BadiyoMessagingService extends MessagingService {
         }
     }
 
+    /** Pushes that mean "stop ringing — job no longer available to you". */
+    static boolean isStopAlert(String alertType) {
+        if (alertType == null) return false;
+        switch (alertType) {
+            case "already_taken":
+            case "booking_taken":
+            case "offer_taken":
+            case "offer_expired":
+            case "offer_withdrawn":
+            case "ring_stop":
+                return true;
+            default:
+                return false;
+        }
+    }
+
     /** Single "OK" dismiss alerts (informational). */
     static boolean isInfoAlert(String alertType) {
         return "order_cancelled".equals(alertType)
@@ -117,52 +129,39 @@ public class BadiyoMessagingService extends MessagingService {
             || "reminder_30min".equals(alertType);
     }
 
-    // ---------------- courier (parcel) offers ----------------
-
-    private void showCourierOffer(Map<String, String> data) {
-        String offerId = orEmpty(data.get("offer_id"));
-        String orderId = orEmpty(data.get("order_id"));
-        String expiresAt = orEmpty(data.get("expires_at"));
-        String pickup = orEmpty(data.get("pickup_area"));
-        String drop = orEmpty(data.get("drop_area"));
-        String earning = orEmpty(data.get("earning"));
-        String tripKm = orEmpty(data.get("trip_km"));
-        String title = fallback(data.get("order_code"), "New parcel delivery");
-        String body = (pickup.isEmpty() && drop.isEmpty())
-            ? "Tap to view the delivery"
-            : pickup + " -> " + drop;
-
-        int seconds = BookingRingActivity.secondsUntil(expiresAt);
-        if (seconds <= 0) {
-            Log.d(TAG, "courier offer already expired offer=" + offerId);
-            return;
+    /**
+     * Ring window from the backend: prefer the absolute expires_at (exact
+     * remaining time, accounts for push delay), then timeout_seconds /
+     * accept_timeout_seconds. The fixed default is only used when the backend
+     * sent nothing. Returns 0 when the offer has already expired.
+     */
+    static int resolveTimeoutSeconds(Map<String, String> data, boolean info) {
+        String exp = data.get("expires_at");
+        if (exp != null && !exp.isEmpty()) {
+            long ms = parseIsoMs(exp);
+            if (ms > 0) {
+                long left = (ms - System.currentTimeMillis()) / 1000L;
+                return (int) Math.max(0, left);
+            }
         }
-
-        Log.d(TAG, "courier offer=" + offerId + " order=" + orderId
-            + " expires_in=" + seconds + "s");
-
-        Intent ring = new Intent(this, BookingRingActivity.class);
-        ring.addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK
-                | Intent.FLAG_ACTIVITY_CLEAR_TOP
-                | Intent.FLAG_ACTIVITY_NO_USER_ACTION
-        );
-        ring.putExtra(BookingRingActivity.EXTRA_ALERT_KIND, "courier_offer");
-        ring.putExtra(BookingRingActivity.EXTRA_OFFER_ID, offerId);
-        ring.putExtra(BookingRingActivity.EXTRA_ORDER_ID, orderId);
-        ring.putExtra(BookingRingActivity.EXTRA_EXPIRES_AT, expiresAt);
-        ring.putExtra(BookingRingActivity.EXTRA_EARNING, earning);
-        ring.putExtra(BookingRingActivity.EXTRA_DURATION, tripKm.isEmpty() ? "" : tripKm + " km");
-        ring.putExtra(BookingRingActivity.EXTRA_TITLE, title);
-        ring.putExtra(BookingRingActivity.EXTRA_BODY, body);
-        ring.putExtra(BookingRingActivity.EXTRA_ADDRESS, body);
-        ring.putExtra(BookingRingActivity.EXTRA_TIMEOUT, seconds);
-
-        startFullScreenAlert(ring, COURIER_CHANNEL_ID, offerId.hashCode(),
-            title, body, seconds);
+        int t = parseInt(data.get("accept_timeout_seconds"), -1);
+        if (t <= 0) t = parseInt(data.get("timeout_seconds"), -1);
+        if (t > 0) return t;
+        return info ? 20 : 60;
     }
 
-    // ---------------- home-service booking alerts ----------------
+    private static long parseIsoMs(String s) {
+        try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                return java.time.OffsetDateTime.parse(s.trim().replace(' ', 'T')).toInstant().toEpochMilli();
+            }
+        } catch (Throwable ignored) {}
+        try {
+            return Long.parseLong(s.trim()); // epoch ms fallback
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
 
     private void showRingingNotification(Map<String, String> data) {
         String bookingId = orEmpty(data.get("booking_id"));
@@ -177,7 +176,11 @@ public class BadiyoMessagingService extends MessagingService {
         String extraPrice = orEmpty(data.get("extra_price"));
         boolean info = isInfoAlert(alertType);
         boolean extension = "extension_request".equals(alertType);
-        int timeoutSeconds = parseInt(data.get("timeout_seconds"), info ? 20 : 60);
+        int timeoutSeconds = resolveTimeoutSeconds(data, info);
+        if (timeoutSeconds <= 0) {
+            Log.d(TAG, "offer already expired — not ringing");
+            return;
+        }
 
         Log.d(TAG, "ring alert booking=" + bookingId + " type=" + alertType
             + " timeout=" + timeoutSeconds + "s");
@@ -200,9 +203,28 @@ public class BadiyoMessagingService extends MessagingService {
         ring.putExtra(BookingRingActivity.EXTRA_EXTRA_MINUTES, extraMinutes);
         ring.putExtra(BookingRingActivity.EXTRA_EXTRA_PRICE, extraPrice);
 
+        PendingIntent fullScreen = PendingIntent.getActivity(
+            this, bookingId.hashCode(), ring, piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+        );
+
         String text = address.isEmpty() ? body : (duration.isEmpty() ? address : duration + " · " + address);
 
-        NotificationCompat.Action[] actions;
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_CALL)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setOnlyAlertOnce(false)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setTimeoutAfter(timeoutSeconds * 1000L)
+            .setFullScreenIntent(fullScreen, true)
+            .setContentIntent(fullScreen);
+
         if (info) {
             PendingIntent okPi = PendingIntent.getBroadcast(
                 this,
@@ -210,9 +232,7 @@ public class BadiyoMessagingService extends MessagingService {
                 BookingAlertActions.dismissIntent(this, bookingId),
                 piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
             );
-            actions = new NotificationCompat.Action[] {
-                new NotificationCompat.Action(0, "OK", okPi)
-            };
+            builder.addAction(0, "OK", okPi);
         } else if (extension) {
             PendingIntent acceptPi = PendingIntent.getBroadcast(
                 this,
@@ -226,10 +246,7 @@ public class BadiyoMessagingService extends MessagingService {
                 BookingAlertActions.extensionIntent(this, bookingId, extensionId, false),
                 piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
             );
-            actions = new NotificationCompat.Action[] {
-                new NotificationCompat.Action(0, "Accept", acceptPi),
-                new NotificationCompat.Action(0, "Decline", declinePi)
-            };
+            builder.addAction(0, "Accept", acceptPi).addAction(0, "Decline", declinePi);
         } else {
             PendingIntent acceptPi = PendingIntent.getBroadcast(
                 this,
@@ -243,114 +260,45 @@ public class BadiyoMessagingService extends MessagingService {
                 BookingAlertActions.rejectIntent(this, bookingId),
                 piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
             );
-            actions = new NotificationCompat.Action[] {
-                new NotificationCompat.Action(0, "Accept", acceptPi),
-                new NotificationCompat.Action(0, "Reject", rejectPi)
-            };
-        }
-
-        startFullScreenAlert(ring, CHANNEL_ID, bookingId.hashCode(),
-            title, text, timeoutSeconds, actions);
-    }
-
-    // ---------------- shared full-screen alert plumbing ----------------
-
-    private void startFullScreenAlert(Intent ring, String channelId, int requestKey,
-                                      String title, String text, int timeoutSeconds,
-                                      NotificationCompat.Action... actions) {
-        // The push can arrive before MainActivity has ever run (app killed /
-        // fresh boot), so make sure the channel exists before notifying —
-        // otherwise Android O+ silently drops the notification.
-        ensureChannel(channelId);
-
-        PendingIntent fullScreen = PendingIntent.getActivity(
-            this, requestKey, ring, piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
-        );
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_CALL)
-            .setOngoing(true)
-            .setAutoCancel(false)
-            .setOnlyAlertOnce(false)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setTimeoutAfter(timeoutSeconds * 1000L)
-            .setFullScreenIntent(fullScreen, true)
-            .setContentIntent(fullScreen);
-
-        if (actions != null) {
-            for (NotificationCompat.Action action : actions) {
-                if (action != null) builder.addAction(action);
-            }
+            builder.addAction(0, "Accept", acceptPi).addAction(0, "Reject", rejectPi);
         }
 
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm == null) return;
-        Notification n = builder.build();
-        n.flags |= Notification.FLAG_INSISTENT; // keep ringing until acted on
-        nm.notify(RING_NOTIFICATION_ID, n);
 
-        // On locked / dozing devices the full-screen intent fires immediately.
-        // When the device is merely idle-but-unlocked some OEMs only show the
-        // heads-up, so start the activity ourselves too (safe: singleTask).
+        // Android 14+: full-screen intent only when the expert allowed it.
+        // Otherwise this stays a PRIORITY_MAX heads-up with the looping alarm.
+        boolean fullScreenAllowed = RingGuard.canUseFullScreenIntent(this);
+        if (!fullScreenAllowed) {
+            builder.setFullScreenIntent(null, false);
+            Log.d(TAG, "full-screen intent not allowed — heads-up fallback");
+        }
+
+        // The looping sound comes from the foreground service, so the
+        // notification itself only alerts once (no double sound).
+        builder.setOnlyAlertOnce(true).setSilent(true);
+        Notification n = builder.build();
+
+        boolean serviceStarted = BookingRingService.start(
+            getApplicationContext(), n, bookingId, soundUrl, timeoutSeconds * 1000L);
+        if (!serviceStarted) {
+            // FGS start refused (rare OEM restriction): fall back to an
+            // insistent notification that loops the channel sound.
+            Notification loud = builder.setSilent(false).setOnlyAlertOnce(false).build();
+            loud.flags |= Notification.FLAG_INSISTENT;
+            nm.notify(RING_NOTIFICATION_ID, loud);
+        }
+
+        // On locked devices start the ring screen directly too (singleTask),
+        // but only when full-screen alerts are allowed.
         KeyguardManager km = getSystemService(KeyguardManager.class);
         boolean locked = km != null && km.isKeyguardLocked();
-        if (locked || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        if (fullScreenAllowed && (locked || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)) {
             try {
                 startActivity(ring);
             } catch (Throwable t) {
                 Log.w(TAG, "direct startActivity blocked; relying on full-screen intent", t);
             }
-        }
-    }
-
-    /**
-     * Safety net for cold starts: MainActivity creates both channels on launch,
-     * but a push can land before the app has ever been opened. Creating an
-     * existing channel is a no-op, so this is cheap and idempotent.
-     */
-    private void ensureChannel(String channelId) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
-        NotificationManager nm = getSystemService(NotificationManager.class);
-        if (nm == null || nm.getNotificationChannel(channelId) != null) return;
-
-        boolean courier = COURIER_CHANNEL_ID.equals(channelId);
-        android.app.NotificationChannel channel = new android.app.NotificationChannel(
-            channelId,
-            courier ? "Parcel Delivery Offers" : "New Booking Alerts",
-            NotificationManager.IMPORTANCE_HIGH
-        );
-        channel.setDescription(courier
-            ? "Loud alerts when a parcel delivery offer arrives nearby."
-            : "Loud alerts when a new booking is available nearby.");
-        channel.enableVibration(true);
-        channel.setVibrationPattern(new long[] { 0, 400, 200, 400 });
-
-        android.net.Uri soundUri = android.media.RingtoneManager.getDefaultUri(
-            courier
-                ? android.media.RingtoneManager.TYPE_RINGTONE
-                : android.media.RingtoneManager.TYPE_NOTIFICATION
-        );
-        if (soundUri == null) {
-            soundUri = android.media.RingtoneManager.getDefaultUri(
-                android.media.RingtoneManager.TYPE_NOTIFICATION
-            );
-        }
-        channel.setSound(soundUri, new android.media.AudioAttributes.Builder()
-            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build());
-        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-        channel.enableLights(true);
-
-        try {
-            nm.createNotificationChannel(channel);
-        } catch (Throwable t) {
-            Log.w(TAG, "could not create channel " + channelId, t);
         }
     }
 
@@ -363,6 +311,7 @@ public class BadiyoMessagingService extends MessagingService {
     static void cancelRingNotification(Context ctx) {
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm != null) nm.cancel(RING_NOTIFICATION_ID);
+        BookingRingService.stop(ctx.getApplicationContext());
     }
 
     private static String orEmpty(String s) {

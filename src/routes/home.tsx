@@ -23,6 +23,7 @@ import {
   stopBackgroundAvailabilityService,
 } from "@/lib/background-location";
 import { initExpertPush } from "@/lib/push";
+import { getAlertSetupStatus, shouldPromptAlertSetup, markAlertSetupPrompted } from "@/lib/alert-setup";
 import {
   useCourierSkill,
   useActiveCourierOrder,
@@ -103,6 +104,19 @@ function HomeDashboard() {
   useEffect(() => {
     if (!userId) return;
     void initExpertPush((opts) => navigate(opts as Parameters<typeof navigate>[0]));
+  }, [userId, navigate]);
+
+  // One-time "Allow full-screen alerts" / DND access screen (native Android only).
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void getAlertSetupStatus().then((s) => {
+      if (!cancelled && shouldPromptAlertSetup(s)) {
+        markAlertSetupPrompted();
+        navigate({ to: "/battery-guide" });
+      }
+    });
+    return () => { cancelled = true; };
   }, [userId, navigate]);
 
   const online = !!expert?.is_online;

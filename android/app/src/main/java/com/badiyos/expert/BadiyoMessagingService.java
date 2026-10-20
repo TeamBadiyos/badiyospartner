@@ -311,6 +311,7 @@ public class BadiyoMessagingService extends MessagingService {
     static void cancelRingNotification(Context ctx) {
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm != null) nm.cancel(RING_NOTIFICATION_ID);
+        BookingRingService.stop(ctx.getApplicationContext());
     }
 
     private static String orEmpty(String s) {
