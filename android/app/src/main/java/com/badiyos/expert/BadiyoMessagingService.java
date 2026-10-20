@@ -42,11 +42,29 @@ public class BadiyoMessagingService extends MessagingService {
     static final int RING_NOTIFICATION_ID = 5120;
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        // Process may have died mid-ring with the alarm volume boosted.
+        if (!BookingRingService.isRunning()) RingGuard.restoreIfPending(this);
+    }
+
+    @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         Map<String, String> data = remoteMessage.getData();
         String alertType = data.get("alert_type");
 
+        // "Already taken" / offer withdrawn: stop any ring for that job.
+        if (isStopAlert(alertType)) {
+            String id = orEmpty(data.get("booking_id"));
+            if (id.isEmpty()) id = orEmpty(data.get("order_id"));
+            BookingRingService.stopFor(getApplicationContext(), id);
+            BookingRingActivity.dismissIfShowing(getApplicationContext(), id);
+            super.onMessageReceived(remoteMessage);
+            return;
+        }
+
         boolean isBookingAlert = isRingAlert(alertType);
+
 
         if (!isBookingAlert) {
             super.onMessageReceived(remoteMessage);
@@ -87,12 +105,62 @@ public class BadiyoMessagingService extends MessagingService {
         }
     }
 
+    /** Pushes that mean "stop ringing — job no longer available to you". */
+    static boolean isStopAlert(String alertType) {
+        if (alertType == null) return false;
+        switch (alertType) {
+            case "already_taken":
+            case "booking_taken":
+            case "offer_taken":
+            case "offer_expired":
+            case "offer_withdrawn":
+            case "ring_stop":
+                return true;
+            default:
+                return false;
+        }
+    }
+
     /** Single "OK" dismiss alerts (informational). */
     static boolean isInfoAlert(String alertType) {
         return "order_cancelled".equals(alertType)
             || "order_completed".equals(alertType)
             || "reminder_10min".equals(alertType)
             || "reminder_30min".equals(alertType);
+    }
+
+    /**
+     * Ring window from the backend: prefer the absolute expires_at (exact
+     * remaining time, accounts for push delay), then timeout_seconds /
+     * accept_timeout_seconds. The fixed default is only used when the backend
+     * sent nothing. Returns 0 when the offer has already expired.
+     */
+    static int resolveTimeoutSeconds(Map<String, String> data, boolean info) {
+        String exp = data.get("expires_at");
+        if (exp != null && !exp.isEmpty()) {
+            long ms = parseIsoMs(exp);
+            if (ms > 0) {
+                long left = (ms - System.currentTimeMillis()) / 1000L;
+                return (int) Math.max(0, left);
+            }
+        }
+        int t = parseInt(data.get("accept_timeout_seconds"), -1);
+        if (t <= 0) t = parseInt(data.get("timeout_seconds"), -1);
+        if (t > 0) return t;
+        return info ? 20 : 60;
+    }
+
+    private static long parseIsoMs(String s) {
+        try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                return java.time.OffsetDateTime.parse(s.trim().replace(' ', 'T')).toInstant().toEpochMilli();
+            }
+        } catch (Throwable ignored) {}
+        try {
+            return Long.parseLong(s.trim()); // epoch ms fallback
+        } catch (Throwable t) {
+            return -1;
+        }
     }
 
     private void showRingingNotification(Map<String, String> data) {
@@ -108,7 +176,11 @@ public class BadiyoMessagingService extends MessagingService {
         String extraPrice = orEmpty(data.get("extra_price"));
         boolean info = isInfoAlert(alertType);
         boolean extension = "extension_request".equals(alertType);
-        int timeoutSeconds = parseInt(data.get("timeout_seconds"), info ? 20 : 60);
+        int timeoutSeconds = resolveTimeoutSeconds(data, info);
+        if (timeoutSeconds <= 0) {
+            Log.d(TAG, "offer already expired — not ringing");
+            return;
+        }
 
         Log.d(TAG, "ring alert booking=" + bookingId + " type=" + alertType
             + " timeout=" + timeoutSeconds + "s");
@@ -147,6 +219,7 @@ public class BadiyoMessagingService extends MessagingService {
             .setOngoing(true)
             .setAutoCancel(false)
             .setOnlyAlertOnce(false)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setTimeoutAfter(timeoutSeconds * 1000L)
             .setFullScreenIntent(fullScreen, true)
@@ -192,16 +265,35 @@ public class BadiyoMessagingService extends MessagingService {
 
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm == null) return;
-        Notification n = builder.build();
-        n.flags |= Notification.FLAG_INSISTENT; // keep ringing until acted on
-        nm.notify(RING_NOTIFICATION_ID, n);
 
-        // On locked / dozing devices the full-screen intent fires immediately.
-        // When the device is merely idle-but-unlocked some OEMs only show the
-        // heads-up, so start the activity ourselves too (safe: singleTask).
+        // Android 14+: full-screen intent only when the expert allowed it.
+        // Otherwise this stays a PRIORITY_MAX heads-up with the looping alarm.
+        boolean fullScreenAllowed = RingGuard.canUseFullScreenIntent(this);
+        if (!fullScreenAllowed) {
+            builder.setFullScreenIntent(null, false);
+            Log.d(TAG, "full-screen intent not allowed — heads-up fallback");
+        }
+
+        // The looping sound comes from the foreground service, so the
+        // notification itself only alerts once (no double sound).
+        builder.setOnlyAlertOnce(true).setSilent(true);
+        Notification n = builder.build();
+
+        boolean serviceStarted = BookingRingService.start(
+            getApplicationContext(), n, bookingId, soundUrl, timeoutSeconds * 1000L);
+        if (!serviceStarted) {
+            // FGS start refused (rare OEM restriction): fall back to an
+            // insistent notification that loops the channel sound.
+            Notification loud = builder.setSilent(false).setOnlyAlertOnce(false).build();
+            loud.flags |= Notification.FLAG_INSISTENT;
+            nm.notify(RING_NOTIFICATION_ID, loud);
+        }
+
+        // On locked devices start the ring screen directly too (singleTask),
+        // but only when full-screen alerts are allowed.
         KeyguardManager km = getSystemService(KeyguardManager.class);
         boolean locked = km != null && km.isKeyguardLocked();
-        if (locked || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        if (fullScreenAllowed && (locked || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)) {
             try {
                 startActivity(ring);
             } catch (Throwable t) {
