@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_AUTH_STORAGE_KEY } from "@/integrations/supabase/api-url";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,11 +41,17 @@ function Splash() {
     (async () => {
       // On the phone app the login is kept in the phone's own storage (not
       // localStorage), so read it from there; it is local, no network wait.
+      // Read the stored value directly — getSession() can wait on a network
+      // token refresh, which kept the blue screen up for seconds.
       let saved = hasSavedSession();
       if (!saved) {
         try {
-          const { data } = await supabase.auth.getSession();
-          saved = !!data.session;
+          const { Capacitor } = await import("@capacitor/core");
+          if (Capacitor.isNativePlatform()) {
+            const { Preferences } = await import("@capacitor/preferences");
+            const { value } = await Preferences.get({ key: SUPABASE_AUTH_STORAGE_KEY });
+            saved = !!value && value.includes("refresh_token");
+          }
         } catch {
           saved = false;
         }
