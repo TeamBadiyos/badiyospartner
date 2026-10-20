@@ -36,12 +36,23 @@ function Splash() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const saved = hasSavedSession();
-    // Go immediately — no artificial delay, no second web splash.
-    navigate({ to: saved ? "/home" : "/login", replace: true });
-    if (!saved) return;
-    // Validate in the background; an invalid session goes to login.
+    let cancelled = false;
     (async () => {
+      // On the phone app the login is kept in the phone's own storage (not
+      // localStorage), so read it from there; it is local, no network wait.
+      let saved = hasSavedSession();
+      if (!saved) {
+        try {
+          const { data } = await supabase.auth.getSession();
+          saved = !!data.session;
+        } catch {
+          saved = false;
+        }
+      }
+      if (cancelled) return;
+      navigate({ to: saved ? "/home" : "/login", replace: true });
+      if (!saved) return;
+      // Validate in the background; only a definitely-invalid session logs out.
       try {
         const { data, error } = await supabase.auth.getUser();
         if (error?.status === 401 || error?.status === 403 || (!error && !data?.user)) {
@@ -52,6 +63,9 @@ function Splash() {
         /* offline — keep the saved session */
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [navigate]);
 
   // Plain background matching the native splash; shown for a frame at most.
