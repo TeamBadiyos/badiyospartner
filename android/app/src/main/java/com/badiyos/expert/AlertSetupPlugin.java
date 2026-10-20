@@ -152,7 +152,6 @@ public class AlertSetupPlugin extends Plugin {
     private boolean tryStart(Intent i) {
         try {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            if (i.resolveActivity(getContext().getPackageManager()) == null) return false;
             getContext().startActivity(i);
             return true;
         } catch (Throwable t) {
