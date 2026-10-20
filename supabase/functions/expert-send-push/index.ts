@@ -235,8 +235,8 @@ async function sendCourierOffer(offerId: string, expertId: string): Promise<Resp
   const failed: string[] = [];
   for (const dev of tokens) {
     const token = dev.token;
-    // Ring natively only when the flag is on AND this device runs build >= 6.
-    const native = nativeAlert && supportsNativeRing(dev);
+    // Ring natively whenever the flag is on, on every device (no version gating).
+    const native = nativeAlert;
     if (native) nativeCount += 1;
     const android: Record<string, unknown> = {
       priority: "HIGH",
@@ -422,9 +422,8 @@ Deno.serve(async (req) => {
     let sent = 0;
     const failedTokens: string[] = [];
     for (const t of tokens) {
-      // Old app (build < 6 or unknown): add a visible notification so the OS
-      // still shows the job; build >= 6 gets data-only and rings natively.
-      const legacy = !supportsNativeRing(t);
+      // Every device gets data-only (no version gating); version_code is only recorded.
+      const legacy = false;
       const res = await fetch(fcmUrl, {
         method: "POST",
         headers: {

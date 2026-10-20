@@ -11,4 +11,4 @@
 
 - Expose business-trip display metadata to riders through `courier_business_trip_display` and the existing courier offers RPC, not direct business-table reads, because business records are private and rider access must be scoped to assigned jobs or valid offers.
 - Business-trip parcel scanning uses courier_scan_packet/courier_trip_packets RPCs and a lazy-loaded @zxing/browser scanner; OTP stays locked until scanned or scan_skipped_at is set, because the server rejects unscanned stops.
-- Job/courier push senders pick data-only (native ring) vs visible notification per device from `device_tokens.version_code` (>= MIN_NATIVE_RING_VERSION_CODE), because old builds cannot ring on data-only pushes; the app reports its versionCode via `register_device_token`.
+- Expert job/courier alerts are sent data-only to every device regardless of version, because the native service must ring on its own; `version_code`/`app_version` are still recorded via `register_device_token` only to see who needs to update.
