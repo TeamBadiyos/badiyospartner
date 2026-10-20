@@ -33,6 +33,7 @@ public class BookingAlertActions extends BroadcastReceiver {
     public static final String ACTION_DISMISS = "com.badiyos.expert.action.ALERT_DISMISS";
     public static final String ACTION_EXT_ACCEPT = "com.badiyos.expert.action.EXT_ACCEPT";
     public static final String ACTION_EXT_DECLINE = "com.badiyos.expert.action.EXT_DECLINE";
+    public static final String ACTION_OPEN_COURIER = "com.badiyos.expert.action.OPEN_COURIER";
     public static final String EXTRA_BOOKING_ID = "booking_id";
     public static final String EXTRA_EXTENSION_ID = "extension_id";
 
@@ -54,6 +55,14 @@ public class BookingAlertActions extends BroadcastReceiver {
         Intent i = new Intent(ctx, BookingAlertActions.class);
         i.setAction(ACTION_DISMISS);
         i.putExtra(EXTRA_BOOKING_ID, bookingId);
+        return i;
+    }
+
+    /** "Open offer" for courier/parcel offers: stop ring, open Home, where the offer card has Accept. */
+    static Intent openCourierIntent(Context ctx, String orderId) {
+        Intent i = new Intent(ctx, BookingAlertActions.class);
+        i.setAction(ACTION_OPEN_COURIER);
+        i.putExtra(EXTRA_BOOKING_ID, orderId);
         return i;
     }
 
@@ -86,13 +95,16 @@ public class BookingAlertActions extends BroadcastReceiver {
                 extensionId,
                 ACTION_EXT_ACCEPT.equals(action)
             );
+        } else if (ACTION_OPEN_COURIER.equals(action)) {
+            openApp(context.getApplicationContext(),
+                "/home");
         } else if (ACTION_DISMISS.equals(action)) {
             // Informational alert acknowledged — deep-link to the booking.
             if (bookingId != null && !bookingId.isEmpty()) {
                 openApp(context.getApplicationContext(), "/booking/" + bookingId);
             }
         }
-        // Reject: nothing else to do — silent local dismiss.
+        // Reject / courier dismiss: nothing else to do — silent local dismiss.
     }
 
     /** Fire-and-forget claim on a worker thread, then open the app on success. */
