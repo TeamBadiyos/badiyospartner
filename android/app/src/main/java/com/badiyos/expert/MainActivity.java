@@ -49,6 +49,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         // Register custom plugins BEFORE super.onCreate so Capacitor picks them up.
         registerPlugin(BackgroundLocationPlugin.class);
+        registerPlugin(AlertSetupPlugin.class);
         super.onCreate(savedInstanceState);
 
 
@@ -63,6 +64,8 @@ public class MainActivity extends BridgeActivity {
             }
         });
 
+        // If the app crashed / was killed mid-ring, put the expert's alarm volume back.
+        if (!BookingRingService.isRunning()) RingGuard.restoreIfPending(this);
         createNewBookingNotificationChannel();
         createCourierOfferNotificationChannel();
         handleRouteExtra(getIntent());
