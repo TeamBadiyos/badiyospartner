@@ -199,9 +199,7 @@ public class BookingRingActivity extends Activity {
             accept.setOnClickListener(v -> {
                 stopRinging();
                 BadiyoMessagingService.cancelRingNotification(getApplicationContext());
-                BookingAlertActions.openApp(getApplicationContext(),
-                    "/home");
-                finishRing();
+                unlockThenOpen("/home");
             });
             reject.setOnClickListener(v -> {
                 stopRinging();
@@ -237,6 +235,31 @@ public class BookingRingActivity extends Activity {
     }
 
     // ---------------- lockscreen / screen wake ----------------
+
+    /** Ask the user to unlock (PIN/fingerprint), then open the app on the offer. */
+    private void unlockThenOpen(final String route) {
+        KeyguardManager km = getSystemService(KeyguardManager.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && km != null && km.isKeyguardLocked()) {
+            km.requestDismissKeyguard(this, new KeyguardManager.KeyguardDismissCallback() {
+                @Override public void onDismissSucceeded() {
+                    BookingAlertActions.openApp(getApplicationContext(), route);
+                    finishRing();
+                }
+                @Override public void onDismissCancelled() {
+                    // Still queue the app so it is on the offer right after unlock.
+                    BookingAlertActions.openApp(getApplicationContext(), route);
+                    finishRing();
+                }
+                @Override public void onDismissError() {
+                    BookingAlertActions.openApp(getApplicationContext(), route);
+                    finishRing();
+                }
+            });
+            return;
+        }
+        BookingAlertActions.openApp(getApplicationContext(), route);
+        finishRing();
+    }
 
     @SuppressWarnings("deprecation")
     private void showOverLockscreen() {
