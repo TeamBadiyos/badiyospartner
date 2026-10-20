@@ -58,7 +58,7 @@ public class BadiyoMessagingService extends MessagingService {
         String alertType = resolveAlertType(data);
         if (alertType != null) data.put("alert_type", alertType);
 
-        // "Already taken" / offer withdrawn: stop any ring for that job.
+        // "Already taken" / offer withdrawn / order closed: no sound, stop any ring.
         if (isStopAlert(alertType)) {
             String id = orEmpty(data.get("booking_id"));
             if (id.isEmpty()) id = orEmpty(data.get("order_id"));
@@ -70,15 +70,24 @@ public class BadiyoMessagingService extends MessagingService {
 
         boolean isBookingAlert = isRingAlert(alertType);
 
-
         if (!isBookingAlert) {
+            // Wallet / offers / info / unknown types. A data-only push is never
+            // shown by the OS, so post a normal heads-up ourselves when the app
+            // is not open — nothing gets dropped silently.
+            if (remoteMessage.getNotification() == null && !MainActivity.isAppInForeground()) {
+                try {
+                    showInfoNotification(data);
+                } catch (Throwable t) {
+                    Log.e(TAG, "showInfoNotification failed", t);
+                }
+            }
             super.onMessageReceived(remoteMessage);
             return;
         }
 
         if (MainActivity.isAppInForeground()) {
             // App is open: the web layer already plays its own looping alert
-            // and renders the broadcast card. Do not ring twice.
+            // and renders the offer card. Do not ring twice.
             Log.d(TAG, "booking alert while foreground — delegating to webview");
             super.onMessageReceived(remoteMessage);
             return;
@@ -88,8 +97,48 @@ public class BadiyoMessagingService extends MessagingService {
             showRingingNotification(data);
         } catch (Throwable t) {
             Log.e(TAG, "showRingingNotification failed — falling back", t);
+            try { showInfoNotification(data); } catch (Throwable ignored) {}
             super.onMessageReceived(remoteMessage);
         }
+    }
+
+    static final String INFO_CHANNEL_ID = "badiyo_general_v1";
+
+    /** Normal-sound heads-up for info pushes and any unrecognised data-only push. */
+    private void showInfoNotification(Map<String, String> data) {
+        Context ctx = getApplicationContext();
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        if (nm == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+            && nm.getNotificationChannel(INFO_CHANNEL_ID) == null) {
+            android.app.NotificationChannel ch = new android.app.NotificationChannel(
+                INFO_CHANNEL_ID, "Updates", NotificationManager.IMPORTANCE_HIGH);
+            ch.setDescription("Wallet, offers and other updates.");
+            ch.enableVibration(true);
+            nm.createNotificationChannel(ch);
+        }
+        String title = fallback(data.get("title"), "Badiyos Expert");
+        String body = fallback(data.get("body"), fallback(data.get("message"), "You have a new update"));
+        String route = orEmpty(data.get("route"));
+        if (route.isEmpty()) route = orEmpty(data.get("url"));
+        if (!route.startsWith("/")) route = "/home";
+
+        Intent open = new Intent(ctx, MainActivity.class);
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        open.putExtra(MainActivity.EXTRA_ROUTE, route);
+        int id = (int) (System.currentTimeMillis() & 0x7fffffff);
+        PendingIntent pi = PendingIntent.getActivity(ctx, id, open, piFlags(PendingIntent.FLAG_UPDATE_CURRENT));
+
+        NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, INFO_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setAutoCancel(true)
+            .setContentIntent(pi);
+        nm.notify(id, b.build());
     }
 
     /** alert_type, falling back to the payload "type" for job pushes. */
@@ -97,11 +146,11 @@ public class BadiyoMessagingService extends MessagingService {
         String a = data.get("alert_type");
         if (a != null && !a.isEmpty()) return a;
         String t = data.get("type");
-        if (t == null) return null;
+        if (t == null || t.isEmpty()) return null;
         switch (t) {
             case "new_booking_broadcast": return "broadcast";
             case "booking_assigned": return "assigned";
-            default: return null;
+            default: return t; // e.g. "courier_offer", "order_closed"
         }
     }
 
@@ -138,6 +187,7 @@ public class BadiyoMessagingService extends MessagingService {
             case "broadcast":
             case "new_order":
             case "extension_request":
+            case "courier_offer":
             case "order_cancelled":
             case "order_completed":
             case "reminder_10min":
@@ -158,6 +208,9 @@ public class BadiyoMessagingService extends MessagingService {
             case "offer_expired":
             case "offer_withdrawn":
             case "ring_stop":
+            case "order_closed":
+            case "courier_offer_taken":
+            case "courier_offer_expired":
                 return true;
             default:
                 return false;
@@ -207,10 +260,26 @@ public class BadiyoMessagingService extends MessagingService {
     }
 
     private void showRingingNotification(Map<String, String> data) {
-        String bookingId = orEmpty(data.get("booking_id"));
         String alertType = orEmpty(data.get("alert_type"));
-        String title = fallback(data.get("title"), "New booking nearby");
-        String body = fallback(data.get("body"), "Tap to view details");
+        boolean courier = "courier_offer".equals(alertType);
+        String bookingId = orEmpty(data.get("booking_id"));
+        if (bookingId.isEmpty() || courier) {
+            String oid = orEmpty(data.get("order_id"));
+            if (!oid.isEmpty()) bookingId = oid;
+        }
+        String title = fallback(data.get("title"), courier ? "New delivery offer" : "New booking nearby");
+        String body = orEmpty(data.get("body"));
+        if (body.isEmpty() && courier) {
+            String earning = orEmpty(data.get("earning"));
+            String pickup = orEmpty(data.get("pickup_area"));
+            String drop = orEmpty(data.get("drop_area"));
+            StringBuilder sb = new StringBuilder();
+            if (!earning.isEmpty()) sb.append("You earn ₹").append(earning);
+            if (!pickup.isEmpty()) sb.append(sb.length() > 0 ? " · " : "").append("Pickup ").append(pickup);
+            if (!drop.isEmpty()) sb.append(" → ").append(drop);
+            body = sb.toString();
+        }
+        if (body.isEmpty()) body = "Tap to view details";
         String address = orEmpty(data.get("address"));
         String duration = orEmpty(data.get("duration"));
         String soundUrl = orEmpty(data.get("sound_url"));
@@ -290,6 +359,20 @@ public class BadiyoMessagingService extends MessagingService {
                 piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
             );
             builder.addAction(0, "Accept", acceptPi).addAction(0, "Decline", declinePi);
+        } else if (courier) {
+            PendingIntent openPi = PendingIntent.getBroadcast(
+                this,
+                ("courier-open:" + bookingId).hashCode(),
+                BookingAlertActions.openCourierIntent(this, bookingId),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            PendingIntent dismissPi = PendingIntent.getBroadcast(
+                this,
+                ("courier-dismiss:" + bookingId).hashCode(),
+                BookingAlertActions.rejectIntent(this, bookingId),
+                piFlags(PendingIntent.FLAG_UPDATE_CURRENT)
+            );
+            builder.addAction(0, "Open offer", openPi).addAction(0, "Dismiss", dismissPi);
         } else {
             PendingIntent acceptPi = PendingIntent.getBroadcast(
                 this,
