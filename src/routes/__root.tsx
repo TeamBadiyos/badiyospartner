@@ -18,6 +18,7 @@ import { LanguageProvider } from "../lib/i18n";
 import { SwipeBack } from "../components/swipe-back";
 import { OfflineGate } from "../components/offline-gate";
 import { initSafeArea } from "../lib/safe-area";
+import { AppUpdateGate } from "../components/app-update-gate";
 
 function NotFoundComponent() {
   return (
@@ -161,9 +162,11 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <LanguageProvider>
         <OfflineGate>
-          <SwipeBack fallbackTo="/home" disabled={NO_SWIPE_BACK.includes(pathname)}>
-            <Outlet />
-          </SwipeBack>
+          <AppUpdateGate>
+            <SwipeBack fallbackTo="/home" disabled={NO_SWIPE_BACK.includes(pathname)}>
+              <Outlet />
+            </SwipeBack>
+          </AppUpdateGate>
         </OfflineGate>
       </LanguageProvider>
       <Toaster position="top-center" richColors closeButton />
