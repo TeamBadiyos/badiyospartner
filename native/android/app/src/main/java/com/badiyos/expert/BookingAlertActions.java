@@ -58,7 +58,7 @@ public class BookingAlertActions extends BroadcastReceiver {
         return i;
     }
 
-    /** "Open offer" for courier/parcel offers: stop ring, open /courier/<order_id>. */
+    /** "Open offer" for courier/parcel offers: stop ring, open Home, where the offer card has Accept. */
     static Intent openCourierIntent(Context ctx, String orderId) {
         Intent i = new Intent(ctx, BookingAlertActions.class);
         i.setAction(ACTION_OPEN_COURIER);
@@ -97,7 +97,7 @@ public class BookingAlertActions extends BroadcastReceiver {
             );
         } else if (ACTION_OPEN_COURIER.equals(action)) {
             openApp(context.getApplicationContext(),
-                bookingId == null || bookingId.isEmpty() ? "/courier" : "/courier/" + bookingId);
+                bookingId == null || "/home");
         } else if (ACTION_DISMISS.equals(action)) {
             // Informational alert acknowledged — deep-link to the booking.
             if (bookingId != null && !bookingId.isEmpty()) {

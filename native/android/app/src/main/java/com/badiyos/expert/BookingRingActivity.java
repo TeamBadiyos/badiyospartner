@@ -200,7 +200,7 @@ public class BookingRingActivity extends Activity {
                 stopRinging();
                 BadiyoMessagingService.cancelRingNotification(getApplicationContext());
                 BookingAlertActions.openApp(getApplicationContext(),
-                    bookingId.isEmpty() ? "/courier" : "/courier/" + bookingId);
+                    "/home");
                 finishRing();
             });
             reject.setOnClickListener(v -> {
