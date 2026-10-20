@@ -42,11 +42,29 @@ public class BadiyoMessagingService extends MessagingService {
     static final int RING_NOTIFICATION_ID = 5120;
 
     @Override
+    public void onCreate() {
+        super.onCreate();
+        // Process may have died mid-ring with the alarm volume boosted.
+        if (!BookingRingService.isRunning()) RingGuard.restoreIfPending(this);
+    }
+
+    @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         Map<String, String> data = remoteMessage.getData();
         String alertType = data.get("alert_type");
 
+        // "Already taken" / offer withdrawn: stop any ring for that job.
+        if (isStopAlert(alertType)) {
+            String id = orEmpty(data.get("booking_id"));
+            if (id.isEmpty()) id = orEmpty(data.get("order_id"));
+            BookingRingService.stopFor(getApplicationContext(), id);
+            BookingRingActivity.dismissIfShowing(getApplicationContext(), id);
+            super.onMessageReceived(remoteMessage);
+            return;
+        }
+
         boolean isBookingAlert = isRingAlert(alertType);
+
 
         if (!isBookingAlert) {
             super.onMessageReceived(remoteMessage);
