@@ -105,12 +105,62 @@ public class BadiyoMessagingService extends MessagingService {
         }
     }
 
+    /** Pushes that mean "stop ringing — job no longer available to you". */
+    static boolean isStopAlert(String alertType) {
+        if (alertType == null) return false;
+        switch (alertType) {
+            case "already_taken":
+            case "booking_taken":
+            case "offer_taken":
+            case "offer_expired":
+            case "offer_withdrawn":
+            case "ring_stop":
+                return true;
+            default:
+                return false;
+        }
+    }
+
     /** Single "OK" dismiss alerts (informational). */
     static boolean isInfoAlert(String alertType) {
         return "order_cancelled".equals(alertType)
             || "order_completed".equals(alertType)
             || "reminder_10min".equals(alertType)
             || "reminder_30min".equals(alertType);
+    }
+
+    /**
+     * Ring window from the backend: prefer the absolute expires_at (exact
+     * remaining time, accounts for push delay), then timeout_seconds /
+     * accept_timeout_seconds. The fixed default is only used when the backend
+     * sent nothing. Returns 0 when the offer has already expired.
+     */
+    static int resolveTimeoutSeconds(Map<String, String> data, boolean info) {
+        String exp = data.get("expires_at");
+        if (exp != null && !exp.isEmpty()) {
+            long ms = parseIsoMs(exp);
+            if (ms > 0) {
+                long left = (ms - System.currentTimeMillis()) / 1000L;
+                return (int) Math.max(0, left);
+            }
+        }
+        int t = parseInt(data.get("accept_timeout_seconds"), -1);
+        if (t <= 0) t = parseInt(data.get("timeout_seconds"), -1);
+        if (t > 0) return t;
+        return info ? 20 : 60;
+    }
+
+    private static long parseIsoMs(String s) {
+        try {
+            if (Build.VERSION.SDK_INT >= 26) {
+                return java.time.OffsetDateTime.parse(s.trim().replace(' ', 'T')).toInstant().toEpochMilli();
+            }
+        } catch (Throwable ignored) {}
+        try {
+            return Long.parseLong(s.trim()); // epoch ms fallback
+        } catch (Throwable t) {
+            return -1;
+        }
     }
 
     private void showRingingNotification(Map<String, String> data) {
@@ -126,7 +176,11 @@ public class BadiyoMessagingService extends MessagingService {
         String extraPrice = orEmpty(data.get("extra_price"));
         boolean info = isInfoAlert(alertType);
         boolean extension = "extension_request".equals(alertType);
-        int timeoutSeconds = parseInt(data.get("timeout_seconds"), info ? 20 : 60);
+        int timeoutSeconds = resolveTimeoutSeconds(data, info);
+        if (timeoutSeconds <= 0) {
+            Log.d(TAG, "offer already expired — not ringing");
+            return;
+        }
 
         Log.d(TAG, "ring alert booking=" + bookingId + " type=" + alertType
             + " timeout=" + timeoutSeconds + "s");
