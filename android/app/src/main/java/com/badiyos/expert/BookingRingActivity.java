@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.PowerManager;
 import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -58,6 +59,8 @@ public class BookingRingActivity extends Activity {
     private String alertType = "";
     private MediaPlayer player;
     private Vibrator vibrator;
+    private PowerManager.WakeLock wakeLock;
+    private int savedAlarmVolume = -1;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable timeoutTask;
     private Runnable tickTask;
@@ -254,9 +257,11 @@ public class BookingRingActivity extends Activity {
 
     private void startRinging(String soundUrl) {
         if (player != null) return;
-        // Remote (signed URL) sound first; fall back to the bundled raw
-        // resource / device ringtone if it is missing or fails to stream.
-        if (soundUrl != null && soundUrl.startsWith("http")) {
+        acquireWakeLock();
+        boostAlarmVolume();
+        // Bundled loud siren (res/raw/booking_alert) first; then a remote
+        // sound; then the device ringtone. Loops until accept/reject/timeout.
+        if (customAlertUri() == null && soundUrl != null && soundUrl.startsWith("http")) {
             try {
                 player = new MediaPlayer();
                 player.setAudioAttributes(ringAttributes());
@@ -282,9 +287,10 @@ public class BookingRingActivity extends Activity {
         startVibration();
     }
 
+    /** ALARM usage: plays at full alarm volume even in silent / vibrate mode. */
     private AudioAttributes ringAttributes() {
         return new AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+            .setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build();
     }
@@ -312,10 +318,9 @@ public class BookingRingActivity extends Activity {
 
     private void startVibration() {
         try {
-            AudioManager am = getSystemService(AudioManager.class);
-            boolean silent = am != null && am.getRingerMode() == AudioManager.RINGER_MODE_SILENT;
+            // Vibrate even in silent mode — an expert who is live must notice the order.
             vibrator = getSystemService(Vibrator.class);
-            if (vibrator != null && vibrator.hasVibrator() && !silent) {
+            if (vibrator != null && vibrator.hasVibrator()) {
                 long[] pattern = { 0, 700, 400, 700, 400 };
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0));
@@ -336,6 +341,49 @@ public class BookingRingActivity extends Activity {
         return Uri.parse("android.resource://" + getPackageName() + "/" + resId);
     }
 
+    /**
+     * Raise the ALARM stream to max while ringing so the alert is loud even
+     * when the expert lowered media/notification volume or set silent mode.
+     * The original level is restored in stopRinging().
+     */
+    private void boostAlarmVolume() {
+        try {
+            AudioManager am = getSystemService(AudioManager.class);
+            if (am == null || savedAlarmVolume >= 0) return;
+            savedAlarmVolume = am.getStreamVolume(AudioManager.STREAM_ALARM);
+            am.setStreamVolume(AudioManager.STREAM_ALARM, am.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0);
+        } catch (Throwable t) {
+            Log.w(TAG, "volume boost failed", t);
+        }
+    }
+
+    private void restoreAlarmVolume() {
+        try {
+            AudioManager am = getSystemService(AudioManager.class);
+            if (am != null && savedAlarmVolume >= 0) {
+                am.setStreamVolume(AudioManager.STREAM_ALARM, savedAlarmVolume, 0);
+            }
+        } catch (Throwable ignored) {
+        } finally {
+            savedAlarmVolume = -1;
+        }
+    }
+
+    private void acquireWakeLock() {
+        try {
+            if (wakeLock != null) return;
+            PowerManager pm = getSystemService(PowerManager.class);
+            if (pm == null) return;
+            //noinspection deprecation
+            wakeLock = pm.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "badiyo:ring");
+            wakeLock.acquire(3 * 60 * 1000L);
+        } catch (Throwable t) {
+            Log.w(TAG, "wakelock failed", t);
+        }
+    }
+
     private void stopRinging() {
         try {
             if (player != null) {
@@ -351,6 +399,13 @@ public class BookingRingActivity extends Activity {
         } catch (Throwable ignored) {
         } finally {
             vibrator = null;
+        }
+        restoreAlarmVolume();
+        try {
+            if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+        } catch (Throwable ignored) {
+        } finally {
+            wakeLock = null;
         }
     }
 
