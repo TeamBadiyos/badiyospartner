@@ -10,10 +10,25 @@ let initialized = false;
 let currentToken: string | null = null;
 let currentPlatform: string | null = null;
 
+/** Native build number (Android versionCode) + version name; null on web. */
+async function nativeVersion(): Promise<{ name: string | null; code: number | null }> {
+  try {
+    const { App } = await import("@capacitor/app");
+    const info = await App.getInfo();
+    const code = Number.parseInt(String(info.build ?? ""), 10);
+    return { name: info.version ?? null, code: Number.isFinite(code) && code > 0 ? code : null };
+  } catch {
+    return { name: null, code: null };
+  }
+}
+
 async function callRegister(fcmToken: string, platform: string) {
+  const ver = await nativeVersion();
   const { error } = await supabase.rpc("register_device_token", {
     p_fcm_token: fcmToken,
     p_platform: platform,
+    ...(ver.name ? { p_app_version: ver.name } : {}),
+    ...(ver.code ? { p_version_code: ver.code } : {}),
   });
   if (error) {
     console.warn("register_device_token failed", error);
