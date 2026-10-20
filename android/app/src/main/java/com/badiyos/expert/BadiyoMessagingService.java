@@ -101,7 +101,6 @@ public class BadiyoMessagingService extends MessagingService {
         switch (t) {
             case "new_booking_broadcast": return "broadcast";
             case "booking_assigned": return "assigned";
-            case "courier_offer": return "new_order";
             default: return null;
         }
     }

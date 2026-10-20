@@ -389,3 +389,46 @@ Xiaomi / Vivo / Oppo / Realme / Samsung steps only.
 2. No Java change needed: MainActivity extends Capacitor's `BridgeWebChromeClient`, which already asks the Android camera permission and grants the in-app camera request. Do not override `onPermissionRequest`.
 3. `npx cap sync android`, build the AAB, and declare camera use ("scan parcel labels") in Play Console.
 Until then, riders can use "Type code".
+
+---
+
+## MANUAL MERGE BLOCK — single FCM handler (required for closed/locked ringing)
+
+`@capacitor/push-notifications` ships its own `MessagingService` in its library
+manifest. If it survives the merge, Android may deliver job pushes to it and
+only a plain notification appears. In `android/app/src/main/AndroidManifest.xml`:
+
+1. Add `xmlns:tools` to the root tag:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+```
+
+2. Inside `<application>`, add exactly:
+
+```xml
+<service
+    android:name="com.capacitorjs.plugins.pushnotifications.MessagingService"
+    tools:node="remove" />
+
+<service
+    android:name=".BadiyoMessagingService"
+    android:exported="false"
+    android:directBootAware="true">
+    <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+    </intent-filter>
+</service>
+
+<meta-data
+    android:name="com.google.firebase.messaging.default_notification_channel_id"
+    android:value="new_booking_alerts_v2" />
+```
+
+Verify after building: `app/build/intermediates/merged_manifests/release/AndroidManifest.xml`
+must contain `MESSAGING_EVENT` exactly once, under `.BadiyoMessagingService`.
+
+Job alert channel is now `new_booking_alerts_v2` (alarm sound `res/raw/booking_alert`,
+USAGE_ALARM). The old `new_booking_alerts` channel is deleted on first push/app open,
+so the loud sound applies without reinstalling.
