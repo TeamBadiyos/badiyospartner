@@ -97,7 +97,7 @@ public class BookingAlertActions extends BroadcastReceiver {
             );
         } else if (ACTION_OPEN_COURIER.equals(action)) {
             openApp(context.getApplicationContext(),
-                bookingId == null || "/home");
+                "/home");
         } else if (ACTION_DISMISS.equals(action)) {
             // Informational alert acknowledged — deep-link to the booking.
             if (bookingId != null && !bookingId.isEmpty()) {
