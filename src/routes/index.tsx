@@ -62,9 +62,12 @@ function Splash() {
       // Validate in the background; only a definitely-invalid session logs out.
       try {
         const { data, error } = await supabase.auth.getUser();
-        if (error?.status === 401 || error?.status === 403 || (!error && !data?.user)) {
-          await supabase.auth.signOut({ scope: "local" });
-          navigate({ to: "/login", replace: true });
+        const jwtError =
+          error?.status === 401 || error?.status === 403 || /jwt/i.test(error?.message ?? "");
+        if (jwtError || (!error && !data?.user)) {
+          // Try a silent refresh first; only log out if that fails too.
+          const token = await refreshAccessTokenOnce();
+          if (!token) await signOutToLogin();
         }
       } catch {
         /* offline — keep the saved session */
