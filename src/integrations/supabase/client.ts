@@ -9,6 +9,8 @@ function isNewSupabaseApiKey(value: string): boolean {
 }
 
 // Single-flight refresh: concurrent 401s share one refreshSession() call.
+// supabase-js also serialises refreshSession() behind its own auth lock, so an
+// in-progress library refresh is awaited instead of a second one starting.
 let refreshInFlight: Promise<string | null> | null = null;
 let signingOut = false;
 
@@ -27,6 +29,31 @@ export function refreshAccessTokenOnce(): Promise<string | null> {
     });
   }
   return refreshInFlight;
+}
+
+/** Current stored access token (waits for any library refresh in progress). */
+export async function currentAccessToken(): Promise<string | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A request sent with `failedToken` was rejected. Returns a usable newer token,
+ * or null after signing out locally. Never signs out if a newer session exists.
+ */
+export async function recoverFromAuthFailure(failedToken: string | null): Promise<string | null> {
+  const before = await currentAccessToken();
+  if (before && before !== failedToken) return before; // newer session already exists
+  const refreshed = await refreshAccessTokenOnce();
+  if (refreshed && refreshed !== failedToken) return refreshed;
+  const after = await currentAccessToken();
+  if (after && after !== failedToken) return after; // new login / library refresh meanwhile
+  void signOutToLogin();
+  return null;
 }
 
 export async function signOutToLogin(): Promise<void> {
@@ -55,6 +82,11 @@ function requestUrl(input: RequestInfo | URL): string {
   return input.url;
 }
 
+function bearerOf(headers: Headers): string | null {
+  const auth = headers.get('Authorization') ?? '';
+  return auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : null;
+}
+
 function createSupabaseFetch(supabaseKey: string): typeof fetch {
   return async (input, init) => {
     const headers = new Headers(
@@ -72,20 +104,24 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 
     headers.set('apikey', supabaseKey);
 
-    const isAuthCall = requestUrl(input).includes('/auth/v1/');
+    // Only data/storage calls sent with a real user token are eligible for recovery.
+    const url = requestUrl(input);
+    const sentToken = bearerOf(headers);
+    const eligible =
+      (url.includes('/rest/v1/') || url.includes('/storage/v1/')) &&
+      !!sentToken &&
+      sentToken !== supabaseKey &&
+      sentToken.split('.').length === 3;
     // Keep a copy of a Request body so the one retry can resend it.
     const retryInput =
-      !isAuthCall && typeof Request !== 'undefined' && input instanceof Request ? input.clone() : input;
+      eligible && typeof Request !== 'undefined' && input instanceof Request ? input.clone() : input;
 
     const res = await fetch(input, { ...init, headers });
-    if (res.status !== 401 || isAuthCall || typeof window === 'undefined') return res;
+    if (res.status !== 401 || !eligible || typeof window === 'undefined') return res;
 
-    const token = await refreshAccessTokenOnce();
-    if (!token) {
-      void signOutToLogin();
-      return res;
-    }
-    // Retry the original request exactly once with the new token.
+    const token = await recoverFromAuthFailure(sentToken);
+    if (!token) return res;
+    // Retry the original request exactly once with the newer token.
     const retryHeaders = new Headers(headers);
     retryHeaders.set('Authorization', `Bearer ${token}`);
     return fetch(retryInput, { ...init, headers: retryHeaders });
