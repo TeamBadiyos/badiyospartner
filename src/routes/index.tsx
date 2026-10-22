@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { supabase, refreshAccessTokenOnce, signOutToLogin } from "@/integrations/supabase/client";
+import { supabase, currentAccessToken, recoverFromAuthFailure } from "@/integrations/supabase/client";
 import { SUPABASE_AUTH_STORAGE_KEY } from "@/integrations/supabase/api-url";
 
 export const Route = createFileRoute("/")({
@@ -61,13 +61,13 @@ function Splash() {
       if (!saved) return;
       // Validate in the background; only a definitely-invalid session logs out.
       try {
+        const checkedToken = await currentAccessToken();
         const { data, error } = await supabase.auth.getUser();
         const jwtError =
           error?.status === 401 || error?.status === 403 || /jwt/i.test(error?.message ?? "");
         if (jwtError || (!error && !data?.user)) {
-          // Try a silent refresh first; only log out if that fails too.
-          const token = await refreshAccessTokenOnce();
-          if (!token) await signOutToLogin();
+          // Skip if a newer session exists; else refresh, and log out only if that fails.
+          await recoverFromAuthFailure(checkedToken);
         }
       } catch {
         /* offline — keep the saved session */
