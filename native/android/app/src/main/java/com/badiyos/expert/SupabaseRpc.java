@@ -28,9 +28,29 @@ final class SupabaseRpc {
 
     private static final String PREFS_NAME = "CapacitorStorage";
     private static final String SESSION_KEY = "sb-dkneclwmmjlqswovtqno-auth-token";
-    private static final String SUPABASE_URL = "https://api.badiyos.com";
-    private static final String SUPABASE_ANON_KEY =
+    private static final String FALLBACK_SUPABASE_URL = "https://api.badiyos.com";
+    private static final String FALLBACK_SUPABASE_ANON_KEY =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrbmVjbHdtbWpscXN3b3Z0cW5vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4OTExMjMsImV4cCI6MjEwMDQ2NzEyM30.5wHGl9oFmY2AJysu9KlTpUwb-HQGtZZ6q-SHi1ced1Q";
+
+    // Read at call time from Capacitor Preferences (written by the web layer on
+    // every app start) so a new Supabase project needs only a web republish.
+    private static String prefString(Context c, String key, String fallback) {
+        try {
+            String v = c.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(key, null);
+            return (v == null || v.trim().isEmpty()) ? fallback : v.trim();
+        } catch (Throwable t) {
+            return fallback;
+        }
+    }
+
+    static String supabaseUrl(Context c) {
+        String u = prefString(c, "supabase_url", FALLBACK_SUPABASE_URL);
+        return u.endsWith("/") ? u.substring(0, u.length() - 1) : u;
+    }
+
+    static String supabaseAnonKey(Context c) {
+        return prefString(c, "supabase_anon_key", FALLBACK_SUPABASE_ANON_KEY);
+    }
 
     private SupabaseRpc() {}
 
@@ -70,14 +90,14 @@ final class SupabaseRpc {
         }
         HttpURLConnection conn = null;
         try {
-            URL url = new URL(SUPABASE_URL + "/rest/v1/rpc/" + fn);
+            URL url = new URL(supabaseUrl(ctx) + "/rest/v1/rpc/" + fn);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setConnectTimeout(15_000);
             conn.setReadTimeout(15_000);
             conn.setDoOutput(true);
             conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("apikey", SUPABASE_ANON_KEY);
+            conn.setRequestProperty("apikey", supabaseAnonKey(ctx));
             conn.setRequestProperty("Authorization", "Bearer " + token);
 
             try (OutputStream os = conn.getOutputStream()) {
