@@ -8,8 +8,55 @@ function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
 }
 
+// Single-flight refresh: concurrent 401s share one refreshSession() call.
+let refreshInFlight: Promise<string | null> | null = null;
+let signingOut = false;
+
+export function refreshAccessTokenOnce(): Promise<string | null> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error || !data.session?.access_token) return null;
+        return data.session.access_token;
+      } catch {
+        return null;
+      }
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+export async function signOutToLogin(): Promise<void> {
+  if (signingOut || typeof window === 'undefined') return;
+  signingOut = true;
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch {
+    /* ignore */
+  }
+  try {
+    const { toast } = await import('sonner');
+    toast.error('Please log in again');
+  } catch {
+    /* ignore */
+  }
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.replace('/login');
+  }
+  signingOut = false;
+}
+
+function requestUrl(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
 function createSupabaseFetch(supabaseKey: string): typeof fetch {
-  return (input, init) => {
+  return async (input, init) => {
     const headers = new Headers(
       typeof Request !== 'undefined' && input instanceof Request ? input.headers : undefined,
     );
@@ -24,7 +71,24 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     }
 
     headers.set('apikey', supabaseKey);
-    return fetch(input, { ...init, headers });
+
+    const isAuthCall = requestUrl(input).includes('/auth/v1/');
+    // Keep a copy of a Request body so the one retry can resend it.
+    const retryInput =
+      !isAuthCall && typeof Request !== 'undefined' && input instanceof Request ? input.clone() : input;
+
+    const res = await fetch(input, { ...init, headers });
+    if (res.status !== 401 || isAuthCall || typeof window === 'undefined') return res;
+
+    const token = await refreshAccessTokenOnce();
+    if (!token) {
+      void signOutToLogin();
+      return res;
+    }
+    // Retry the original request exactly once with the new token.
+    const retryHeaders = new Headers(headers);
+    retryHeaders.set('Authorization', `Bearer ${token}`);
+    return fetch(retryInput, { ...init, headers: retryHeaders });
   };
 }
 
