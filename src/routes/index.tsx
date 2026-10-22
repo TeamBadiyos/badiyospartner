@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, refreshAccessTokenOnce, signOutToLogin } from "@/integrations/supabase/client";
 import { SUPABASE_AUTH_STORAGE_KEY } from "@/integrations/supabase/api-url";
 
 export const Route = createFileRoute("/")({
